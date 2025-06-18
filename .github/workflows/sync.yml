@@ -2,23 +2,23 @@ name: Sync to Huawei Cloud
 
 on:
   push:
-    branches:
-      - main  
-
+    branches: main
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout GitHub Repo
-        uses: actions/checkout@v3
 
-      - name: Push to Huawei Cloud
-        run: |
-          git config --global user.email "wangqianxu310@163.com"
-          git config --global user.name "quixon-wang"
-          git remote add huawei https://$HW_USERNAME:$HW_PASSWORD@codehub.devcloud.cn-north-4.huaweicloud.com/74e2063c952c45a4addaa62bfa9e31b8/ITAP.git
-          git push huawei main --force
-        env:
-          HW_USERNAME: ${{ secrets.HW_USERNAME }}
-          HW_PASSWORD: ${{ secrets.HW_PASSWORD }}
+    steps:
+    - name: Checkout GitHub code
+      uses: actions/checkout@v4
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "Quixon-w"
+        git config --global user.email "qxwang310@gmail.com"
+        
+        git remote add huaweicloud https://${{ secrets.HW_USERNAME }}:${{ secrets.HW_PASSWORD }}@codehub.codearts.huaweicloud.com/74e2063c952c45a4addaa62bfa9e31b8/ITAP.git
+
+    - name: Push to Huawei Cloud
+      run: |
+        git push --force huaweicloud HEAD:main
