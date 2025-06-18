@@ -17,7 +17,7 @@ jobs:
         git config --global user.name "Quixon-w"
         git config --global user.email "qxwang310@gmail.com"
         
-        git remote add huaweicloud https://${{ secrets.HW_USERNAME }}:${{ secrets.HW_PASSWORD }}@codehub.codearts.huaweicloud.com/74e2063c952c45a4addaa62bfa9e31b8/ITAP.git
+        git remote add huaweicloud https://access-token:${{ secrets.HW_TOKEN }}@codehub.codearts.huaweicloud.com/74e2063c952c45a4addaa62bfa9e31b8/ITAP.git
 
     - name: Push to Huawei Cloud
       run: |
