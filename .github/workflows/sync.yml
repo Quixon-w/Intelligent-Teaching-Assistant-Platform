@@ -5,7 +5,6 @@ on:
     branches:
       - main  
 
-
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -15,8 +14,8 @@ jobs:
 
       - name: Push to Huawei Cloud
         run: |
-          git config --global user.email "qxwang310@gmail.com"
-          git config --global user.name "Quixon-wang"
+          git config --global user.email "wangqianxu310@163.com"
+          git config --global user.name "quixon-wang"
           git remote add huawei https://$HW_USERNAME:$HW_PASSWORD@codehub.devcloud.cn-north-4.huaweicloud.com/74e2063c952c45a4addaa62bfa9e31b8/ITAP.git
           git push huawei main --force
         env:
