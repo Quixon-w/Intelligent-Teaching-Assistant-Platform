@@ -28,3 +28,17 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# IDEA
+.idea/
+*.iml
+
+# Node/Vue
+node_modules/
+dist/
+.vscode/
+.env*
+
+# Maven
+target/
+
