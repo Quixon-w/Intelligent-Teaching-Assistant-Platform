@@ -2,19 +2,26 @@ package org.cancan.usercenter.controller;
 
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.mapper.UserMapper;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.model.domain.request.PasswordChangeRequest;
 import org.cancan.usercenter.model.domain.request.UserLoginRequest;
 import org.cancan.usercenter.model.domain.request.UserRegisterRequest;
 import org.cancan.usercenter.service.UserService;
 import org.cancan.usercenter.utils.RedisUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,6 +37,8 @@ import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
  */
 @RestController
 @RequestMapping("/user")
+@Slf4j
+@Tag(name = "body参数")
 public class UserController {
 
     @Resource
@@ -39,6 +48,12 @@ public class UserController {
     private RedisUtil redisUtil;
 
     @PostMapping("/register")
+    @Operation(summary = "用户注册")
+    @Parameters({
+            @Parameter(name = "userAccount", description = "用户账号", required = true),
+            @Parameter(name = "userPassword", description = "用户密码", required = true),
+            @Parameter(name = "checkPassword", description = "确认密码", required = true)
+    })
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         if (userRegisterRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -54,6 +69,11 @@ public class UserController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "用户登录")
+    @Parameters({
+            @Parameter(name = "userAccount", description = "用户账号", required = true),
+            @Parameter(name = "userPassword", description = "用户密码", required = true)
+    })
     public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         if (userLoginRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -68,6 +88,7 @@ public class UserController {
     }
 
     @PostMapping("/logout")
+    @Operation(summary = "用户登出")
     public BaseResponse<Integer> userLogout(HttpServletRequest request) {
         if (request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -77,6 +98,7 @@ public class UserController {
     }
 
     @GetMapping("/current")
+    @Operation(summary = "获取当前用户")
     public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
         String userJson = redisUtil.get(request.getSession().getId());
         if (userJson == null) {
@@ -97,6 +119,10 @@ public class UserController {
     }
 
     @PostMapping("/update")
+    @Operation(summary = "更新用户")
+    @Parameters({
+            @Parameter(name = "userAccount", description = "用户账号", required = true),
+    })
     public BaseResponse<User> updateUser(@RequestBody User user, HttpServletRequest request) {
         if (user == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -120,6 +146,12 @@ public class UserController {
     }
 
     @PostMapping("/password")
+    @Operation(summary = "修改密码")
+    @Parameters({
+            @Parameter(name = "oldPassword", description = "旧密码", required = true),
+            @Parameter(name = "newPassword", description = "新密码", required = true),
+            @Parameter(name = "checkPassword", description = "确认密码", required = true)
+    })
     public BaseResponse<Boolean> updatePassword(@RequestBody PasswordChangeRequest passwordChangeRequest, HttpServletRequest request) {
         if (passwordChangeRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -130,11 +162,13 @@ public class UserController {
         if (StringUtils.isAnyBlank(oldPassword, newPassword, checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
+        // 获取当前用户
         String userJson = redisUtil.get(request.getSession().getId());
         if (userJson == null) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
         User currentUser = JSON.parseObject(userJson, User.class);
+        // 修改密码
         if (currentUser != null && currentUser.getId() != null && newPassword.equals(checkPassword)) {
             userService.passwordUpdate(oldPassword, newPassword, currentUser.getId());
         }
@@ -142,10 +176,11 @@ public class UserController {
     }
 
     @GetMapping("/search")
+    @Operation(summary = "获取用户列表")
+    @Parameters({
+            @Parameter(name = "username", description = "用户名", required = true),
+    })
     public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
-        if (!isAdmin(request)) {
-            throw new BusinessException(ErrorCode.NO_AUTH);
-        }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNotBlank(username)) {
             queryWrapper.like("username", username);
@@ -156,8 +191,18 @@ public class UserController {
     }
 
     @PostMapping("/delete")
+    @Operation(summary = "删除用户")
+    @Parameters({
+            @Parameter(name = "id", description = "用户id", required = true),
+    })
     public BaseResponse<Boolean> deleteUsers(@RequestBody long id, HttpServletRequest request) {
-        if (!isAdmin(request)) {
+        // 获取当前用户
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        User currentUser = JSON.parseObject(userJson, User.class);
+        if (currentUser.getId() != id && !isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
         if (id <= 0) {
