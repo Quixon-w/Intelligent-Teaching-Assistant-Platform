@@ -1,16 +1,11 @@
 package org.cancan.usercenter.model.domain;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
-
-import java.util.Date;
 
 /**
  * 用户
- * @TableName user
+ * {@code @TableName} user
  */
 @TableName(value ="user")
 @Data
@@ -19,6 +14,7 @@ public class User {
      * id
      */
     @TableId(type = IdType.AUTO)
+    @TableField(update = "false")
     private Long id;
 
     /**
@@ -29,6 +25,7 @@ public class User {
     /**
      * 账号
      */
+    @TableField(update = "false")
     private String userAccount;
 
     /**
@@ -44,6 +41,7 @@ public class User {
     /**
      * 密码
      */
+    @TableField(update = "false")
     private String userPassword;
 
     /**
@@ -59,31 +57,20 @@ public class User {
     /**
      *  状态 0 - 正常
      */
+    @TableField(update = "false")
     private Integer userStatus;
-
-    /**
-     * 创建时间
-     */
-    private Date createTime;
-
-    /**
-     * 更新时间
-     */
-    private Date updateTime;
 
     /**
      * 是否删除
      */
     @TableLogic
+    @TableField(update = "false")
     private Integer isDelete;
 
     /**
-     * 0 - 普通用户 1 - 管理员
+     * 0 - 学生 1 - 教师 2 - 管理员
      */
+    @TableField(update = "false")
     private Integer userRole;
 
-    /**
-     * 星球编号
-     */
-    private String planetCode;
 }
