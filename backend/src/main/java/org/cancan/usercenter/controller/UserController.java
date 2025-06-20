@@ -9,12 +9,14 @@ import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.model.domain.User;
+import org.cancan.usercenter.model.domain.request.PasswordChangeRequest;
 import org.cancan.usercenter.model.domain.request.UserLoginRequest;
 import org.cancan.usercenter.model.domain.request.UserRegisterRequest;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
@@ -40,11 +42,10 @@ public class UserController {
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
-        String planetCode = userRegisterRequest.getPlanetCode();
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
-        long result = userService.userRegister(userAccount, userPassword, checkPassword, planetCode);
+        long result = userService.userRegister(userAccount, userPassword, checkPassword);
         return ResultUtils.success(result);
     }
 
@@ -83,6 +84,42 @@ public class UserController {
         User user = userService.getById(userId);
         User result = userService.getSafetyUser(user);
         return ResultUtils.success(result);
+    }
+
+    @PostMapping("/update")
+    public BaseResponse<User> updateUser(@RequestBody User user, HttpServletRequest request) {
+        if (user == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        if (user.getUserAccount() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号不能为空");
+        }
+        User currentUser = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+        if (!Objects.equals(user.getUserAccount(), currentUser.getUserAccount()) && !isAdmin(request)) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "无权限");
+        }
+        user.setId(currentUser.getId());
+        User updateUser = userService.userUpdate(user, request);
+        User safeUser = userService.getSafetyUser(updateUser);
+        return ResultUtils.success(safeUser);
+    }
+
+    @PostMapping("/password")
+    public BaseResponse<Boolean> updatePassword(@RequestBody PasswordChangeRequest passwordChangeRequest, HttpServletRequest request) {
+        if (passwordChangeRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        String oldPassword = passwordChangeRequest.getOldPassword();
+        String newPassword = passwordChangeRequest.getNewPassword();
+        String checkPassword = passwordChangeRequest.getCheckPassword();
+        if (StringUtils.isAnyBlank(oldPassword, newPassword, checkPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        User currentUser = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+        if (currentUser != null && currentUser.getId() != null && newPassword.equals(checkPassword)) {
+            userService.passwordUpdate(oldPassword, newPassword, currentUser.getId());
+        }
+        return ResultUtils.success(true);
     }
 
     @GetMapping("/search")
