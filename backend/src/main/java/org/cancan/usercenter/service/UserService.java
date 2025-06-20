@@ -31,8 +31,8 @@ public interface UserService extends IService<User> {
 
     /**
      *
-     * @param
-     * @return
+     * @param  user  用户
+     * @return 脱敏后的用户信息
      */
     User userUpdate(User user, HttpServletRequest request);
 
@@ -51,5 +51,13 @@ public interface UserService extends IService<User> {
      */
     int userLogout(HttpServletRequest request);
 
+    /**
+     * 修改密码
+     *
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     * @param id 用户id
+     */
     void passwordUpdate(String oldPassword, String newPassword, Long id);
+
 }

@@ -1,5 +1,6 @@
 package org.cancan.usercenter.controller;
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +14,7 @@ import org.cancan.usercenter.model.domain.request.PasswordChangeRequest;
 import org.cancan.usercenter.model.domain.request.UserLoginRequest;
 import org.cancan.usercenter.model.domain.request.UserRegisterRequest;
 import org.cancan.usercenter.service.UserService;
+import org.cancan.usercenter.utils.RedisUtil;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,7 +22,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
-import static org.cancan.usercenter.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
  * 用户接口
@@ -33,6 +34,9 @@ public class UserController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private RedisUtil redisUtil;
 
     @PostMapping("/register")
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
@@ -74,14 +78,20 @@ public class UserController {
 
     @GetMapping("/current")
     public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
-        Object userObject = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObject;
-        if (userObject == null) {
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        User currentUser = JSON.parseObject(userJson, User.class);
+
+        if (currentUser == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         long userId = currentUser.getId();
-        // TODO 校验用户是否合法
         User user = userService.getById(userId);
+        if (user.getUserStatus() == 1) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户状态失效");
+        }
         User result = userService.getSafetyUser(user);
         return ResultUtils.success(result);
     }
@@ -94,7 +104,12 @@ public class UserController {
         if (user.getUserAccount() == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号不能为空");
         }
-        User currentUser = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        User currentUser = JSON.parseObject(userJson, User.class);
+
         if (!Objects.equals(user.getUserAccount(), currentUser.getUserAccount()) && !isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH, "无权限");
         }
@@ -115,7 +130,11 @@ public class UserController {
         if (StringUtils.isAnyBlank(oldPassword, newPassword, checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
-        User currentUser = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        User currentUser = JSON.parseObject(userJson, User.class);
         if (currentUser != null && currentUser.getId() != null && newPassword.equals(checkPassword)) {
             userService.passwordUpdate(oldPassword, newPassword, currentUser.getId());
         }
@@ -156,8 +175,11 @@ public class UserController {
      */
     private boolean isAdmin(HttpServletRequest request) {
         // 仅管理员可查询
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User user = (User) userObj;
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        User user = JSON.parseObject(userJson, User.class);
         return user != null && user.getUserRole() == ADMIN_ROLE;
     }
 }

@@ -14,7 +14,6 @@ public class User {
      * id
      */
     @TableId(type = IdType.AUTO)
-    @TableField(update = "false")
     private Long id;
 
     /**
@@ -25,7 +24,6 @@ public class User {
     /**
      * 账号
      */
-    @TableField(update = "false")
     private String userAccount;
 
     /**
@@ -41,7 +39,6 @@ public class User {
     /**
      * 密码
      */
-    @TableField(update = "false")
     private String userPassword;
 
     /**
@@ -57,20 +54,17 @@ public class User {
     /**
      *  状态 0 - 正常
      */
-    @TableField(update = "false")
     private Integer userStatus;
 
     /**
      * 是否删除
      */
     @TableLogic
-    @TableField(update = "false")
     private Integer isDelete;
 
     /**
      * 0 - 学生 1 - 教师 2 - 管理员
      */
-    @TableField(update = "false")
     private Integer userRole;
 
 }
