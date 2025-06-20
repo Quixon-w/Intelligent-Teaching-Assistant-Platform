@@ -27,24 +27,18 @@ springdoc:
     enabled: true
     path: /v3/api-docs
   group-configs:
-    - group: 'default'
-      paths-to-match: '/**'
-      packages-to-scan: org.cancan.usercenter
+        - group: 'default'
+          paths-to-match: '/**'
+          packages-to-scan: org.cancan.usercenter
 knife4j:
   enable: true
   setting:
     language: zh_cn
 server:
   port: 8080
-  servlet:
-    session:
-      cookie:
-        name: SESSION
-        same-site: None
-        secure: true
 mybatis-plus:
   configuration:
-    map-underscore-to-camel-case: true
+    map-underscore-to-camel-case: false
   global-config:
     db-config:
       logic-delete-field: isDelete # 全局逻辑删除字段名

@@ -1,7 +1,7 @@
 package org.cancan.usercenter.controller;
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -14,23 +14,26 @@ import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
-import org.cancan.usercenter.model.domain.Courses;
+import org.cancan.usercenter.mapper.UserMapper;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.model.domain.request.PasswordChangeRequest;
 import org.cancan.usercenter.model.domain.request.UserLoginRequest;
 import org.cancan.usercenter.model.domain.request.UserRegisterRequest;
-import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.UserService;
+import org.cancan.usercenter.utils.RedisUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
-import static org.cancan.usercenter.constant.UserConstant.*;
+import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
 
 /**
  * 用户接口
  *
- * @author cancan
+ * @author 洪
  */
 @RestController
 @RequestMapping("/user")
@@ -42,7 +45,7 @@ public class UserController {
     private UserService userService;
 
     @Resource
-    private CoursesService coursesService;
+    private RedisUtil redisUtil;
 
     @PostMapping("/register")
     @Operation(summary = "用户注册")
@@ -78,12 +81,9 @@ public class UserController {
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账户或密码参数为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         User result = userService.userLogin(userAccount, userPassword, request);
-        if (result == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户名或密码错误");
-        }
         return ResultUtils.success(result);
     }
 
@@ -100,7 +100,15 @@ public class UserController {
     @GetMapping("/current")
     @Operation(summary = "获取当前用户")
     public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
-        User currentUser = userService.getCurrentUser(request);
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        User currentUser = JSON.parseObject(userJson, User.class);
+
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
         long userId = currentUser.getId();
         User user = userService.getById(userId);
         if (user.getUserStatus() == 1) {
@@ -113,35 +121,25 @@ public class UserController {
     @PostMapping("/update")
     @Operation(summary = "更新用户")
     @Parameters({
-            @Parameter(name = "id", description = "用户id", required = true),
             @Parameter(name = "userAccount", description = "用户账号", required = true),
     })
     public BaseResponse<User> updateUser(@RequestBody User user, HttpServletRequest request) {
         if (user == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
-        if (user.getUserAccount() == null || user.getId() == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户id账号不能为空");
+        if (user.getUserAccount() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号不能为空");
         }
-        User currentUser = userService.getCurrentUser(request);
-        // 更新信息校验
-        if (currentUser.getUserRole() != ADMIN_ROLE) {
-            if (!Objects.equals(user.getId(), currentUser.getId())) {
-                throw new BusinessException(ErrorCode.PARAMS_ERROR, "访问id无权限");
-            }
-            if (!Objects.equals(user.getUserAccount(), currentUser.getUserAccount())) {
-                throw new BusinessException(ErrorCode.NO_AUTH, "账号不可更改");
-            }
-            // 老师有课程时不可变为学生
-            if (user.getUserRole() != null && currentUser.getUserRole() == TEACHER_ROLE && user.getUserRole() == STUDENT_ROLE) {
-                QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
-                queryWrapper.eq("teacher_id", currentUser.getId());
-                boolean result = coursesService.exists(queryWrapper);
-                if (result) {
-                    throw new BusinessException(ErrorCode.NO_AUTH, "老师有课程时不可变为学生");
-                }
-            }
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
         }
+        User currentUser = JSON.parseObject(userJson, User.class);
+
+        if (!Objects.equals(user.getUserAccount(), currentUser.getUserAccount()) && !isAdmin(request)) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "无权限");
+        }
+        user.setId(currentUser.getId());
         User updateUser = userService.userUpdate(user, request);
         User safeUser = userService.getSafetyUser(updateUser);
         return ResultUtils.success(safeUser);
@@ -150,7 +148,6 @@ public class UserController {
     @PostMapping("/password")
     @Operation(summary = "修改密码")
     @Parameters({
-            @Parameter(name = "userId", description = "要更新的用户的id", required = true),
             @Parameter(name = "oldPassword", description = "旧密码", required = true),
             @Parameter(name = "newPassword", description = "新密码", required = true),
             @Parameter(name = "checkPassword", description = "确认密码", required = true)
@@ -159,7 +156,6 @@ public class UserController {
         if (passwordChangeRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
-        Long userId = passwordChangeRequest.getUserId();
         String oldPassword = passwordChangeRequest.getOldPassword();
         String newPassword = passwordChangeRequest.getNewPassword();
         String checkPassword = passwordChangeRequest.getCheckPassword();
@@ -167,46 +163,31 @@ public class UserController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         // 获取当前用户
-        User currentUser = userService.getCurrentUser(request);
-        // 验证是本人
-        if (!Objects.equals(currentUser.getId(), userId) && currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "没有权限");
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
         }
+        User currentUser = JSON.parseObject(userJson, User.class);
         // 修改密码
-        if (!newPassword.equals(checkPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码校验失败，两次密码不同");
+        if (currentUser != null && currentUser.getId() != null && newPassword.equals(checkPassword)) {
+            userService.passwordUpdate(oldPassword, newPassword, currentUser.getId());
         }
-        userService.passwordUpdate(oldPassword, newPassword, userId, currentUser);
         return ResultUtils.success(true);
     }
 
-    @GetMapping("/searchPage")
-    @Operation(summary = "按页获取用户列表")
+    @GetMapping("/search")
+    @Operation(summary = "获取用户列表")
     @Parameters({
-            @Parameter(name = "pageNum", description = "当前页码", required = true),
-            @Parameter(name = "pageSize", description = "每页条数", required = true),
             @Parameter(name = "username", description = "用户名", required = true),
     })
-    public BaseResponse<Page<User>> searchUsers(
-            @RequestParam Integer pageNum,
-            @RequestParam Integer pageSize,
-            @RequestParam String username,
-            HttpServletRequest request) {
-        // 校验参数
-        if (pageNum == null || pageNum <= 0 || pageSize == null || pageSize <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "分页参数非法");
-        }
-        if (getCurrentUser(request) == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN);
-        }
+    public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNotBlank(username)) {
             queryWrapper.like("username", username);
         }
-        // 分页查询
-        Page<User> page = new Page<>(pageNum, pageSize);
-        Page<User> resultPage = userService.page(page, queryWrapper);
-        return ResultUtils.success(resultPage);
+        List<User> userList = userService.list(queryWrapper);
+        List<User> result = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(result);
     }
 
     @PostMapping("/delete")
@@ -216,33 +197,34 @@ public class UserController {
     })
     public BaseResponse<Boolean> deleteUsers(@RequestBody long id, HttpServletRequest request) {
         // 获取当前用户
-        User currentUser = userService.getCurrentUser(request);
-        // 仅管理员与本用户可删除
-        if (currentUser.getId() != id && currentUser.getUserRole() != ADMIN_ROLE) {
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        User currentUser = JSON.parseObject(userJson, User.class);
+        if (currentUser.getId() != id && !isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
         if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户id <= 0");
         }
         boolean result = userService.removeById(id);
-        userService.userLogout(request);
         return ResultUtils.success(result);
     }
 
-    @GetMapping("/getUser")
-    @Operation(summary = "获取用户信息")
-    @Parameters({
-            @Parameter(name = "id", description = "用户id", required = true),
-    })
-    public BaseResponse<User> getUserById(long id) {
-        if (id <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数不合法");
+    /**
+     * 是否为管理员
+     *
+     * @param request session ID
+     * @return result
+     */
+    private boolean isAdmin(HttpServletRequest request) {
+        // 仅管理员可查询
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
         }
-        User user = userService.getById(id);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "用户不存在");
-        }
-        return ResultUtils.success(user);
+        User user = JSON.parseObject(userJson, User.class);
+        return user != null && user.getUserRole() == ADMIN_ROLE;
     }
-
 }
