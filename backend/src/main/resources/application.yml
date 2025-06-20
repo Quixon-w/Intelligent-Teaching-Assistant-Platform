@@ -1,14 +1,11 @@
 spring:
   application:
     name: user-center
-  # DataSource Config
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: 20040326hyc
     url: jdbc:mysql://localhost:3306/itap
-  session:
-    timeout: 86400
   data:
     redis:
       host: localhost
@@ -19,6 +16,24 @@ spring:
           max-idle: 4
           min-idle: 2
           max-wait: 2000ms
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui
+    tags-sorter: alpha
+    operations-sorter: alpha
+    url: /v3/api-docs
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  group-configs:
+        - group: 'default'
+          paths-to-match: '/**'
+          packages-to-scan: org.cancan.usercenter
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
 server:
   port: 8080
 mybatis-plus:
