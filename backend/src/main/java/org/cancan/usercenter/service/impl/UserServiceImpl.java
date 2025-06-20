@@ -143,15 +143,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         ) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户角色参数错误");
         }
-        // 👇 手动清除非允许字段
-        user.setUserAccount(null);
-        user.setUserPassword(null);
-        user.setUserStatus(null);
-        user.setIsDelete(null);
+        // 脱敏，仅返回部分用户信息
+        User safetyUser = getSafetyUser(user);
+        // 更新用户信息
+        userMapper.updateById(safetyUser);
 
-        userMapper.updateById(user);
-
-        return user;
+        return safetyUser;
     }
 
     /**
