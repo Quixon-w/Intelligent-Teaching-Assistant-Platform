@@ -13,6 +13,7 @@ const onLogin = () => {
     .then(res=>{
       console.log(res.data.data.userAccount)
       sessionStorage.setItem('token', res.data.data.userAccount);
+      sessionStorage.setItem('role', 'teacher');
       router.push('/dashboard');
     })
     .catch(err=>{

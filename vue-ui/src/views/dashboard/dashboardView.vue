@@ -5,12 +5,14 @@ import { ElMessage } from 'element-plus'
 import CommonAside from '@/components/asides/commonAside.vue'
 import TeacherAside from '@/components/asides/teacherAside.vue'
 import { onExit } from '@/api/dashboard.js'
+import StudentAside from '@/components/asides/studentAside.vue'
 const router = useRouter();
-const role="teacher";
+const role="student";
 const handleCommand = (command) => {
   if (command === 'onExit') {
     onExit().then(res=>{
       sessionStorage.removeItem('token');
+      sessionStorage.removeItem('role');
       router.push('/login');
     }).catch(err=>{
       ElMessage({
@@ -19,9 +21,8 @@ const handleCommand = (command) => {
       });
     })
   } else if (command === 'toUserControl') {
-    router.push('/');
+    router.push('/dashboard/user/central');
   }
-  ElMessage(`click on item ${command}`);
 };
 </script>
 
@@ -30,6 +31,7 @@ const handleCommand = (command) => {
     <el-aside class="sidebar">
       <span v-if="role==='test'"><CommonAside/></span>
       <span v-else-if="role==='teacher'"><TeacherAside/></span>
+      <span v-else-if="role==='student'"><StudentAside/></span>
     </el-aside>
     <el-container>
       <el-header class="header">

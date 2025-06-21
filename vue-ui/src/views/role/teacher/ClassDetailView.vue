@@ -1,11 +1,9 @@
 <script setup>
-import { useRoute, useRouter } from 'vue-router'
-const router = useRouter();
-const route=useRoute();
+import ClassDetail from '@/components/role/teacher/ClassDetail.vue'
 </script>
 
 <template>
-<span>Class {{route.params.id}}</span>
+  <ClassDetail/>
 </template>
 
 <style scoped>

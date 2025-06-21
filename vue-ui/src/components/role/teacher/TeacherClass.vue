@@ -23,7 +23,7 @@ const toClass=(id)=>{
 .classTable{
   display: flex;
   flex-wrap: wrap; /* 允许换行 */
-  justify-content: space-between; /* 子元素平均分布 */
+  //justify-content: space-between; /* 子元素平均分布 */
   align-items: center; /* 垂直居中 */
   gap: 2%; /* 每个子项之间的间距为 2% */
   width: 100%;
@@ -33,8 +33,8 @@ const toClass=(id)=>{
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  width: 30%;
-  height: 20%;
+  width: 23%;
+  height: 30%;
   background-color: #fff;
   border-radius: 8px;
   overflow: hidden;
