@@ -2,15 +2,15 @@
 import { ref } from 'vue'
 import {useRouter} from 'vue-router'
 const router = useRouter();
-const teacherClass=ref([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]);
+const studentClass=ref([1,4,10,11,12,13,17]);
 const toClass=(id)=>{
-  router.push('/dashboard/teacher/class/'+id);
+  router.push('/dashboard/student/class/'+id);
 }
 </script>
 
 <template>
   <div class="classTable">
-    <div class="classOfTeacher" v-for="id in teacherClass" @click="toClass(id)">
+    <div class="classOfTeacher" v-for="id in studentClass" @click="toClass(id)">
       <img src="@/assets/images/login-background.jpg" alt=""/>
       <div class="text-wrapper">
         <el-text>{{ id }}</el-text>

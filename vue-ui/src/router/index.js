@@ -5,7 +5,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
+      path: '',
       redirect: '/login',
     },
     {
@@ -24,9 +24,14 @@ const router = createRouter({
       component: () => import('../views/dashboard/DashboardView.vue'),
       children:[
         {
+          path: 'main',
+          name: 'main',
+          component: () => import('../views/dashboard/MainView.vue'),
+        },
+        {
           path: '',
-          name: 'inToRedirect',
-          redirect: '/dashboard/teacher/class',
+          name: 'inToMain',
+          redirect: 'dashboard/main',
         },
         {
           path: 'about',
@@ -39,18 +44,28 @@ const router = createRouter({
         {
           path: 'user/central',
           name: 'user/central',
-          component: () => import('../views/user/userCentralView.vue'),
+          component: () => import('../views/user/UserCentralView.vue'),
         },
         {
           path: 'teacher/class',
           name: 'teacher/class',
-          component: () => import('../views/role/teacher/ClassView.vue'),
+          component: () => import('../views/role/teacher/TeacherClassView.vue'),
         },
         {
           path: 'teacher/class/:id',
           name: 'teacher/class/id',
-          component: () => import('../views/role/teacher/ClassDetailView.vue'),
-        }
+          component: () => import('../views/role/teacher/TeacherClassDetailView.vue'),
+        },
+        {
+          path: 'student/class',
+          name: 'student/class',
+          component: () => import('../views/role/student/StudentClassView.vue'),
+        },
+        {
+          path: 'student/class/:id',
+          name: 'student/class/id',
+          component: () => import('../views/role/student/StudentClassDetailView.vue'),
+        },
       ]
     }
   ],

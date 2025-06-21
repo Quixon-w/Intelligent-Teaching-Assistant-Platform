@@ -1,5 +1,5 @@
 <script setup>
-import ClassDetail from '@/components/role/teacher/ClassDetail.vue'
+import ClassDetail from '@/components/role/teacher/TeacherClassDetail.vue'
 </script>
 
 <template>

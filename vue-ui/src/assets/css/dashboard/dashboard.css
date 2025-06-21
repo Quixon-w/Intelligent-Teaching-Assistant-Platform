@@ -36,3 +36,6 @@
 .logo{
     margin-right: 10px;
 }
+.el-tooltip__trigger:focus {
+    outline: none;
+}
