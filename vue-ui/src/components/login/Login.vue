@@ -2,21 +2,25 @@
 import {useRouter} from 'vue-router'
 import { reactive } from 'vue'
 import { login } from '@/api/login/login.js'
+import { ElMessage } from 'element-plus'
 const router = useRouter();
 const loginForm = reactive({
   username: '',
   password: '',
 })
 const onLogin = () => {
-  if(login(loginForm.username,loginForm.password)){
-    localStorage.setItem('token', loginForm.username);
-    router.push('/dashboard');
-  }else {
-    ElMessage({
-      message: '用户名或密码错误',
-      type: 'error',
+  login(loginForm.username,loginForm.password)
+    .then(res=>{
+      console.log(res.data.data.userAccount)
+      localStorage.setItem('token', res.data.data.userAccount);
+      router.push('/dashboard');
+    })
+    .catch(err=>{
+      ElMessage({
+        message: '用户名或密码错误',
+        type: 'error',
+      });
     });
-  }
 }
 const onRegister = () => {
   router.push('/register');

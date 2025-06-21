@@ -1,17 +1,15 @@
-import { request } from 'axios'
+import axios from 'axios'
 export function login(username, password) {
-  return request({
+  return axios.request({
     method: 'post',
-    url: 'http://localhost:8080/',
+    url: 'http://192.168.240.226:8080/user/login',
     data: {
-      username,
-      password,
+      "userAccount": username,
+      "userPassword": password,
     }
   }).then(response => {
-    console.log(response);
-    return true;
+    return response;
   }).catch(error => {
-    console.log(error);
-    return false;
+    return error;
   });
 }
