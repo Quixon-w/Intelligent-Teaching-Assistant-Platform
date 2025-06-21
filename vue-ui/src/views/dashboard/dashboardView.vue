@@ -1,8 +1,11 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterView } from 'vue-router'
 import {useRouter} from 'vue-router'
 import { ElMessage } from 'element-plus'
+import CommonAside from '@/components/asides/commonAside.vue'
+import TeacherAside from '@/components/asides/teacherAside.vue'
 const router = useRouter();
+const role="teacher";
 const handleCommand = (command) => {
   if (command === 'onExit') {
     localStorage.removeItem('token');
@@ -17,21 +20,8 @@ const handleCommand = (command) => {
 <template>
   <el-container class="main-container">
     <el-aside class="sidebar">
-      <el-scrollbar>
-        <el-menu>
-          <el-menu-item>
-            <RouterLink to="/dashboard/">我的课程</RouterLink>
-          </el-menu-item>
-          <el-menu-item>
-            <RouterLink to="/dashboard/about">占位符</RouterLink>
-          </el-menu-item>
-        </el-menu>
-        <el-menu>
-          <el-menu-item>
-            <RouterLink to="/dashboard/">我的课程</RouterLink>
-          </el-menu-item>
-        </el-menu>
-      </el-scrollbar>
+      <span v-if="role==='test'"><CommonAside/></span>
+      <span v-else-if="role==='teacher'"><TeacherAside/></span>
     </el-aside>
     <el-container>
       <el-header class="header">
@@ -54,37 +44,6 @@ const handleCommand = (command) => {
     </el-container>
   </el-container>
 </template>
-
+<style src="@/assets/css/dashboard/dashboard.css"></style>
 <style scoped>
-.main-container{
-  display: flex;
-  height: 100%;
-  position: relative;
-}
-.sidebar{
-  width: 10%;
-  background-color: #304156;
-  height: 100%;
-  position: fixed;
-  font-size: 0;
-  z-index: 1001;
-  overflow: hidden;
-  -webkit-box-shadow: 2px 0 6px rgba(0,21,41,.35);
-  box-shadow: 2px 0 6px rgba(0,21,41,.35);
-}
-.header{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 90%;
-  height: 7%;
-  margin-left: 10%;
-  font-size: 0;
-  background: #ffffff;
-}
-.main{
-  width: 90%;
-  height: 93%;
-  margin-left: 10%;
-}
 </style>
