@@ -7,7 +7,7 @@ import lombok.Data;
  * 用户
  * {@code @TableName} user
  */
-@TableName(value ="user")
+@TableName(value ="users")
 @Data
 public class User {
     /**
