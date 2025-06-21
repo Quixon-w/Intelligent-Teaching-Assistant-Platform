@@ -12,7 +12,7 @@ const onLogin = () => {
   login(loginForm.username,loginForm.password)
     .then(res=>{
       console.log(res.data.data.userAccount)
-      localStorage.setItem('token', res.data.data.userAccount);
+      sessionStorage.setItem('token', res.data.data.userAccount);
       router.push('/dashboard');
     })
     .catch(err=>{

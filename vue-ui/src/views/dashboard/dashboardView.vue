@@ -4,12 +4,20 @@ import {useRouter} from 'vue-router'
 import { ElMessage } from 'element-plus'
 import CommonAside from '@/components/asides/commonAside.vue'
 import TeacherAside from '@/components/asides/teacherAside.vue'
+import { onExit } from '@/api/dashboard.js'
 const router = useRouter();
 const role="teacher";
 const handleCommand = (command) => {
   if (command === 'onExit') {
-    localStorage.removeItem('token');
-    router.push('/login');
+    onExit().then(res=>{
+      sessionStorage.removeItem('token');
+      router.push('/login');
+    }).catch(err=>{
+      ElMessage({
+        message: '退出失败',
+        type: 'error',
+      });
+    })
   } else if (command === 'toUserControl') {
     router.push('/');
   }

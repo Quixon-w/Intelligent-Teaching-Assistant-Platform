@@ -5,6 +5,10 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/',
+      redirect: '/login',
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('../views/login/LoginView.vue'),
@@ -21,8 +25,8 @@ const router = createRouter({
       children:[
         {
           path: '',
-          name: 'home',
-          component: HomeView,
+          name: 'inToRedirect',
+          redirect: '/dashboard/teacher/class',
         },
         {
           path: 'about',
@@ -31,6 +35,11 @@ const router = createRouter({
           // this generates a separate chunk (About.[hash].js) for this route
           // which is lazy-loaded when the route is visited.
           component: () => import('../views/AboutView.vue'),
+        },
+        {
+          path: 'user/central',
+          name: 'user/central',
+          component: () => import('../views/user/userCentralView.vue'),
         },
         {
           path: 'teacher/class',
@@ -47,7 +56,7 @@ const router = createRouter({
   ],
 })
 router.beforeEach((to, from, next) => {
-  if (to.name !== 'login' && to.name!=='register' &&!localStorage.getItem('token')) next({ name: 'login' })
+  if (to.name !== 'login' && to.name!=='register' &&!sessionStorage.getItem('token')) next({ name: 'login' })
   else next()
 })
 export default router
