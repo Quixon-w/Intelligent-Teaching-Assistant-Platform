@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.cancan.usercenter.mapper.EnrollMapper">
+
+    <resultMap id="BaseResultMap" type="org.cancan.usercenter.model.domain.Enroll">
+            <id property="id" column="id" />
+            <result property="coursesId" column="courses_id" />
+            <result property="studentId" column="student_id" />
+            <result property="finalScore" column="final_score" />
+            <result property="startTime" column="start_time" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,courses_id,student_id,final_score,start_time
+    </sql>
+</mapper>
