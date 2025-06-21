@@ -1,14 +1,27 @@
 <script setup>
 import {useRouter} from 'vue-router'
 import { reactive } from 'vue'
+import { login } from '@/api/login/login.js'
+import { ElMessage } from 'element-plus'
 const router = useRouter();
 const loginForm = reactive({
   username: '',
-  passsword: '',
+  password: '',
 })
 const onLogin = () => {
-  localStorage.setItem('token', '123456');
-  router.push('/dashboard');
+  login(loginForm.username,loginForm.password)
+    .then(res=>{
+      console.log(res.data.data.userAccount)
+      sessionStorage.setItem('token', res.data.data.userAccount);
+      sessionStorage.setItem('role', 'teacher');
+      router.push('/dashboard');
+    })
+    .catch(err=>{
+      ElMessage({
+        message: '用户名或密码错误',
+        type: 'error',
+      });
+    });
 }
 const onRegister = () => {
   router.push('/register');
@@ -22,7 +35,7 @@ const onRegister = () => {
         <el-input v-model="loginForm.username"/>
       </el-form-item>
       <el-form-item prop="password" label="密码：">
-        <el-input v-model="loginForm.passsword" />
+        <el-input v-model="loginForm.password" />
       </el-form-item>
       <el-form-item prop="onClick">
         <el-button type="primary" @click="onLogin" style="width: 100%">登录</el-button>

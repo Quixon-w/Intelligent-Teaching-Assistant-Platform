@@ -1,0 +1,41 @@
+.main-container{
+    display: flex;
+    height: 100%;
+    position: relative;
+}
+.sidebar{
+    width: 10%;
+    background-color: #304156;
+    height: 100%;
+    position: fixed;
+    font-size: 0;
+    z-index: 1001;
+    overflow: hidden;
+    -webkit-box-shadow: 2px 0 6px rgba(0,21,41,.35);
+    box-shadow: 2px 0 6px rgba(0,21,41,.35);
+}
+.header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 90%;
+    height: 7%;
+    margin-left: 10%;
+    font-size: 0;
+    background: #304156;
+}
+.main{
+    width: 90%;
+    height: 93%;
+    margin-left: 10%;
+}
+.menu{
+    background-color: #304156;
+    color: #F5F7FA;
+}
+.logo{
+    margin-right: 10px;
+}
+.el-tooltip__trigger:focus {
+    outline: none;
+}
