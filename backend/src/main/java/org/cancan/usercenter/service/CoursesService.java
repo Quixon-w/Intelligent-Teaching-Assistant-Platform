@@ -1,58 +1,21 @@
 package org.cancan.usercenter.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.cancan.usercenter.model.domain.Courses;
 
 /**
- * @author 洪
- * {@code @description} 针对表【courses】的数据库操作Service
- * {@code @createDate} 2025-06-21 09:06:32
- */
+* @author 洪
+* @description 针对表【courses】的数据库操作Service
+* @createDate 2025-06-21 09:06:32
+*/
 public interface CoursesService extends IService<Courses> {
 
     /**
      * 添加课程
-     *
      * @param courseName 课程名
-     * @param teacherId  老师id
+     * @param teacherId 老师id
      * @return 课程
      */
-    Courses addCourse(String courseName, String comment, Long teacherId);
+    Courses addCourse(String courseName, Long teacherId);
 
-    /**
-     * 判断是否是本老师在操作
-     *
-     * @param coursesId 课程id
-     * @param request   请求
-     * @return 是否是老师
-     */
-    Boolean isTeacher(Long coursesId, HttpServletRequest request);
-
-    /**
-     * 获取有效课程
-     *
-     * @param courseId 课程id
-     * @return 课程
-     */
-    Courses getValidCourseById(Long courseId);
-
-    /**
-     * 修改课程简介
-     *
-     * @param courseId 课程id
-     * @param comment  课程简介
-     * @return 是否成功
-     */
-    Boolean editComment(Long courseId, String comment);
-
-    /**
-     * 构建课程查询条件
-     *
-     * @param courseName  课程名
-     * @param teacherName 老师名字
-     * @return 查询条件
-     */
-    QueryWrapper<Courses> buildCourseQuery(String courseName, String teacherName);
 }

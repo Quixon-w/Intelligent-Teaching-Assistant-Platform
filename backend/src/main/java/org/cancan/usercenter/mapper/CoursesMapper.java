@@ -5,10 +5,10 @@ import org.cancan.usercenter.model.domain.Courses;
 
 /**
 * @author 洪
-* {@code @description} 针对表【courses】的数据库操作Mapper
-* {@code @createDate} 2025-06-21 09:06:32
-* {@code @Entity} generator.domain.Courses
- */
+* @description 针对表【courses】的数据库操作Mapper
+* @createDate 2025-06-21 09:06:32
+* @Entity generator.domain.Courses
+*/
 public interface CoursesMapper extends BaseMapper<Courses> {
 
 }

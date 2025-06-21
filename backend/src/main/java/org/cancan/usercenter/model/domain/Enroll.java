@@ -9,7 +9,7 @@ import java.util.Date;
 
 /**
  * 
- * {@code @TableName} enroll
+ * @TableName enroll
  */
 @TableName(value ="enroll")
 @Data

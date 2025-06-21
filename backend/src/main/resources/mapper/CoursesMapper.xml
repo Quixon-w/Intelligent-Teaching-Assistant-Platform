@@ -9,10 +9,9 @@
             <result property="name" column="name" />
             <result property="teacherId" column="teacher_id" />
             <result property="createTime" column="create_time" />
-            <result property="comment" column="comment" />
     </resultMap>
 
-<!--    <sql id="Base_Column_List">-->
-<!--        id,name,teacher_id,create_time,comment-->
-<!--    </sql>-->
+    <sql id="Base_Column_List">
+        id,name,teacher_id,create_time
+    </sql>
 </mapper>

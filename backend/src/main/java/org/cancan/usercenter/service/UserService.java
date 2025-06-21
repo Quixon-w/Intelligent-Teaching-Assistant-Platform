@@ -60,4 +60,12 @@ public interface UserService extends IService<User> {
      */
     void passwordUpdate(String oldPassword, String newPassword, Long id);
 
+    /**
+     * 获取当前用户
+     *
+     * @param request 请求
+     * @return 当前用户
+     */
+    User getCurrentUser(HttpServletRequest request);
+
 }

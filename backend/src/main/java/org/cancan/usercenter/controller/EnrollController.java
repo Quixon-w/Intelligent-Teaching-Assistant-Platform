@@ -18,7 +18,6 @@ import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Objects;
 
 import static org.cancan.usercenter.constant.UserConstant.*;
@@ -29,7 +28,8 @@ import static org.cancan.usercenter.constant.UserConstant.*;
  * @author 洪
  */
 @RestController
-@RequestMapping("/enroll")
+@RequestMapping("/course")
+@CrossOrigin
 @Slf4j
 @Tag(name = "body参数")
 public class EnrollController {
@@ -43,7 +43,7 @@ public class EnrollController {
     @Resource
     private EnrollService enrollService;
 
-    @PostMapping("/")
+    @PostMapping("/enroll")
     @Operation(summary = "学生选课")
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true),
@@ -53,9 +53,6 @@ public class EnrollController {
             throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
         }
         User currentUser = userService.getCurrentUser(request);
-        if (currentUser.getUserRole() != STUDENT_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "只有学生可以选课");
-        }
         return ResultUtils.success(enrollService.enroll(courseId, currentUser.getId()));
     }
 
@@ -72,62 +69,18 @@ public class EnrollController {
         // 获取当前用户
         User currentUser = userService.getCurrentUser(request);
         // 获取课程信息
-        Courses courses = coursesService.getValidCourseById(courseId);
+        Courses courses = coursesService.getById(courseId);
+        if (courses == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "课程不存在");
+        }
         // 判断退课权限
         if (
                 !Objects.equals(currentUser.getId(), studentId) &&
-                        !Objects.equals(currentUser.getId(), courses.getTeacherId()) &&
-                        currentUser.getUserRole() != ADMIN_ROLE
+                !Objects.equals(currentUser.getId(), courses.getTeacherId()) &&
+                currentUser.getUserRole() != ADMIN_ROLE
         ) {
             throw new BusinessException(ErrorCode.NO_AUTH, "没有权限");
         }
         return ResultUtils.success(enrollService.dismiss(courseId, studentId));
-    }
-
-    @GetMapping("/list/student")
-    @Operation(summary = "查看某学生的所有选课")
-    @Parameters({
-            @Parameter(name = "studentId", description = "学生id", required = true)
-    })
-    public BaseResponse<List<Courses>> listCourses(@RequestParam Long studentId, HttpServletRequest request) {
-        if (studentId == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "学生ID不能为空");
-        }
-        User currentUser = userService.getCurrentUser(request);
-        if (currentUser.getUserRole() == TEACHER_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "只有学生可以选课");
-        }
-        if (!Objects.equals(currentUser.getId(), studentId) && currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
-        }
-        List<Courses> coursesList = enrollService.getCoursesByStudentId(studentId);
-        if (coursesList == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "学生无选课记录");
-        }
-        return ResultUtils.success(coursesList);
-    }
-
-    @GetMapping("/list/course")
-    @Operation(summary = "查看某课程的所有选课学生")
-    @Parameters({
-            @Parameter(name = "courseId", description = "课程id", required = true)
-    })
-    public BaseResponse<List<User>> listStudents(@RequestParam Long courseId, HttpServletRequest request) {
-        if (courseId == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
-        }
-        User currentUser = userService.getCurrentUser(request);
-        if (currentUser.getUserRole() != TEACHER_ROLE && currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "只有老师可以查看");
-        }
-        Courses course = coursesService.getById(courseId);
-        if (!Objects.equals(currentUser.getId(), course.getTeacherId()) && currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
-        }
-        List<User> studentsList = enrollService.getStudentsByCourseId(courseId);
-        if (studentsList == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "该课无选课学生");
-        }
-        return ResultUtils.success(studentsList);
     }
 }

@@ -14,13 +14,12 @@ import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.UserService;
 import org.cancan.usercenter.mapper.UserMapper;
 import org.cancan.usercenter.utils.RedisUtil;
+import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
+import org.springframework.util.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.cancan.usercenter.constant.UserConstant.*;
 
@@ -55,18 +54,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码过短");
         }
         // 账户不能包含特殊字符
-        String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
-        Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
-        if (matcher.find()) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号包含特殊字符");
-        }
+        SpecialCode.validateCode(userAccount);
         // 密码和校验密码相同
         if (!userPassword.equals(checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "校验失败");
         }
         // 账户不能重复
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("userAccount", userAccount);
+        queryWrapper.eq("user_account", userAccount);
         long count = userMapper.selectCount(queryWrapper);
         if (count > 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号重复");
@@ -97,17 +92,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return null;
         }
         // 账户不能包含特殊字符
-        String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
-        Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
-        if (matcher.find()) {
-            return null;
-        }
+        SpecialCode.validateCode(userAccount);
         // 对密码进行加密
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes(StandardCharsets.UTF_8));
         // 查询用户是否存在
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("userAccount", userAccount);
-        queryWrapper.eq("userPassword", encryptPassword);
+        queryWrapper.eq("user_account", userAccount);
+        queryWrapper.eq("user_password", encryptPassword);
         User user = userMapper.selectOne(queryWrapper);
         // 用户不存在
         if (user == null) {
@@ -136,17 +127,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         ) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "性别参数错误");
         }
-        if (
-                user.getUserRole() != null
-                        && user.getUserRole() != STUDENT_ROLE
-                        && user.getUserRole() != TEACHER_ROLE
-        ) {
+        if (user.getUserRole() != STUDENT_ROLE && user.getUserRole() != TEACHER_ROLE) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户角色参数错误");
         }
         // 脱敏，仅返回部分用户信息
         User safetyUser = getSafetyUser(user);
         // 更新用户信息
         userMapper.updateById(safetyUser);
+        // 将用户信息更新到 Redis
+        String sessionId = request.getSession().getId(); // 使用 session ID 作为 Redis 的 key
+        redisUtil.set(sessionId, JSON.toJSONString(safetyUser), 3600, TimeUnit.SECONDS); // 1小时过期
 
         return safetyUser;
     }
@@ -196,6 +186,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 对密码进行加密
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + newPassword).getBytes(StandardCharsets.UTF_8));
         updateWrapper.eq("id", id).set("userPassword", encryptPassword);
+    }
+
+    /**
+     * @param request 请求
+     * @return 当前用户
+     */
+    @Override
+    public User getCurrentUser(HttpServletRequest request) {
+        String userJson = redisUtil.get(request.getSession().getId());
+        if (userJson == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        User currentUser = JSON.parseObject(userJson, User.class);
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        return currentUser;
     }
 }
 

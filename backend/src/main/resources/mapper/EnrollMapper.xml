@@ -12,15 +12,7 @@
             <result property="startTime" column="start_time" />
     </resultMap>
 
-<!--    <sql id="Base_Column_List">-->
-<!--        id,courses_id,student_id,final_score,start_time-->
-<!--    </sql>-->
-
-    <select id="selectCourseIdsByStudentId" resultType="java.lang.Long">
-        select courses_id from enroll where student_id = #{studentId}
-    </select>
-    <select id="selectStudentIdsByCourseId" resultType="java.lang.Long">
-        select student_id from enroll where courses_id = #{courseId}
-    </select>
-
+    <sql id="Base_Column_List">
+        id,courses_id,student_id,final_score,start_time
+    </sql>
 </mapper>
