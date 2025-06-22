@@ -7,7 +7,7 @@ import TeacherAside from '@/components/asides/TeacherAside.vue'
 import { onExit } from '@/api/dashboard.js'
 import StudentAside from '@/components/asides/StudentAside.vue'
 const router = useRouter();
-const role="admin";
+const role="teacher";
 const handleCommand = (command) => {
   if (command === 'onExit') {
     onExit().then(res=>{
