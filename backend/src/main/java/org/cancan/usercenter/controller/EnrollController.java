@@ -1,5 +1,6 @@
 package org.cancan.usercenter.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -11,14 +12,18 @@ import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.mapper.CoursesMapper;
 import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Queue;
 
 import static org.cancan.usercenter.constant.UserConstant.*;
 
@@ -28,7 +33,7 @@ import static org.cancan.usercenter.constant.UserConstant.*;
  * @author 洪
  */
 @RestController
-@RequestMapping("/course")
+@RequestMapping("/enroll")
 @CrossOrigin
 @Slf4j
 @Tag(name = "body参数")
@@ -42,8 +47,10 @@ public class EnrollController {
 
     @Resource
     private EnrollService enrollService;
+    @Autowired
+    private CoursesMapper coursesMapper;
 
-    @PostMapping("/enroll")
+    @PostMapping("/")
     @Operation(summary = "学生选课")
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true),
@@ -53,6 +60,9 @@ public class EnrollController {
             throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
         }
         User currentUser = userService.getCurrentUser(request);
+        if (currentUser.getUserRole() == TEACHER_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有学生可以选课");
+        }
         return ResultUtils.success(enrollService.enroll(courseId, currentUser.getId()));
     }
 
@@ -82,5 +92,46 @@ public class EnrollController {
             throw new BusinessException(ErrorCode.NO_AUTH, "没有权限");
         }
         return ResultUtils.success(enrollService.dismiss(courseId, studentId));
+    }
+
+    @PostMapping("/list/student")
+    @Operation(summary = "查看某学生的所有选课")
+    public BaseResponse<List<Courses>> listCourses(@RequestParam Long studentId, HttpServletRequest request) {
+        if (studentId == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "学生ID不能为空");
+        }
+        User currentUser = userService.getCurrentUser(request);
+        if (currentUser.getUserRole() != STUDENT_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有学生可以选课");
+        }
+        if (!Objects.equals(currentUser.getId(), studentId)) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
+        }
+        List<Courses> coursesList = enrollService.getCoursesByStudentId(studentId);
+        if (coursesList == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "学生无选课记录");
+        }
+        return ResultUtils.success(coursesList);
+    }
+
+    @PostMapping("/list/course")
+    @Operation(summary = "查看某课程的所有选课学生")
+    public BaseResponse<List<User>> listStudents(@RequestParam Long courseId, HttpServletRequest request) {
+        if (courseId == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
+        }
+        User currentUser = userService.getCurrentUser(request);
+        if (currentUser.getUserRole() != TEACHER_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有老师可以查看");
+        }
+        Courses course = coursesService.getById(courseId);
+        if (!Objects.equals(currentUser.getId(), course.getTeacherId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
+        }
+        List<User> studentsList = enrollService.getStudentsByCourseId(courseId);
+        if (studentsList == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "该课无选课学生");
+        }
+        return ResultUtils.success(studentsList);
     }
 }

@@ -24,8 +24,9 @@ import java.util.concurrent.TimeUnit;
 import static org.cancan.usercenter.constant.UserConstant.*;
 
 /**
-* @author 洪
-*/
+ * @author 洪
+ * {@code @description} 针对表【users】的数据库操作Service实现
+ */
 @Service
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {

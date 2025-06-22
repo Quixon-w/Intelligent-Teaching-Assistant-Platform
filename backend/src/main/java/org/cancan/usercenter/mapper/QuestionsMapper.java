@@ -5,10 +5,10 @@ import org.cancan.usercenter.model.domain.Questions;
 
 /**
 * @author 洪
-* {@code @description} 针对表【questions】的数据库操作Mapper
-* {@code @createDate} 2025-06-22 10:55:25
-* {@code @Entity} generator.domain.Questions
- */
+* @description 针对表【questions】的数据库操作Mapper
+* @createDate 2025-06-22 10:55:25
+* @Entity generator.domain.Questions
+*/
 public interface QuestionsMapper extends BaseMapper<Questions> {
 
 }
