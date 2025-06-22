@@ -3,6 +3,8 @@ package org.cancan.usercenter.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.cancan.usercenter.model.domain.Enroll;
 
+import java.util.List;
+
 /**
 * @author 洪
 * @description 针对表【enrollments】的数据库操作Mapper
@@ -11,6 +13,9 @@ import org.cancan.usercenter.model.domain.Enroll;
 */
 public interface EnrollMapper extends BaseMapper<Enroll> {
 
+    List<Long> selectCourseIdsByStudentId(Long studentId);
+
+    List<Long> selectStudentIdsByCourseId(Long courseId);
 }
 
 

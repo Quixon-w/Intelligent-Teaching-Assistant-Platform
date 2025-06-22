@@ -11,9 +11,9 @@ import org.springframework.stereotype.Service;
 
 /**
 * @author 洪
-* @description 针对表【courses】的数据库操作Service实现
-* @createDate 2025-06-21 09:06:32
-*/
+* {@code @description} 针对表【courses】的数据库操作Service实现
+* {@code @createDate} 2025-06-21 09:06:32
+ */
 @Service
 public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> implements CoursesService{
 

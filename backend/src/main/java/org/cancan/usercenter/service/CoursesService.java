@@ -5,9 +5,9 @@ import org.cancan.usercenter.model.domain.Courses;
 
 /**
 * @author 洪
-* @description 针对表【courses】的数据库操作Service
-* @createDate 2025-06-21 09:06:32
-*/
+* {@code @description} 针对表【courses】的数据库操作Service
+* {@code @createDate} 2025-06-21 09:06:32
+ */
 public interface CoursesService extends IService<Courses> {
 
     /**
