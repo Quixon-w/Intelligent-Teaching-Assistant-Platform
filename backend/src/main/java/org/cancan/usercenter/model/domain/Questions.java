@@ -7,7 +7,7 @@ import lombok.Data;
 
 /**
  * 
- * @TableName questions
+ * {@code @TableName} questions
  */
 @TableName(value ="questions")
 @Data
