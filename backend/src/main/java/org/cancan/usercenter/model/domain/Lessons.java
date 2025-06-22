@@ -8,9 +8,10 @@ import lombok.Data;
 import java.util.Date;
 
 /**
+ * 
  * {@code @TableName} lessons
  */
-@TableName(value = "lessons")
+@TableName(value ="lessons")
 @Data
 public class Lessons {
     /**
@@ -34,4 +35,8 @@ public class Lessons {
      */
     private Date createTime;
 
+    /**
+     * 
+     */
+    private Integer fileExist;
 }
