@@ -1,9 +1,10 @@
 <script setup>
 
+import AdminUsers from '@/components/role/admin/AdminUsers.vue'
 </script>
 
 <template>
-  <el-text>欢迎，admin！管理用户</el-text>
+  <AdminUsers/>
 </template>
 
 <style scoped>

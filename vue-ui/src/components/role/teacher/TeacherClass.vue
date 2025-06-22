@@ -1,14 +1,48 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import {useRouter} from 'vue-router'
 const router = useRouter();
-const teacherClass=ref([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]);
+const teacherClass=ref([]);
 const toClass=(id)=>{
   router.push('/dashboard/teacher/class/'+id);
 }
+const getData=()=>{
+  const data=ref([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20])
+  teacherClass.value=data.value.slice((tableSetting.value.currentPage-1)*tableSetting.value.pageSize,tableSetting.value.currentPage*tableSetting.value.pageSize)
+}
+const tableSetting=ref({
+  role:'',
+  total:40,
+  pageSize:10,
+  currentPage:1,
+})
+const handleSizeChange=(number)=>{
+  console.log(number);
+  getData()
+}
+const handleCurrentChange=(number)=>{
+  console.log(number);
+  getData()
+}
+onMounted(()=>{
+  getData()
+})
 </script>
 
 <template>
+  <div>
+    <el-form :model="tableSetting" label-width="auto" style="max-width: 600px">
+      <el-form-item label="课程id">
+        <el-input v-model="tableSetting.role"></el-input>
+      </el-form-item>
+      <el-form-item label="每页大小">
+        <el-input v-model="tableSetting.pageSize"></el-input>
+      </el-form-item>
+      <el-form-item label="当前页">
+        <el-input v-model="tableSetting.currentPage"></el-input>
+      </el-form-item>
+    </el-form>
+  </div>
   <div class="classTable">
     <div class="classOfTeacher" v-for="id in teacherClass" @click="toClass(id)">
       <img src="@/assets/images/login-background.jpg" alt=""/>
@@ -16,6 +50,20 @@ const toClass=(id)=>{
         <el-text>{{ id }}</el-text>
       </div>
     </div>
+  </div>
+  <div>
+    <el-pagination
+      v-model:current-page="tableSetting.currentPage"
+      v-model:page-size="tableSetting.pageSize"
+      v-model:total="tableSetting.total"
+      :page-sizes="[5, 10, 20, 40]"
+      :size="'default'"
+      :disabled="disabled"
+      :background="background"
+      layout="total, sizes, prev, pager, next, jumper"
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
+    />
   </div>
 </template>
 
