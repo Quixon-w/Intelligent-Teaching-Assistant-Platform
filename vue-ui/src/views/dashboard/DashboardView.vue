@@ -2,12 +2,12 @@
 import { RouterView } from 'vue-router'
 import {useRouter} from 'vue-router'
 import { ElMessage } from 'element-plus'
-import CommonAside from '@/components/asides/commonAside.vue'
-import TeacherAside from '@/components/asides/teacherAside.vue'
+import CommonAside from '@/components/asides/AdminAside.vue'
+import TeacherAside from '@/components/asides/TeacherAside.vue'
 import { onExit } from '@/api/dashboard.js'
-import StudentAside from '@/components/asides/studentAside.vue'
+import StudentAside from '@/components/asides/StudentAside.vue'
 const router = useRouter();
-const role="student";
+const role="admin";
 const handleCommand = (command) => {
   if (command === 'onExit') {
     onExit().then(res=>{
@@ -29,24 +29,27 @@ const handleCommand = (command) => {
 <template>
   <el-container class="main-container">
     <el-aside class="sidebar">
-      <span v-if="role==='test'"><CommonAside/></span>
+      <span v-if="role==='admin'"><CommonAside/></span>
       <span v-else-if="role==='teacher'"><TeacherAside/></span>
       <span v-else-if="role==='student'"><StudentAside/></span>
     </el-aside>
     <el-container>
       <el-header class="header">
         <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="50" height="50"/>
-        <el-dropdown @command="handleCommand">
-        <span>
-          <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="50" height="50"/>
-        </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="toUserControl">用户中心</el-dropdown-item>
-              <el-dropdown-item command="onExit">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <div>
+          <el-text style="color: #B0C4DE;font-size: 30px">{{role}}</el-text>
+          <el-dropdown @command="handleCommand">
+            <span>
+              <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="50" height="50"/>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="toUserControl">用户中心</el-dropdown-item>
+                <el-dropdown-item command="onExit">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
       </el-header>
       <el-main class="main">
         <Router-view />
