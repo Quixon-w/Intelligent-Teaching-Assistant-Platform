@@ -1,37 +1,33 @@
 package org.cancan.usercenter.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.cancan.usercenter.model.domain.User;
-import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
- *
  * 用户服务
  *
-* @author 洪
-*/
+ * @author 洪
+ */
 public interface UserService extends IService<User> {
 
     /**
-     *
-     * @param userAccount 用户账户
-     * @param userPassword 用户密码
+     * @param userAccount   用户账户
+     * @param userPassword  用户密码
      * @param checkPassword 校验密码
      * @return 用户id
      */
     long userRegister(String userAccount, String userPassword, String checkPassword);
 
     /**
-     *
-     * @param userAccount 用户账户
+     * @param userAccount  用户账户
      * @param userPassword 用户密码
      * @return 脱敏后的用户信息
      */
     User userLogin(String userAccount, String userPassword, HttpServletRequest request);
 
     /**
-     *
-     * @param  user  用户
+     * @param user 用户
      * @return 脱敏后的用户信息
      */
     User userUpdate(User user, HttpServletRequest request);
@@ -56,9 +52,10 @@ public interface UserService extends IService<User> {
      *
      * @param oldPassword 旧密码
      * @param newPassword 新密码
-     * @param id 用户id
+     * @param userId      欲更新用户的id
+     * @param currentUser 当前用户
      */
-    void passwordUpdate(String oldPassword, String newPassword, Long id);
+    void passwordUpdate(String oldPassword, String newPassword, Long userId, User currentUser);
 
     /**
      * 获取当前用户

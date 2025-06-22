@@ -54,7 +54,7 @@ public class EnrollController {
             throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
         }
         User currentUser = userService.getCurrentUser(request);
-        if (currentUser.getUserRole() == TEACHER_ROLE) {
+        if (currentUser.getUserRole() != STUDENT_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "只有学生可以选课");
         }
         return ResultUtils.success(enrollService.enroll(courseId, currentUser.getId()));
@@ -88,17 +88,20 @@ public class EnrollController {
         return ResultUtils.success(enrollService.dismiss(courseId, studentId));
     }
 
-    @PostMapping("/list/student")
+    @GetMapping("/list/student")
     @Operation(summary = "查看某学生的所有选课")
+    @Parameters({
+            @Parameter(name = "studentId", description = "学生id", required = true)
+    })
     public BaseResponse<List<Courses>> listCourses(@RequestParam Long studentId, HttpServletRequest request) {
         if (studentId == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "学生ID不能为空");
         }
         User currentUser = userService.getCurrentUser(request);
-        if (currentUser.getUserRole() != STUDENT_ROLE) {
+        if (currentUser.getUserRole() == TEACHER_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "只有学生可以选课");
         }
-        if (!Objects.equals(currentUser.getId(), studentId)) {
+        if (!Objects.equals(currentUser.getId(), studentId) && currentUser.getUserRole() != ADMIN_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
         }
         List<Courses> coursesList = enrollService.getCoursesByStudentId(studentId);
@@ -108,18 +111,21 @@ public class EnrollController {
         return ResultUtils.success(coursesList);
     }
 
-    @PostMapping("/list/course")
+    @GetMapping("/list/course")
     @Operation(summary = "查看某课程的所有选课学生")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程id", required = true)
+    })
     public BaseResponse<List<User>> listStudents(@RequestParam Long courseId, HttpServletRequest request) {
         if (courseId == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
         }
         User currentUser = userService.getCurrentUser(request);
-        if (currentUser.getUserRole() != TEACHER_ROLE) {
+        if (currentUser.getUserRole() != TEACHER_ROLE && currentUser.getUserRole() != ADMIN_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "只有老师可以查看");
         }
         Courses course = coursesService.getById(courseId);
-        if (!Objects.equals(currentUser.getId(), course.getTeacherId())) {
+        if (!Objects.equals(currentUser.getId(), course.getTeacherId()) && currentUser.getUserRole() != ADMIN_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
         }
         List<User> studentsList = enrollService.getStudentsByCourseId(courseId);

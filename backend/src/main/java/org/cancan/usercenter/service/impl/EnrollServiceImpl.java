@@ -17,9 +17,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
-* @author 洪
-* {@code @description} 针对表【enrollments】的数据库操作Service实现
-* {@code @createDate} 2025-06-21 11:21:31
+ * @author 洪
+ * {@code @description} 针对表【enrollments】的数据库操作Service实现
+ * {@code @createDate} 2025-06-21 11:21:31
  */
 @Service
 public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> implements EnrollService {
@@ -43,13 +43,15 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
         QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("courses_id", courseId);
         queryWrapper.eq("student_id", studentId);
-
-        return enrollMapper.delete(queryWrapper) > 0;
+        if (!enrollMapper.exists(queryWrapper)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该学生未选择该课程");
+        }
+        return this.remove(queryWrapper);
     }
 
     /**
-     * @param courseId 课程id
-     * @param studentId       学生id
+     * @param courseId  课程id
+     * @param studentId 学生id
      * @return 选课结果
      */
     @Override

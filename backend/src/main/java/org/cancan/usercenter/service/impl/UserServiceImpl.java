@@ -10,13 +10,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.mapper.UserMapper;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.UserService;
-import org.cancan.usercenter.mapper.UserMapper;
 import org.cancan.usercenter.utils.RedisUtil;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
-import org.springframework.util.*;
+import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
@@ -89,7 +89,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (userAccount.length() < 4) {
             return null;
         }
-        if (userPassword.length() < 8 ) {
+        if (userPassword.length() < 8) {
             return null;
         }
         // 账户不能包含特殊字符
@@ -176,17 +176,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     /**
      * @param oldPassword 老密码
      * @param newPassword 新密码
-     * @param id          用户id
+     * @param userId      欲更新用户的id
+     * @param currentUser 当前操作用户
      */
     @Override
-    public void passwordUpdate(String oldPassword, String newPassword, Long id) {
+    public void passwordUpdate(String oldPassword, String newPassword, Long userId, User currentUser) {
         if (newPassword.length() < 8) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码过短");
         }
+        if (currentUser.getUserRole() != ADMIN_ROLE) {
+            // 校验旧密码正确
+            String encryptOldPassword = DigestUtils.md5DigestAsHex((SALT + oldPassword).getBytes(StandardCharsets.UTF_8));
+            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("id", userId).eq("userPassword", encryptOldPassword);
+            if (!userMapper.exists(queryWrapper)) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "旧密码错误");
+            }
+        }
+        // 更新密码
         UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
-        // 对密码进行加密
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + newPassword).getBytes(StandardCharsets.UTF_8));
-        updateWrapper.eq("id", id).set("userPassword", encryptPassword);
+        updateWrapper.eq("id", userId).set("userPassword", encryptPassword);
     }
 
     /**
@@ -197,7 +207,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User getCurrentUser(HttpServletRequest request) {
         String userJson = redisUtil.get(request.getSession().getId());
         if (userJson == null) {
-            throw new BusinessException(ErrorCode.NO_AUTH);
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
         User currentUser = JSON.parseObject(userJson, User.class);
         if (currentUser == null) {
