@@ -9,7 +9,7 @@ import java.util.Date;
 
 /**
  * 
- * @TableName courses
+ * {@code @TableName} courses
  */
 @TableName(value ="courses")
 @Data

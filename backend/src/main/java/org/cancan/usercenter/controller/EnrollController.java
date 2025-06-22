@@ -1,6 +1,5 @@
 package org.cancan.usercenter.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -12,18 +11,15 @@ import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
-import org.cancan.usercenter.mapper.CoursesMapper;
 import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Queue;
 
 import static org.cancan.usercenter.constant.UserConstant.*;
 
@@ -47,8 +43,6 @@ public class EnrollController {
 
     @Resource
     private EnrollService enrollService;
-    @Autowired
-    private CoursesMapper coursesMapper;
 
     @PostMapping("/")
     @Operation(summary = "学生选课")
