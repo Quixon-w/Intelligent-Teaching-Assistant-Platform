@@ -1,10 +1,9 @@
 <script setup>
 
-import UserCentral from '@/components/user/UserCentral.vue'
 </script>
 
 <template>
-<UserCentral/>
+  <el-text>欢迎，admin！管理用户</el-text>
 </template>
 
 <style scoped>

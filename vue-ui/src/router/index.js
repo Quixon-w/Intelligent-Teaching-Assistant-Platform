@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import RouterReplaceComp from '@/utils/RouteReplaceSelf.js'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,38 +34,62 @@ const router = createRouter({
           redirect: 'dashboard/main',
         },
         {
-          path: 'about',
-          name: 'about',
-          // route level code-splitting
-          // this generates a separate chunk (About.[hash].js) for this route
-          // which is lazy-loaded when the route is visited.
-          component: () => import('../views/AboutView.vue'),
-        },
-        {
           path: 'user/central',
           name: 'user/central',
           component: () => import('../views/user/UserCentralView.vue'),
         },
         {
-          path: 'teacher/class',
-          name: 'teacher/class',
-          component: () => import('../views/role/teacher/TeacherClassView.vue'),
+          path: 'admin',
+          name: 'admin',
+          component: RouterReplaceComp(() => import('../views/role/admin/AdminDashboardView.vue')),
+          children: [
+            {
+              path: 'class',
+              name: 'adminClass',
+              component: () => import('../views/role/admin/AdminClassView.vue'),
+            },
+            {
+              path: 'users',
+              name: 'adminUsers',
+              component: () => import('../views/role/admin/AdminUsersView.vue'),
+            },
+          ],
         },
         {
-          path: 'teacher/class/:id',
-          name: 'teacher/class/id',
-          component: () => import('../views/role/teacher/TeacherClassDetailView.vue'),
+          path: 'teacher',
+          name: 'teacher',
+          component: RouterReplaceComp(()=> import('../views/role/teacher/TeacherDashboardView.vue')),
+          children:[
+            {
+              path: 'class',
+              name: 'class',
+              component: () => import('../views/role/teacher/TeacherClassView.vue'),
+            },
+            {
+              path: 'class/:id',
+              name: 'class/id',
+              component: () => import('../views/role/teacher/TeacherClassDetailView.vue'),
+            },
+          ]
         },
         {
-          path: 'student/class',
-          name: 'student/class',
-          component: () => import('../views/role/student/StudentClassView.vue'),
+          path: 'student',
+          name: 'student',
+          component: RouterReplaceComp(() => import('../views/role/student/StudentDashboardView.vue')),
+          children:[
+            {
+              path: 'class',
+              name: 'class',
+              component: () => import('../views/role/student/StudentClassView.vue'),
+            },
+            {
+              path: 'class/:id',
+              name: 'class/id',
+              component: () => import('../views/role/student/StudentClassDetailView.vue'),
+            },
+          ]
         },
-        {
-          path: 'student/class/:id',
-          name: 'student/class/id',
-          component: () => import('../views/role/student/StudentClassDetailView.vue'),
-        },
+
       ]
     }
   ],

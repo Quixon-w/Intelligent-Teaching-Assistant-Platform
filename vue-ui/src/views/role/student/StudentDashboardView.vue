@@ -1,10 +1,9 @@
 <script setup>
 
-import UserCentral from '@/components/user/UserCentral.vue'
 </script>
 
 <template>
-<UserCentral/>
+  <el-text>Welocme!stu!!!!!</el-text>
 </template>
 
 <style scoped>
