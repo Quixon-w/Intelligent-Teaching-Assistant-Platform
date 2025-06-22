@@ -7,7 +7,7 @@ import TeacherAside from '@/components/asides/TeacherAside.vue'
 import { onExit } from '@/api/dashboard.js'
 import StudentAside from '@/components/asides/StudentAside.vue'
 const router = useRouter();
-const role="student";
+const role="admin";
 const handleCommand = (command) => {
   if (command === 'onExit') {
     onExit().then(res=>{
@@ -29,7 +29,7 @@ const handleCommand = (command) => {
 <template>
   <el-container class="main-container">
     <el-aside class="sidebar">
-      <span v-if="role==='test'"><CommonAside/></span>
+      <span v-if="role==='admin'"><CommonAside/></span>
       <span v-else-if="role==='teacher'"><TeacherAside/></span>
       <span v-else-if="role==='student'"><StudentAside/></span>
     </el-aside>
