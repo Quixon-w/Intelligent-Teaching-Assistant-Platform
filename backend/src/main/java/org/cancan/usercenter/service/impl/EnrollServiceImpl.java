@@ -6,20 +6,32 @@ import jakarta.annotation.Resource;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.mapper.EnrollMapper;
+import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Enroll;
+import org.cancan.usercenter.model.domain.User;
+import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
+import org.cancan.usercenter.service.UserService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
 * @author 洪
-* @description 针对表【enrollments】的数据库操作Service实现
-* @createDate 2025-06-21 11:21:31
-*/
+* {@code @description} 针对表【enrollments】的数据库操作Service实现
+* {@code @createDate} 2025-06-21 11:21:31
+ */
 @Service
 public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> implements EnrollService {
 
     @Resource
     private EnrollMapper enrollMapper;
+
+    @Resource
+    private CoursesService coursesService;
+
+    @Resource
+    private UserService userService;
 
     /**
      * @param courseId  课程id
@@ -54,6 +66,27 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
         this.save(enroll);
         return true;
     }
+
+    /**
+     * @param studentId 学生id
+     * @return 课程列表
+     */
+    @Override
+    public List<Courses> getCoursesByStudentId(Long studentId) {
+        List<Long> courseIds = enrollMapper.selectCourseIdsByStudentId(studentId);
+        return coursesService.listByIds(courseIds);
+    }
+
+    /**
+     * @param courseId 课程id
+     * @return 学生列表
+     */
+    @Override
+    public List<User> getStudentsByCourseId(Long courseId) {
+        List<Long> studentIds = enrollMapper.selectStudentIdsByCourseId(courseId);
+        return userService.listByIds(studentIds);
+    }
+
 }
 
 

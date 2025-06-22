@@ -5,38 +5,41 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
-import java.util.Date;
-
 /**
  * 
- * @TableName courses
+ * @TableName questions
  */
-@TableName(value ="courses")
+@TableName(value ="questions")
 @Data
-public class Courses {
+public class Questions {
     /**
-     * 课程ID
+     * 习题ID
      */
     @TableId(type = IdType.AUTO)
-    private Long id;
+    private Long questionId;
 
     /**
-     * 课程名称
+     * 知识点
      */
-    private String name;
+    private String knowledge;
 
     /**
-     * 教师ID
+     * 题目
      */
-    private Long teacherId;
+    private String question;
 
     /**
-     * 创建时间
+     * 选项
      */
-    private Date createTime;
+    private Object options;
 
     /**
-     * 课程简介
+     * 答案
      */
-    private String comment;
+    private String answer;
+
+    /**
+     * 解析
+     */
+    private String explain;
 }
