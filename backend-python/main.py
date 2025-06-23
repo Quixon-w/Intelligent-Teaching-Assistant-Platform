@@ -62,7 +62,7 @@ from utils.rwkv import *
 from utils.torch import *
 from utils.ngrok import *
 from utils.log import log_middleware
-from routes import completion, config, state_cache, file_process, upload, search, create
+from routes import completion, config, state_cache, file_process, upload, search, create, exercise, download
 import global_var
 
 
@@ -89,6 +89,8 @@ app.include_router(state_cache.router)
 app.include_router(upload.router)
 app.include_router(search.router)
 app.include_router(create.router)
+app.include_router(exercise.router)
+app.include_router(download.router)
 
 
 @app.post("/exit", tags=["Root"])

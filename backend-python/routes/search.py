@@ -1,85 +1,158 @@
 import os
+import pickle
+import numpy as np
+import faiss
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Union, Optional
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
 
 router = APIRouter()
 
 
 class SearchBody(BaseModel):
     query: str = Field(..., description="查询内容")
-    session_id: str = Field(..., description="会话ID")
+    sessionId: str = Field(..., description="会话ID")
     isTeacher: bool = Field(False, description="是否为教师模式")
-    courseID: Union[str, None] = Field(None, description="课程ID，教师模式下必填")
-    lessonNum: Union[str, None] = Field(None, description="课时号，教师模式下必填")
-    top_k: int = Field(2, description="返回结果数量", ge=1, le=10)
+    courseId: Union[str, None] = Field(None, description="课程ID，已有文件查询模式下必填")
+    lessonNum: Union[str, None] = Field(None, description="课时号，已有文件查询模式下必填")
+    topK: int = Field(2, description="返回结果数量", ge=1, le=10)
+    searchMode: str = Field("existing", description="搜索模式：existing(已有文件查询) 或 uploaded(用户上传文件查询)")
 
     model_config = {
         "json_schema_extra": {
             "example": {
                 "query": "什么是微积分？",
-                "session_id": "session123",
+                "sessionId": "session123",
                 "isTeacher": False,
-                "courseID": None,
-                "lessonNum": None,
-                "top_k": 2
+                "courseId": "MATH101",
+                "lessonNum": "lesson01",
+                "topK": 2,
+                "searchMode": "existing"
             }
         }
     }
 
 
-def search_knowledge_db(session_id, query, isTeacher=False, courseID=None, lessonNum=None, top_k=2):
+def load_embeddings_model():
     """
-    从知识库中搜索相关内容
+    加载文本嵌入模型
     """
-    # 根据isTeacher决定知识库路径
-    if isTeacher:
-        # 教师模式：从Teachers目录下的session_id/courseID/lessonNum文件夹中搜索
-        if not courseID:
-            print("教师模式下courseID不能为空")
+    try:
+        model = SentenceTransformer("/data-extend/wangqianxu/wqxspace/RWKV/model/m3e-base")
+        return model
+    except Exception as e:
+        print(f"加载嵌入模型失败: {e}")
+        return None
+
+
+def search_knowledge_db(sessionId, query, isTeacher=False, courseId=None, lessonNum=None, top_k=2, search_mode="existing"):
+    """
+    从知识库中搜索相关内容 - 使用直接的向量相似度查询
+    """
+    # 根据搜索模式和用户类型决定知识库路径
+    if search_mode == "uploaded":
+        # 用户上传文件查询模式 - 区分学生和教师
+        if isTeacher:
+            # 教师模式：从Teachers/sessionId/ask/vector_kb中搜索
+            vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{sessionId}/ask/vector_kb"
+        else:
+            # 学生模式：从Students/sessionId/ask/vector_kb中搜索
+            vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Students/{sessionId}/ask/vector_kb"
+    else:
+        # 已有文件查询模式 - 统一从Teachers目录下查找
+        if not courseId:
+            print("已有文件查询模式下courseId不能为空")
             return None
         if not lessonNum:
-            print("教师模式下lessonNum不能为空")
+            print("已有文件查询模式下lessonNum不能为空")
             return None
-        vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{session_id}/{courseID}/{lessonNum}/vector_kb"
-    else:
-        # 学生模式：从Students目录下的session_id文件夹中搜索
-        vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Students/{session_id}/vector_kb"
+        # 不管用户是教师还是学生，都从Teachers目录下查找
+        vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{sessionId}/{courseId}/{lessonNum}/vector_kb"
     
     if not os.path.exists(vector_kb_folder):
         print(f"知识库路径不存在: {vector_kb_folder}")
         return None
     
     try:
-        embeddings = HuggingFaceEmbeddings(model_name="/data-extend/wangqianxu/wqxspace/RWKV/model/m3e-base")
-        vectordb = FAISS.load_local(vector_kb_folder, embeddings)
+        # 加载嵌入模型
+        model = load_embeddings_model()
+        if model is None:
+            return "嵌入模型加载失败"
         
-        # 搜索
-        print(f"正在从知识库检索: {query}")
-        search_results_with_scores = vectordb.similarity_search_with_score(query, k=top_k)
+        # 加载FAISS索引
+        index_path = os.path.join(vector_kb_folder, "index.faiss")
+        metadata_path = os.path.join(vector_kb_folder, "index.pkl")
         
-        if search_results_with_scores:
-            # 将检索结果整合成一个文本块，处理编码问题
-            retrieved_contents = []
-            for result, _ in search_results_with_scores:
-                content = result.page_content
-                if isinstance(content, bytes):
-                    try:
-                        content = content.decode('utf-8')
-                    except UnicodeDecodeError:
-                        try:
-                            content = content.decode('gbk')
-                        except UnicodeDecodeError:
-                            content = content.decode('utf-8', errors='ignore')
-                retrieved_contents.append(content)
-            return "\n".join(retrieved_contents)
+        if not os.path.exists(index_path) or not os.path.exists(metadata_path):
+            print(f"FAISS索引文件不存在: {vector_kb_folder}")
+            return None
+        
+        # 读取FAISS索引
+        index = faiss.read_index(index_path)
+        
+        # 读取元数据
+        with open(metadata_path, 'rb') as f:
+            metadata = pickle.load(f)
+        
+        # 提取文档存储和ID映射
+        if isinstance(metadata, tuple) and len(metadata) >= 2:
+            docstore = metadata[0]
+            id_to_uuid = metadata[1]
         else:
-            return ""
+            print("元数据格式不正确")
+            return None
+        
+        # 对查询文本进行编码
+        query_embedding = model.encode([query])
+        
+        # 执行向量搜索
+        print(f"正在从知识库检索: {query}")
+        print(f"搜索模式: {search_mode}, 路径: {vector_kb_folder}")
+        
+        # 搜索最相似的向量
+        distances, indices = index.search(query_embedding, k=min(top_k, index.ntotal))
+        
+        # 提取搜索结果
+        retrieved_contents = []
+        for i, (distance, idx) in enumerate(zip(distances[0], indices[0])):
+            if idx < len(id_to_uuid):
+                doc_id = id_to_uuid[idx]
+                
+                # 从文档存储中获取内容
+                if hasattr(docstore, '_dict') and doc_id in docstore._dict:
+                    doc = docstore._dict[doc_id]
+                elif hasattr(docstore, 'docstore') and doc_id in docstore.docstore:
+                    doc = docstore.docstore[doc_id]
+                else:
+                    continue
+                
+                if hasattr(doc, 'page_content'):
+                    content = doc.page_content
+                    if isinstance(content, bytes):
+                        try:
+                            content = content.decode('utf-8')
+                        except UnicodeDecodeError:
+                            try:
+                                content = content.decode('gbk')
+                            except UnicodeDecodeError:
+                                content = content.decode('utf-8', errors='ignore')
+                    
+                    # 添加相似度分数信息（距离越小越相似）
+                    similarity_score = 1.0 / (1.0 + distance)  # 将距离转换为相似度
+                    content_with_score = f"[相似度: {similarity_score:.3f}] {content}"
+                    retrieved_contents.append(content_with_score)
+        
+        if retrieved_contents:
+            return "\n\n".join(retrieved_contents)
+        else:
+            return "未找到相关内容"
+            
     except Exception as e:
         print(f"搜索失败: {e}")
-        return ""
+        import traceback
+        traceback.print_exc()
+        return f"搜索过程中出现错误: {str(e)}"
 
 
 @router.post("/v1/search", tags=["Search"])
@@ -87,41 +160,56 @@ def search_knowledge_db(session_id, query, isTeacher=False, courseID=None, lesso
 async def search_knowledge(body: SearchBody):
     """
     搜索知识库内容
+    
+    支持两种搜索模式：
+    1. existing: 已有文件查询 - 根据课程和课时号查找对应的知识库
+    2. uploaded: 用户上传文件查询 - 查找用户上传到ask文件夹的文件对应的知识库
     """
-    # 验证教师模式下的courseID和lessonNum
-    if body.isTeacher and not body.courseID:
+    # 验证搜索模式
+    if body.searchMode not in ["existing", "uploaded"]:
         raise HTTPException(
-            status_code=400, 
-            detail="教师模式下courseID不能为空"
+            status_code=400,
+            detail="searchMode必须是 'existing' 或 'uploaded'"
         )
     
-    if body.isTeacher and body.courseID and not body.lessonNum:
-        raise HTTPException(
-            status_code=400, 
-            detail="教师模式下lessonNum不能为空"
-        )
+    # 验证已有文件查询模式下的必要参数
+    if body.searchMode == "existing":
+        if not body.courseId:
+            raise HTTPException(
+                status_code=400, 
+                detail="已有文件查询模式下courseId不能为空"
+            )
+        
+        if not body.lessonNum:
+            raise HTTPException(
+                status_code=400, 
+                detail="已有文件查询模式下lessonNum不能为空"
+            )
     
     # 执行搜索
     search_result = search_knowledge_db(
-        body.session_id, 
+        body.sessionId, 
         body.query, 
         body.isTeacher, 
-        body.courseID, 
+        body.courseId, 
         body.lessonNum, 
-        body.top_k
+        body.topK,
+        body.searchMode
     )
     
     if search_result is None:
         raise HTTPException(
             status_code=404,
-            detail="知识库不存在或courseID/lessonNum无效"
+            detail="知识库不存在或搜索失败"
         )
     
     return {
+        "success": True,
         "query": body.query,
-        "session_id": body.session_id,
+        "sessionId": body.sessionId,
         "isTeacher": body.isTeacher,
-        "courseID": body.courseID,
+        "courseId": body.courseId,
         "lessonNum": body.lessonNum,
-        "result": search_result if search_result else "未找到相关内容"
+        "searchMode": body.searchMode,
+        "result": search_result
     } 
