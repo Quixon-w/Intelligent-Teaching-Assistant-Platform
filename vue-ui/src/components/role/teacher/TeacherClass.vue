@@ -30,18 +30,16 @@ onMounted(()=>{
 </script>
 
 <template>
-  <div>
-    <el-form :model="tableSetting" label-width="auto" style="max-width: 600px">
+  <div style="display: flex;gap: 50px">
+    <el-form :model="tableSetting" label-width="auto" style="width: 600px">
       <el-form-item label="课程id">
         <el-input v-model="tableSetting.role"></el-input>
       </el-form-item>
-      <el-form-item label="每页大小">
-        <el-input v-model="tableSetting.pageSize"></el-input>
-      </el-form-item>
-      <el-form-item label="当前页">
-        <el-input v-model="tableSetting.currentPage"></el-input>
-      </el-form-item>
     </el-form>
+    <div>
+      <el-button>查询课程</el-button>
+      <el-button class="">创建课程</el-button>
+    </div>
   </div>
   <div class="classTable">
     <div class="classOfTeacher" v-for="id in teacherClass" @click="toClass(id)">
