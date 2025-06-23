@@ -1,0 +1,123 @@
+package org.cancan.usercenter.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.cancan.usercenter.common.BaseResponse;
+import org.cancan.usercenter.common.ErrorCode;
+import org.cancan.usercenter.common.ResultUtils;
+import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.model.domain.Courses;
+import org.cancan.usercenter.model.domain.User;
+import org.cancan.usercenter.service.CoursesService;
+import org.cancan.usercenter.service.UserService;
+import org.springframework.web.bind.annotation.*;
+
+import static org.cancan.usercenter.constant.UserConstant.TEACHER_ROLE;
+
+/**
+ * 课程接口
+ *
+ * @author 洪
+ */
+@RestController
+@RequestMapping("/course")
+@Slf4j
+@Tag(name = "body参数")
+public class CoursesController {
+
+    @Resource
+    private CoursesService coursesService;
+
+    @Resource
+    private UserService userService;
+
+    @GetMapping("/findOne")
+    @Operation(summary = "查找某个课程")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程id", required = true)
+    })
+    public BaseResponse<Courses> findOne(@RequestParam Long courseId) {
+        Courses courses = coursesService.getValidCourseById(courseId);
+        return ResultUtils.success(courses);
+    }
+
+    @GetMapping("/listPage")
+    @Operation(summary = "按页获取课程列表")
+    @Parameters({
+            @Parameter(name = "pageNum", description = "当前页码", required = true),
+            @Parameter(name = "pageSize", description = "每页条数", required = true),
+            @Parameter(name = "courseName", description = "课程名"),
+            @Parameter(name = "teacherName", description = "老师名字")
+    })
+    public BaseResponse<Page<Courses>> listPage(
+            @RequestParam Integer pageNum,
+            @RequestParam Integer pageSize,
+            @RequestParam(required = false) String courseName,
+            @RequestParam(required = false) String teacherName
+    ) {
+        // 校验参数
+        if (pageNum == null || pageNum <= 0 || pageSize == null || pageSize <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "分页参数非法");
+        }
+        // 筛选条件
+        QueryWrapper<Courses> queryWrapper = coursesService.buildCourseQuery(courseName, teacherName);
+        // 分页查询
+        Page<Courses> page = new Page<>(pageNum, pageSize);
+        Page<Courses> resultPage = coursesService.page(page, queryWrapper);
+        return ResultUtils.success(resultPage);
+    }
+
+    @PostMapping("/add")
+    @Operation(summary = "添加课程")
+    @Parameters({
+            @Parameter(name = "courseName", description = "课程名", required = true),
+            @Parameter(name = "comment", description = "课程描述")
+    })
+    public BaseResponse<Courses> addCourse(
+            @RequestParam String courseName,
+            @RequestParam(required = false) String comment,
+            HttpServletRequest request
+    ) {
+        User currentUser = userService.getCurrentUser(request);
+        // 仅老师可开课
+        if (currentUser.getUserRole() != TEACHER_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是老师不可开课");
+        }
+        return ResultUtils.success(coursesService.addCourse(courseName, comment, currentUser.getId()));
+    }
+
+    @PostMapping("/delete")
+    @Operation(summary = "删除课程")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程id", required = true)
+    })
+    public BaseResponse<Boolean> deleteCourse(@RequestParam Long courseId, HttpServletRequest request) {
+        coursesService.isTeacher(courseId, request);
+        return ResultUtils.success(coursesService.removeById(courseId));
+    }
+
+    @PostMapping("/edit")
+    @Operation(summary = "编辑课程简介")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程id", required = true),
+            @Parameter(name = "comment", description = "课程简介", required = true)
+    })
+    public BaseResponse<Boolean> editComment(
+            @RequestParam Long courseId,
+            @RequestParam String comment,
+            HttpServletRequest request
+    ) {
+        if (!coursesService.isTeacher(courseId, request)) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可删除课程");
+        }
+        return ResultUtils.success(coursesService.editComment(courseId, comment));
+    }
+
+}

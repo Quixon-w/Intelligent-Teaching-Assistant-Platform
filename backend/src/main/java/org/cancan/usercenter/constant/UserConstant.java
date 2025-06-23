@@ -5,18 +5,31 @@ package org.cancan.usercenter.constant;
  */
 public interface UserConstant {
 
+    // 性别
     /**
-     * 用户登录态键
+     * 未知性别
      */
-    String USER_LOGIN_STATE = "userLoginState";
+    int UNKNOWN_GENDER = 0;
+    /**
+     * 男性别
+     */
+    int MALE_GENDER = 1;
+    /**
+     * 女性别
+     */
+    int FEMALE_GENDER = 2;
 
     // 权限
     /**
-     * 默认权限
+     * 学生权限
      */
-    int DEFAULT_ROLE = 0;
+    int STUDENT_ROLE = 0;
+    /**
+     * 教师权限
+     */
+    int TEACHER_ROLE = 1;
     /**
      * 管理员权限
      */
-    int ADMIN_ROLE = 1;
+    int ADMIN_ROLE = 2;
 }
