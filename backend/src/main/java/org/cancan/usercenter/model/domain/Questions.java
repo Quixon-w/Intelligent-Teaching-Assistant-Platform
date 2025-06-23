@@ -6,10 +6,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
- * 
  * {@code @TableName} questions
  */
-@TableName(value ="questions")
+@TableName(value = "questions")
 @Data
 public class Questions {
     /**
@@ -41,5 +40,5 @@ public class Questions {
     /**
      * 解析
      */
-    private String explain;
+    private String explanation;
 }

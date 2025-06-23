@@ -5,15 +5,15 @@
 <mapper namespace="org.cancan.usercenter.mapper.QuestionsMapper">
 
     <resultMap id="BaseResultMap" type="org.cancan.usercenter.model.domain.Questions">
-            <id property="questionId" column="question_id" />
-            <result property="knowledge" column="knowledge" />
-            <result property="question" column="question" />
-            <result property="options" column="options" />
-            <result property="answer" column="answer" />
-            <result property="explain" column="explain" />
+        <id property="questionId" column="question_id"/>
+        <result property="knowledge" column="knowledge"/>
+        <result property="question" column="question"/>
+        <result property="options" column="options"/>
+        <result property="answer" column="answer"/>
+        <result property="explanation" column="explanation"/>
     </resultMap>
 
-<!--    <sql id="Base_Column_List">-->
-<!--        question_id,knowledge,question,options,answer,explain-->
-<!--    </sql>-->
+    <!--    <sql id="Base_Column_List">-->
+    <!--        question_id,knowledge,question,options,answer,explanation-->
+    <!--    </sql>-->
 </mapper>

@@ -30,11 +30,10 @@ import static org.cancan.usercenter.constant.UserConstant.*;
 /**
  * 用户接口
  *
- * @author 洪
+ * @author cancan
  */
 @RestController
 @RequestMapping("/user")
-@CrossOrigin
 @Slf4j
 @Tag(name = "body参数")
 public class UserController {
@@ -79,7 +78,7 @@ public class UserController {
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账户或密码参数为空");
         }
         User result = userService.userLogin(userAccount, userPassword, request);
         if (result == null) {
