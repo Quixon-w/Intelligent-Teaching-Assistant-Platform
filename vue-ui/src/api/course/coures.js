@@ -7,12 +7,23 @@ export function getCourses(pageNum,pageSize,courseName,teacherName){
       "pageSize":pageSize,
       "courseName":courseName,
       "teacherName":teacherName
-    }
+    },
   }).then(res=>{
     console.log(res);
     return res;
   }).catch(err=>{
     console.log(err);
+    return err;
+  })
+}
+export function deleteCourse(courseId){
+  return request.post('course/delete',null,{
+    params:{
+      courseId:courseId
+    }
+  }).then(res=>{
+    return res;
+  }).catch(err=>{
     return err;
   })
 }

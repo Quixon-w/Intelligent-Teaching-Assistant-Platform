@@ -4,6 +4,7 @@ export function register(username,password,checkpassword){
       "userAccount":username,
       "userPassword":password,
       "checkPassword":checkpassword,
+  },{
   }).then( res=>{
     return res;
   }).catch(err =>{
