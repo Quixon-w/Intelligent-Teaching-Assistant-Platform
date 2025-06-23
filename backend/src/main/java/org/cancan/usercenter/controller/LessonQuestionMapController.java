@@ -29,7 +29,7 @@ import java.util.List;
  * @author cancan
  */
 @RestController
-@RequestMapping("/map")
+@RequestMapping("/api/map")
 @Slf4j
 @Tag(name = "body参数")
 public class LessonQuestionMapController {

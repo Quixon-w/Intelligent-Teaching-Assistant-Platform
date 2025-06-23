@@ -24,12 +24,12 @@ import java.util.Objects;
 import static org.cancan.usercenter.constant.UserConstant.*;
 
 /**
- * 课程接口
+ * 选课接口
  *
  * @author 洪
  */
 @RestController
-@RequestMapping("/enroll")
+@RequestMapping("/api/enroll")
 @Slf4j
 @Tag(name = "body参数")
 public class EnrollController {

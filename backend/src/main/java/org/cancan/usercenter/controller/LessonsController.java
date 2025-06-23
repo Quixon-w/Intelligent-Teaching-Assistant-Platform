@@ -27,12 +27,12 @@ import java.util.Objects;
 import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
 
 /**
- * 课程接口
+ * 课时接口
  *
  * @author 洪
  */
 @RestController
-@RequestMapping("/lesson")
+@RequestMapping("/api/lesson")
 @Slf4j
 @Tag(name = "body参数")
 public class LessonsController {
