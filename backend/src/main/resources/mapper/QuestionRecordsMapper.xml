@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.cancan.usercenter.mapper.QuestionRecordsMapper">
+
+    <resultMap id="BaseResultMap" type="org.cancan.usercenter.model.domain.QuestionRecords">
+        <id property="id" column="id"/>
+        <result property="studentId" column="student_id"/>
+        <result property="questionId" column="question_id"/>
+        <result property="selectedOption" column="selected_option"/>
+        <result property="isCorrect" column="is_correct"/>
+        <result property="submitTime" column="submit_time"/>
+        <result property="lessonId" column="lesson_id"/>
+    </resultMap>
+
+    <!--    <sql id="Base_Column_List">-->
+    <!--        id,student_id,question_id,selected_option,is_correct,submit_time,-->
+    <!--        lesson_id-->
+    <!--    </sql>-->
+</mapper>

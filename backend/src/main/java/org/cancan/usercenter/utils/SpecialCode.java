@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 public class SpecialCode {
 
-    private static final String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
+    private static final String validPattern = "[`~!@#$%^&*()+=|{}':;,\\[\\].<>/?！￥%…&*（）——+|{}【】‘；：”“’。，、？]";
 
     /**
      * 校验字符

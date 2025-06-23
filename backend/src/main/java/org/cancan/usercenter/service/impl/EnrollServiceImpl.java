@@ -43,9 +43,6 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
         QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("courses_id", courseId);
         queryWrapper.eq("student_id", studentId);
-        if (!enrollMapper.exists(queryWrapper)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该学生未选择该课程");
-        }
         return this.remove(queryWrapper);
     }
 
@@ -56,12 +53,9 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
      */
     @Override
     public Boolean enroll(Long courseId, Long studentId) {
-        QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("courses_id", courseId);
-        queryWrapper.eq("student_id", studentId);
-        if (enrollMapper.exists(queryWrapper)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "已选该课程");
-        }
+        // 判断是否已选
+        this.isEnrolled(courseId, studentId);
+        // 添加选课
         Enroll enroll = new Enroll();
         enroll.setCoursesId(courseId);
         enroll.setStudentId(studentId);
@@ -87,6 +81,20 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     public List<User> getStudentsByCourseId(Long courseId) {
         List<Long> studentIds = enrollMapper.selectStudentIdsByCourseId(courseId);
         return userService.listByIds(studentIds);
+    }
+
+    /**
+     * @param courseId  课程id
+     * @param studentId 学生id
+     */
+    @Override
+    public void isEnrolled(Long courseId, Long studentId) {
+        QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("courses_id", courseId);
+        queryWrapper.eq("student_id", studentId);
+        if (!this.exists(queryWrapper)) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "未选该课");
+        }
     }
 
 }
