@@ -1,20 +1,29 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import {useRouter} from 'vue-router'
+import { getCourses } from '@/api/course/coures.js'
+import { ElMessage } from 'element-plus'
 const router = useRouter();
 const teacherClass=ref([]);
 const toClass=(id)=>{
   router.push('/dashboard/teacher/class/'+id);
 }
 const getData=()=>{
-  const data=ref([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20])
-  teacherClass.value=data.value.slice((tableSetting.value.currentPage-1)*tableSetting.value.pageSize,tableSetting.value.currentPage*tableSetting.value.pageSize)
+  getCourses(tableSetting.value.currentPage,tableSetting.value.pageSize,tableSetting.value.courseName, tableSetting.value.teacherName)
+    .then(res=>{
+      teacherClass.value=res.data.data.records;
+      tableSetting.value.total=res.data.data.total;
+    }).catch(err=>{
+      ElMessage(err);
+  })
 }
 const tableSetting=ref({
-  role:'',
-  total:40,
+  role:sessionStorage.getItem('role'),
+  total:0,
   pageSize:10,
   currentPage:1,
+  courseName:'',
+  teacherName:'',
 })
 const handleSizeChange=(number)=>{
   console.log(number);
@@ -42,10 +51,10 @@ onMounted(()=>{
     </div>
   </div>
   <div class="classTable">
-    <div class="classOfTeacher" v-for="id in teacherClass" @click="toClass(id)">
+    <div class="classOfTeacher" v-for="course in teacherClass" @click="toClass(course.id)">
       <img src="@/assets/images/login-background.jpg" alt=""/>
       <div class="text-wrapper">
-        <el-text>{{ id }}</el-text>
+        <el-text>{{ course.name }}</el-text>
       </div>
     </div>
   </div>
@@ -56,7 +65,7 @@ onMounted(()=>{
       v-model:total="tableSetting.total"
       :page-sizes="[5, 10, 20, 40]"
       :size="'default'"
-      :disabled="disabled"
+      :disabled="false"
       :background="background"
       layout="total, sizes, prev, pager, next, jumper"
       @size-change="handleSizeChange"

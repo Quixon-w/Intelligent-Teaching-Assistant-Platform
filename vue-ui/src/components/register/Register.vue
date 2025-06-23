@@ -1,14 +1,28 @@
 <script setup>
 import {useRouter} from 'vue-router'
 import { reactive } from 'vue'
+import { register } from '@/api/register/register.js'
+import { ElMessage } from 'element-plus'
 const router = useRouter();
 const registerForm = reactive({
-username: '',
-passsword: '',
+  username: '',
+  password: '',
+  checkpassword: ''
 })
 const onSubmit = () => {
-  localStorage.setItem('token', '123456');
-  router.push('/dashboard');
+  register(registerForm.username,registerForm.password,registerForm.checkpassword)
+    .then(res=>{
+      if(res.data.code === 0){
+        sessionStorage.setItem('token', registerForm.username);
+        sessionStorage.setItem('role', 'student');
+        router.push('/dashboard');
+      }
+      else {
+        ElMessage(res.data.description)
+      }
+  }).catch(err=>{
+    ElMessage(err);
+  })
 }
 const onCancel = () => {
 router.push('/login');
@@ -17,12 +31,15 @@ router.push('/login');
 <template>
   <div class="register">
     <el-form :model="registerForm" class="register-form">
-      <h3 class="title">登录界面</h3>
+      <h3 class="title">注册界面</h3>
       <el-form-item prop="username" label="账户：">
         <el-input v-model="registerForm.username"/>
       </el-form-item>
       <el-form-item prop="password" label="密码：">
-        <el-input v-model="registerForm.passsword" />
+        <el-input v-model="registerForm.password" />
+      </el-form-item>
+      <el-form-item prop="apassword" label="确认密码：">
+        <el-input v-model="registerForm.checkpassword" />
       </el-form-item>
       <el-form-item prop="onClick">
         <el-button type="primary" @click="onSubmit" style="width: 100%">注册</el-button>
