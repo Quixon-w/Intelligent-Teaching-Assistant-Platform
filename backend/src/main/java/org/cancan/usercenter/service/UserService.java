@@ -65,4 +65,11 @@ public interface UserService extends IService<User> {
      */
     User getCurrentUser(HttpServletRequest request);
 
+    /**
+     * 根据id获取用户
+     *
+     * @param id 用户id
+     * @return 有效用户
+     */
+    User getById(Long id);
 }

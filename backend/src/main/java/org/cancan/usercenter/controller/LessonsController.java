@@ -12,14 +12,19 @@ import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.CoursesService;
+import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.LessonsService;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
+
+import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
 
 /**
  * 课程接口
@@ -28,7 +33,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/lesson")
-@CrossOrigin
 @Slf4j
 @Tag(name = "body参数")
 public class LessonsController {
@@ -38,6 +42,9 @@ public class LessonsController {
 
     @Resource
     private CoursesService coursesService;
+
+    @Resource
+    private EnrollService enrollService;
 
     @Resource
     private UserService userService;
@@ -75,11 +82,37 @@ public class LessonsController {
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true)
     })
-    public BaseResponse<List<Lessons>> listLessons(@RequestParam Long courseId, HttpServletRequest request) {
+    public BaseResponse<List<Lessons>> listLessons(@RequestParam Long courseId) {
         coursesService.getValidCourseById(courseId);
         QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("course_id", courseId);
         return ResultUtils.success(lessonsService.list(queryWrapper));
+    }
+
+    @GetMapping("/getScore")
+    @Operation(summary = "查看某学生某课时的分数")
+    @Parameters({
+            @Parameter(name = "lessonId", description = "课时id", required = true),
+            @Parameter(name = "studentId", description = "学生id", required = true)
+    })
+    public BaseResponse<Integer> getScore(@RequestParam Long lessonId, @RequestParam Long studentId, HttpServletRequest request) {
+        // 校验参数，课程和课时都有效
+        Lessons lessons = lessonsService.getValidLessonById(lessonId);
+        Courses courses = coursesService.getValidCourseById(lessons.getCourseId());
+        // 学生已选该课
+        enrollService.isEnrolled(courses.getId(), studentId);
+        // 验证权限
+        User currentUser = userService.getCurrentUser(request);
+        User student = userService.getById(studentId);
+        if (
+                !Objects.equals(student.getId(), currentUser.getId())
+                        && !(currentUser.getUserRole() == ADMIN_ROLE)
+                        && !Objects.equals(currentUser.getId(), courses.getTeacherId())
+        ) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的分数");
+        }
+        // 查询返回
+        return ResultUtils.success(lessonsService.getLessonScore(lessonId, studentId));
     }
 
 }

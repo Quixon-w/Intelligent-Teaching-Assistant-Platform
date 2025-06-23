@@ -30,7 +30,6 @@ import static org.cancan.usercenter.constant.UserConstant.*;
  */
 @RestController
 @RequestMapping("/enroll")
-@CrossOrigin
 @Slf4j
 @Tag(name = "body参数")
 public class EnrollController {
@@ -73,15 +72,12 @@ public class EnrollController {
         // 获取当前用户
         User currentUser = userService.getCurrentUser(request);
         // 获取课程信息
-        Courses courses = coursesService.getById(courseId);
-        if (courses == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "课程不存在");
-        }
+        Courses courses = coursesService.getValidCourseById(courseId);
         // 判断退课权限
         if (
                 !Objects.equals(currentUser.getId(), studentId) &&
-                !Objects.equals(currentUser.getId(), courses.getTeacherId()) &&
-                currentUser.getUserRole() != ADMIN_ROLE
+                        !Objects.equals(currentUser.getId(), courses.getTeacherId()) &&
+                        currentUser.getUserRole() != ADMIN_ROLE
         ) {
             throw new BusinessException(ErrorCode.NO_AUTH, "没有权限");
         }

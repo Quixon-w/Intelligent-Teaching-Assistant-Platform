@@ -49,10 +49,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         if (userAccount.length() < 4) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号过短");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号过短，不少于四位");
         }
         if (userPassword.length() < 8 || checkPassword.length() < 8) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码过短");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码过短，不少于八位");
         }
         // 账户不能包含特殊字符
         SpecialCode.validateCode(userAccount);
@@ -214,6 +214,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
         return currentUser;
+    }
+
+    /**
+     * @param id 用户id
+     * @return 有效用户
+     */
+    @Override
+    public User getById(Long id) {
+        if (id == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "ID不能为空");
+        }
+        User user = userMapper.selectById(id);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "用户不存在");
+        }
+        return user;
     }
 }
 

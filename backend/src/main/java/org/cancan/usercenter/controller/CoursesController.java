@@ -28,7 +28,6 @@ import static org.cancan.usercenter.constant.UserConstant.TEACHER_ROLE;
  */
 @RestController
 @RequestMapping("/course")
-@CrossOrigin
 @Slf4j
 @Tag(name = "body参数")
 public class CoursesController {
@@ -38,6 +37,16 @@ public class CoursesController {
 
     @Resource
     private UserService userService;
+
+    @GetMapping("/findOne")
+    @Operation(summary = "查找某个课程")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程id", required = true)
+    })
+    public BaseResponse<Courses> findOne(@RequestParam Long courseId) {
+        Courses courses = coursesService.getValidCourseById(courseId);
+        return ResultUtils.success(courses);
+    }
 
     @GetMapping("/listPage")
     @Operation(summary = "按页获取课程列表")
@@ -51,8 +60,8 @@ public class CoursesController {
             @RequestParam Integer pageNum,
             @RequestParam Integer pageSize,
             @RequestParam(required = false) String courseName,
-            @RequestParam(required = false) String teacherName,
-            HttpServletRequest request) {
+            @RequestParam(required = false) String teacherName
+    ) {
         // 校验参数
         if (pageNum == null || pageNum <= 0 || pageSize == null || pageSize <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "分页参数非法");
@@ -65,7 +74,6 @@ public class CoursesController {
         return ResultUtils.success(resultPage);
     }
 
-
     @PostMapping("/add")
     @Operation(summary = "添加课程")
     @Parameters({
@@ -75,7 +83,8 @@ public class CoursesController {
     public BaseResponse<Courses> addCourse(
             @RequestParam String courseName,
             @RequestParam(required = false) String comment,
-            HttpServletRequest request) {
+            HttpServletRequest request
+    ) {
         User currentUser = userService.getCurrentUser(request);
         // 仅老师可开课
         if (currentUser.getUserRole() != TEACHER_ROLE) {
@@ -103,7 +112,8 @@ public class CoursesController {
     public BaseResponse<Boolean> editComment(
             @RequestParam Long courseId,
             @RequestParam String comment,
-            HttpServletRequest request) {
+            HttpServletRequest request
+    ) {
         if (!coursesService.isTeacher(courseId, request)) {
             throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可删除课程");
         }
