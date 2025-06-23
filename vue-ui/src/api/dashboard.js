@@ -1,8 +1,10 @@
-import axios from 'axios'
+import request from '@/utils/request.js'
 export function onExit(){
-  return Promise.reject({
-    data: null,
-    code: 500,
-    message: 'Internal Server Error'
-  })
+  return request.post('http://192.168.240.226:8080/user/logout')
+    .then(res =>{
+      return res;
+    })
+    .catch(err =>{
+      return err;
+    })
 }

@@ -3,6 +3,7 @@ import {useRouter} from 'vue-router'
 import { reactive } from 'vue'
 import { login } from '@/api/login/login.js'
 import { ElMessage } from 'element-plus'
+import UserRoleMap from '@/utils/userrole.js'
 const router = useRouter();
 const loginForm = reactive({
   username: '',
@@ -11,9 +12,8 @@ const loginForm = reactive({
 const onLogin = () => {
   login(loginForm.username,loginForm.password)
     .then(res=>{
-      console.log(res.data.data.userAccount)
       sessionStorage.setItem('token', res.data.data.userAccount);
-      sessionStorage.setItem('role', 'teacher');
+      sessionStorage.setItem('role', UserRoleMap[res.data.data.userRole]);
       router.push('/dashboard');
     })
     .catch(err=>{
