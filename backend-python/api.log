@@ -4450,3 +4450,942 @@ Body: {"model": "/data-extend/wangqianxu/wqxspace/RWKV/model/RWKV-x060-World-7B-
 Data:
 Exception: CUDA out of memory. Tried to allocate 112.00 MiB. GPU 0 has a total capacty of 23.53 GiB of which 45.94 MiB is free. Process 184428 has 1.91 GiB memory in use. Process 368898 has 1.91 GiB memory in use. Process 528512 has 2.83 GiB memory in use. Process 528721 has 2.82 GiB memory in use. Process 535372 has 10.46 GiB memory in use. Including non-PyTorch memory, this process has 3.52 GiB memory in use. Of the allocated memory 2.89 GiB is allocated by PyTorch, and 192.91 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
 
+2025-06-24 14:59:14,812 - INFO
+Loading faiss with AVX2 support.
+2025-06-24 14:59:14,828 - INFO
+Successfully loaded faiss with AVX2 support.
+2025-06-24 14:59:14,831 - INFO
+Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes. This is only an error if you're trying to use GPU Faiss.
+2025-06-24 14:59:19,894 - INFO
+Client: Address(host='127.0.0.1', port=34380)
+Url: http://127.0.0.1:8001/switch-model
+Body: b'{\n            "model": "/data-extend/wangqianxu/wqxspace/RWKV/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", \n            "strategy": "cuda fp16", \n            "tokenizer": "", \n            "customCuda": true, \n            "deploy": false\n        }'
+
+2025-06-24 15:01:05,534 - INFO
+Client: Address(host='127.0.0.1', port=60818)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbb\x80\xe4\xb9\x88\xe5\x8f\xab\xe5\x81\x9a\xe8\xbf\x9b\xe7\xa8\x8b",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:01:05,543 - INFO
+Client: Address(host='127.0.0.1', port=60818)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:01:05,544 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 什么叫做进程
+
+Assistant: 
+
+2025-06-24 15:01:13,790 - INFO
+Client: Address(host='127.0.0.1', port=60818)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 15:01:41,689 - INFO
+Client: Address(host='127.0.0.1', port=46010)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "hello",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:01:41,689 - INFO
+Client: Address(host='127.0.0.1', port=46010)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:01:41,690 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: hello
+
+Assistant: 
+
+2025-06-24 15:01:43,096 - INFO
+Client: Address(host='127.0.0.1', port=46010)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 15:02:09,971 - INFO
+Client: Address(host='127.0.0.1', port=43914)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe5\x88\x9a\xe5\x88\x9a\xe9\x97\xae\xe4\xba\x86\xe4\xbd\xa0\xe4\xbb\x80\xe4\xb9\x88\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:02:09,972 - INFO
+Client: Address(host='127.0.0.1', port=43914)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:02:09,972 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你还记得我刚刚问了你什么吗
+
+Assistant: 
+
+2025-06-24 15:02:12,022 - INFO
+Client: Address(host='127.0.0.1', port=43914)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 15:14:37,951 - INFO
+Loading faiss with AVX2 support.
+2025-06-24 15:14:37,968 - INFO
+Successfully loaded faiss with AVX2 support.
+2025-06-24 15:14:37,971 - INFO
+Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes. This is only an error if you're trying to use GPU Faiss.
+2025-06-24 15:14:43,034 - INFO
+Client: Address(host='127.0.0.1', port=41448)
+Url: http://127.0.0.1:8001/switch-model
+Body: b'{\n            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", \n            "strategy": "cuda fp16", \n            "tokenizer": "", \n            "customCuda": true, \n            "deploy": false\n        }'
+
+2025-06-24 15:16:03,086 - INFO
+Client: Address(host='127.0.0.1', port=38120)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe5\x88\x9a\xe5\x88\x9a\xe9\x97\xae\xe4\xba\x86\xe4\xbd\xa0\xe4\xbb\x80\xe4\xb9\x88\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:16:03,097 - INFO
+Client: Address(host='127.0.0.1', port=38120)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:16:03,097 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你还记得我刚刚问了你什么吗
+
+Assistant: 
+
+2025-06-24 15:16:06,909 - INFO
+Client: Address(host='127.0.0.1', port=38120)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 15:16:25,245 - INFO
+Client: Address(host='127.0.0.1', port=55798)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe6\x88\x91\xe6\x98\xafQuixon\xef\xbc\x8c\xe4\xbd\xa0\xe6\x98\xaf\xe8\xb0\x81",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:16:25,246 - INFO
+Client: Address(host='127.0.0.1', port=55798)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:16:25,247 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 我是Quixon，你是谁
+
+Assistant: 
+
+2025-06-24 15:16:27,944 - INFO
+Client: Address(host='127.0.0.1', port=55798)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 15:16:39,588 - INFO
+Client: Address(host='127.0.0.1', port=45690)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe7\x9f\xa5\xe9\x81\x93\xe6\x88\x91\xe6\x98\xaf\xe8\xb0\x81\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:16:39,589 - INFO
+Client: Address(host='127.0.0.1', port=45690)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:16:39,589 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你知道我是谁吗
+
+Assistant: 
+
+2025-06-24 15:16:41,373 - INFO
+Client: Address(host='127.0.0.1', port=45690)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 15:36:57,635 - INFO
+Loading faiss with AVX2 support.
+2025-06-24 15:36:57,652 - INFO
+Successfully loaded faiss with AVX2 support.
+2025-06-24 15:36:57,655 - INFO
+Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes. This is only an error if you're trying to use GPU Faiss.
+2025-06-24 15:37:02,721 - INFO
+Client: Address(host='127.0.0.1', port=38176)
+Url: http://127.0.0.1:8001/switch-model
+Body: b'{\n            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", \n            "strategy": "cuda fp16", \n            "tokenizer": "", \n            "customCuda": true, \n            "deploy": false\n        }'
+
+2025-06-24 15:39:14,574 - INFO
+Client: Address(host='127.0.0.1', port=56548)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe6\x88\x91\xe6\x98\xafQuixon\xef\xbc\x8c\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xbd\xa0\xe5\x8f\xaf\xe4\xbb\xa5\xe7\xbb\x99\xe6\x88\x91\xe8\xa7\xa3\xe9\x87\x8a\xe4\xb8\x80\xe4\xb8\x8b\xe8\xbf\x9b\xe7\xa8\x8b\xe6\x98\xaf\xe4\xbb\x80\xe4\xb9\x88\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:45:17,302 - INFO
+Loading faiss with AVX2 support.
+2025-06-24 15:45:17,319 - INFO
+Successfully loaded faiss with AVX2 support.
+2025-06-24 15:45:17,322 - INFO
+Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes. This is only an error if you're trying to use GPU Faiss.
+2025-06-24 15:45:22,381 - INFO
+Client: Address(host='127.0.0.1', port=46488)
+Url: http://127.0.0.1:8001/switch-model
+Body: b'{\n            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", \n            "strategy": "cuda fp16", \n            "tokenizer": "", \n            "customCuda": true, \n            "deploy": false\n        }'
+
+2025-06-24 15:46:00,031 - INFO
+Client: Address(host='127.0.0.1', port=58384)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe6\x88\x91\xe6\x98\xafQuixon\xef\xbc\x8c\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xbd\xa0\xe5\x8f\xaf\xe4\xbb\xa5\xe7\xbb\x99\xe6\x88\x91\xe8\xa7\xa3\xe9\x87\x8a\xe4\xb8\x80\xe4\xb8\x8b\xe8\xbf\x9b\xe7\xa8\x8b\xe6\x98\xaf\xe4\xbb\x80\xe4\xb9\x88\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:46:21,023 - INFO
+Client: Address(host='127.0.0.1', port=51254)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe6\x88\x91\xe6\x98\xafQuixon\xef\xbc\x8c\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xbd\xa0\xe5\x8f\xaf\xe4\xbb\xa5\xe7\xbb\x99\xe6\x88\x91\xe8\xa7\xa3\xe9\x87\x8a\xe4\xb8\x80\xe4\xb8\x8b\xe8\xbf\x9b\xe7\xa8\x8b\xe6\x98\xaf\xe4\xbb\x80\xe4\xb9\x88\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:48:14,355 - INFO
+Loading faiss with AVX2 support.
+2025-06-24 15:48:14,372 - INFO
+Successfully loaded faiss with AVX2 support.
+2025-06-24 15:48:14,375 - INFO
+Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes. This is only an error if you're trying to use GPU Faiss.
+2025-06-24 15:48:19,441 - INFO
+Client: Address(host='127.0.0.1', port=40598)
+Url: http://127.0.0.1:8001/switch-model
+Body: b'{\n            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", \n            "strategy": "cuda fp16", \n            "tokenizer": "", \n            "customCuda": true, \n            "deploy": false\n        }'
+
+2025-06-24 15:49:40,168 - INFO
+Client: Address(host='127.0.0.1', port=38834)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe6\x88\x91\xe6\x98\xafQuixon\xef\xbc\x8c\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xbd\xa0\xe5\x8f\xaf\xe4\xbb\xa5\xe7\xbb\x99\xe6\x88\x91\xe8\xa7\xa3\xe9\x87\x8a\xe4\xb8\x80\xe4\xb8\x8b\xe8\xbf\x9b\xe7\xa8\x8b\xe6\x98\xaf\xe4\xbb\x80\xe4\xb9\x88\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:49:40,180 - INFO
+Client: Address(host='127.0.0.1', port=38834)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:49:40,181 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 我是Quixon，你好，你可以给我解释一下进程是什么吗
+
+Assistant: 
+
+2025-06-24 15:49:48,600 - INFO
+Client: Address(host='127.0.0.1', port=38834)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 15:52:27,005 - INFO
+Client: Address(host='127.0.0.1', port=37506)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe5\xa5\xbd\xe7\x9a\x84\xef\xbc\x8c\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe6\x98\xaf\xe8\xb0\x81\xe5\x90\x97\xef\xbc\x9f",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:52:27,006 - INFO
+Client: Address(host='127.0.0.1', port=37506)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:52:27,006 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 好的，你还记得我是谁吗？
+
+Assistant: 
+
+2025-06-24 15:52:28,405 - INFO
+Client: Address(host='127.0.0.1', port=37506)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 15:52:42,925 - INFO
+Client: Address(host='127.0.0.1', port=55932)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe6\x88\x91\xe7\x9a\x84\xe5\x90\x8d\xe5\xad\x97\xe6\x98\xaf\xef\xbc\x9f",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "1"     \n}'
+
+2025-06-24 15:52:42,925 - INFO
+Client: Address(host='127.0.0.1', port=55932)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:52:42,926 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 我的名字是？
+
+Assistant: 
+
+2025-06-24 15:52:44,807 - INFO
+Client: Address(host='127.0.0.1', port=55932)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 15:53:22,081 - INFO
+Client: Address(host='127.0.0.1', port=36430)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe8\xbf\x9b\xe7\xa8\x8b\xe5\x92\x8c\xe7\xba\xbf\xe7\xa8\x8b\xe7\x9a\x84\xe5\x8c\xba\xe5\x88\xab",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "2"     \n}'
+
+2025-06-24 15:53:22,082 - INFO
+Client: Address(host='127.0.0.1', port=36430)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 15:53:22,083 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 进程和线程的区别
+
+Assistant: 
+
+2025-06-24 15:53:34,718 - INFO
+Client: Address(host='127.0.0.1', port=36430)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 16:01:34,568 - INFO
+Loading faiss with AVX2 support.
+2025-06-24 16:01:34,584 - INFO
+Successfully loaded faiss with AVX2 support.
+2025-06-24 16:01:34,587 - INFO
+Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes. This is only an error if you're trying to use GPU Faiss.
+2025-06-24 16:01:39,660 - INFO
+Client: Address(host='127.0.0.1', port=37800)
+Url: http://127.0.0.1:8001/switch-model
+Body: b'{\n            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", \n            "strategy": "cuda fp16", \n            "tokenizer": "", \n            "customCuda": true, \n            "deploy": false\n        }'
+
+2025-06-24 16:04:15,491 - INFO
+Client: Address(host='127.0.0.1', port=36786)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe6\x88\x91\xe6\x98\xafQuixon\xef\xbc\x8c\xe4\xbd\xa0\xe5\xa5\xbd",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "2"     \n}'
+
+2025-06-24 16:04:15,501 - INFO
+Client: Address(host='127.0.0.1', port=36786)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 16:04:15,502 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 我是Quixon，你好
+
+Assistant: 
+
+2025-06-24 16:04:18,344 - INFO
+Client: Address(host='127.0.0.1', port=36786)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 16:04:31,564 - INFO
+Client: Address(host='127.0.0.1', port=44046)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe8\xbf\x9b\xe7\xa8\x8b\xe5\x92\x8c\xe7\xba\xbf\xe7\xa8\x8b\xe7\x9a\x84\xe5\x8c\xba\xe5\x88\xab",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "2"     \n}'
+
+2025-06-24 16:04:31,565 - INFO
+Client: Address(host='127.0.0.1', port=44046)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 16:04:31,565 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 我是Quixon，你好
+
+User: 进程和线程的区别
+
+Assistant: 
+
+2025-06-24 16:04:43,101 - INFO
+Client: Address(host='127.0.0.1', port=44046)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 16:04:48,390 - INFO
+Client: Address(host='127.0.0.1', port=60648)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe8\xbf\x9b\xe7\xa8\x8b\xe5\x92\x8c\xe7\xba\xbf\xe7\xa8\x8b\xe7\x9a\x84\xe5\x8c\xba\xe5\x88\xab",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "2"     \n}'
+
+2025-06-24 16:04:48,391 - INFO
+Client: Address(host='127.0.0.1', port=60648)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 16:04:48,392 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 我是Quixon，你好
+
+User: 进程和线程的区别
+
+User: 进程和线程的区别
+
+Assistant: 
+
+2025-06-24 16:04:58,520 - INFO
+Client: Address(host='127.0.0.1', port=60648)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 16:05:08,262 - INFO
+Client: Address(host='127.0.0.1', port=39948)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe6\x98\xaf\xe8\xb0\x81\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "2"     \n}'
+
+2025-06-24 16:05:08,263 - INFO
+Client: Address(host='127.0.0.1', port=39948)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 16:05:08,264 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 我是Quixon，你好
+
+User: 进程和线程的区别
+
+User: 进程和线程的区别
+
+User: 你还记得我是谁吗
+
+Assistant: 
+
+2025-06-24 16:05:08,881 - INFO
+Client: Address(host='127.0.0.1', port=39948)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 16:09:55,101 - INFO
+Loading faiss with AVX2 support.
+2025-06-24 16:09:55,118 - INFO
+Successfully loaded faiss with AVX2 support.
+2025-06-24 16:09:55,122 - INFO
+Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes. This is only an error if you're trying to use GPU Faiss.
+2025-06-24 16:10:00,188 - INFO
+Client: Address(host='127.0.0.1', port=54298)
+Url: http://127.0.0.1:8001/switch-model
+Body: b'{\n            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", \n            "strategy": "cuda fp16", \n            "tokenizer": "", \n            "customCuda": true, \n            "deploy": false\n        }'
+
+2025-06-24 16:10:48,791 - INFO
+Client: Address(host='127.0.0.1', port=39796)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe6\x98\xaf\xe8\xb0\x81\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "2"     \n}'
+
+2025-06-24 16:10:48,801 - INFO
+Client: Address(host='127.0.0.1', port=39796)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 16:10:48,801 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 我是Quixon，你好
+
+User: 进程和线程的区别
+
+User: 进程和线程的区别
+
+User: 你还记得我是谁吗
+
+User: 你还记得我是谁吗
+
+Assistant: 
+
+2025-06-24 16:10:51,446 - INFO
+Client: Address(host='127.0.0.1', port=39796)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 16:11:02,293 - INFO
+Client: Address(host='127.0.0.1', port=45538)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe6\x88\x91\xe6\x98\xafhyc",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "2"     \n}'
+
+2025-06-24 16:11:02,294 - INFO
+Client: Address(host='127.0.0.1', port=45538)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 16:11:02,294 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 我是Quixon，你好
+
+User: 进程和线程的区别
+
+User: 进程和线程的区别
+
+User: 你还记得我是谁吗
+
+User: 你还记得我是谁吗
+
+Assistant: 抱歉，我不知道你是谁。请问有什么可以帮助您的吗？
+
+User: 你好，我是hyc
+
+Assistant: 
+
+2025-06-24 16:11:03,861 - INFO
+Client: Address(host='127.0.0.1', port=45538)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 16:11:15,411 - INFO
+Client: Address(host='127.0.0.1', port=48734)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe6\x98\xaf\xe8\xb0\x81\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "2"     \n}'
+
+2025-06-24 16:11:15,412 - INFO
+Client: Address(host='127.0.0.1', port=48734)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 16:11:15,412 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 进程和线程的区别
+
+User: 进程和线程的区别
+
+User: 你还记得我是谁吗
+
+User: 你还记得我是谁吗
+
+Assistant: 抱歉，我不知道你是谁。请问有什么可以帮助您的吗？
+
+User: 你好，我是hyc
+
+Assistant: 你好，hyc。有什么我可以帮助你的吗？
+
+User: 你还记得我是谁吗
+
+Assistant: 
+
+2025-06-24 16:11:16,089 - INFO
+Client: Address(host='127.0.0.1', port=48734)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:01:28,611 - INFO
+Loading faiss with AVX2 support.
+2025-06-24 17:01:28,627 - INFO
+Successfully loaded faiss with AVX2 support.
+2025-06-24 17:01:28,630 - INFO
+Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes. This is only an error if you're trying to use GPU Faiss.
+2025-06-24 17:01:33,696 - INFO
+Client: Address(host='127.0.0.1', port=37888)
+Url: http://127.0.0.1:8001/switch-model
+Body: b'{\n            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", \n            "strategy": "cuda fp16", \n            "tokenizer": "", \n            "customCuda": true, \n            "deploy": false\n        }'
+
+2025-06-24 17:05:15,788 - INFO
+Client: Address(host='127.0.0.1', port=38560)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe5\xa5\xbd\xe6\x88\x91\xe6\x98\xafQuixon",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "sessionId": "stuhis1"     \n}'
+
+2025-06-24 17:05:40,345 - INFO
+Client: Address(host='127.0.0.1', port=36554)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe5\xa5\xbd\xe6\x88\x91\xe6\x98\xafQuixon",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userId": "stuhis1"     \n}'
+
+2025-06-24 17:05:47,450 - INFO
+Client: Address(host='127.0.0.1', port=47498)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe5\xa5\xbd\xe6\x88\x91\xe6\x98\xafQuixon",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1"     \n}'
+
+2025-06-24 17:06:23,602 - INFO
+Client: Address(host='127.0.0.1', port=32788)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe5\xa5\xbd\xe6\x88\x91\xe6\x98\xafQuixon",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1",     \n  "sessionID":"1"\r\n}'
+
+2025-06-24 17:06:23,604 - INFO
+Client: Address(host='127.0.0.1', port=32788)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 17:06:23,604 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你好我是Quixon
+
+Assistant: 
+
+2025-06-24 17:06:26,331 - INFO
+Client: Address(host='127.0.0.1', port=32788)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:06:54,687 - INFO
+Client: Address(host='127.0.0.1', port=45770)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe6\x98\xaf\xe8\xb0\x81\xe4\xb9\x88",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1",     \n  "sessionID":"1"\r\n}'
+
+2025-06-24 17:06:54,688 - INFO
+Client: Address(host='127.0.0.1', port=45770)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 17:06:54,688 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你好我是Quixon
+
+Assistant: 你好，Quixon！很高兴认识你。有什么我可以帮助你的吗？
+
+User: 你还记得我是谁么
+
+Assistant: 
+
+2025-06-24 17:06:56,270 - INFO
+Client: Address(host='127.0.0.1', port=45770)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:07:54,007 - INFO
+Client: Address(host='127.0.0.1', port=42978)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe7\xae\x80\xe5\x8d\x95\xe8\xa7\xa3\xe9\x87\x8a\xe4\xb8\x80\xe4\xb8\x8b\xe8\xbf\x9b\xe7\xa8\x8b\xe5\x92\x8c\xe7\xba\xbf\xe7\xa8\x8b\xe7\x9a\x84\xe5\x8c\xba\xe5\x88\xab",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1",     \n  "sessionID":"1"\r\n}'
+
+2025-06-24 17:07:54,008 - INFO
+Client: Address(host='127.0.0.1', port=42978)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 17:07:54,009 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你好我是Quixon
+
+Assistant: 你好，Quixon！很高兴认识你。有什么我可以帮助你的吗？
+
+User: 你还记得我是谁么
+
+Assistant: 当然记得，你是Quixon。有什么我可以帮助你的吗？
+
+User: 简单解释一下进程和线程的区别
+
+Assistant: 
+
+2025-06-24 17:07:57,849 - INFO
+Client: Address(host='127.0.0.1', port=42978)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:08:16,098 - INFO
+Client: Address(host='127.0.0.1', port=41634)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xba\xba\xe4\xb8\x80\xe5\xa4\xa9\xe8\xa6\x81\xe5\x96\x9d\xe5\x87\xa0\xe6\x9d\xaf\xe6\xb0\xb4",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1",     \n  "sessionID":"1"\r\n}'
+
+2025-06-24 17:08:16,099 - INFO
+Client: Address(host='127.0.0.1', port=41634)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 17:08:16,100 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你好我是Quixon
+
+Assistant: 你好，Quixon！很高兴认识你。有什么我可以帮助你的吗？
+
+User: 你还记得我是谁么
+
+Assistant: 当然记得，你是Quixon。有什么我可以帮助你的吗？
+
+User: 简单解释一下进程和线程的区别
+
+Assistant: 当我们在计算机上运行程序时，它们会被分配到内存中的一个或多个进程。每个进程都有自己的独立地址空间、文件描述符和其他资源。而线程则是进程中的一个执行单元，它可以共享进程的资源，如内存、文件描述符等。
+简单来说，线程是在同一个进程中运行的多个任务之间切换时所需要的最小单位。而进程则是由操作系统管理和调度的基本执行单元。
+
+User: 人一天要喝几杯水
+
+Assistant: 
+
+2025-06-24 17:08:18,956 - INFO
+Client: Address(host='127.0.0.1', port=41634)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:09:22,801 - INFO
+Client: Address(host='127.0.0.1', port=54208)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe5\x93\x88\xe5\x93\x88\xef\xbc\x8c\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe6\x98\xaf\xe8\xb0\x81\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1",     \n  "sessionID":"1"\r\n}'
+
+2025-06-24 17:09:22,802 - INFO
+Client: Address(host='127.0.0.1', port=54208)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 17:09:22,802 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你好我是Quixon
+
+Assistant: 你好，Quixon！很高兴认识你。有什么我可以帮助你的吗？
+
+User: 你还记得我是谁么
+
+Assistant: 当然记得，你是Quixon。有什么我可以帮助你的吗？
+
+User: 简单解释一下进程和线程的区别
+
+Assistant: 当我们在计算机上运行程序时，它们会被分配到内存中的一个或多个进程。每个进程都有自己的独立地址空间、文件描述符和其他资源。而线程则是进程中的一个执行单元，它可以共享进程的资源，如内存、文件描述符等。
+简单来说，线程是在同一个进程中运行的多个任务之间切换时所需要的最小单位。而进程则是由操作系统管理和调度的基本执行单元。
+
+User: 人一天要喝几杯水
+
+Assistant: 一般来说，成年人每天需要喝足够的水以保持身体健康。根据世界卫生组织的建议，成年人每天应该饮用至少8杯水（约2升），但具体数量还会因为个人身体状况、环境温度、活动量等因素而有所不同。如果你感到口渴或者出汗较多，可能需要增加饮水量。
+
+User: 哈哈，你还记得我是谁吗
+
+Assistant: 
+
+2025-06-24 17:09:23,554 - INFO
+Client: Address(host='127.0.0.1', port=54208)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:09:50,168 - INFO
+Client: Address(host='127.0.0.1', port=36988)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe7\x8c\x9c\xe7\x8c\x9c\xe6\x88\x91\xe6\x98\xaf\xe8\xb0\x81",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1",     \n  "sessionID":"2"\r\n}'
+
+2025-06-24 17:09:50,169 - INFO
+Client: Address(host='127.0.0.1', port=36988)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 17:09:50,169 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 猜猜我是谁
+
+Assistant: 
+
+2025-06-24 17:09:52,132 - INFO
+Client: Address(host='127.0.0.1', port=36988)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:10:04,139 - INFO
+Client: Address(host='127.0.0.1', port=33036)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe6\x88\x91\xe6\x98\xafhyc\xef\xbc\x8c\xe8\xaf\xb7\xe4\xbd\xa0\xe8\xae\xb0\xe4\xbd\x8f",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1",     \n  "sessionID":"2"\r\n}'
+
+2025-06-24 17:10:04,140 - INFO
+Client: Address(host='127.0.0.1', port=33036)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 17:10:04,140 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 猜猜我是谁
+
+Assistant: 很抱歉，我无法猜测您的身份。作为一个AI机器人，我没有访问您的个人信息或者能够识别您的身份。如果您有任何需要帮助的问题或者任务，请告诉我，我会尽力为您提供帮助。
+
+User: 我是hyc，请你记住
+
+Assistant: 
+
+2025-06-24 17:10:05,393 - INFO
+Client: Address(host='127.0.0.1', port=33036)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:10:19,511 - INFO
+Client: Address(host='127.0.0.1', port=60866)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe9\x97\xae\xe8\xbf\x87\xe4\xbd\xa0\xe4\xbb\x80\xe4\xb9\x88\xe9\x97\xae\xe9\xa2\x98\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1",     \n  "sessionID":"1"\r\n}'
+
+2025-06-24 17:10:19,512 - INFO
+Client: Address(host='127.0.0.1', port=60866)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 17:10:19,513 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你好我是Quixon
+
+Assistant: 你好，Quixon！很高兴认识你。有什么我可以帮助你的吗？
+
+User: 你还记得我是谁么
+
+Assistant: 当然记得，你是Quixon。有什么我可以帮助你的吗？
+
+User: 简单解释一下进程和线程的区别
+
+Assistant: 当我们在计算机上运行程序时，它们会被分配到内存中的一个或多个进程。每个进程都有自己的独立地址空间、文件描述符和其他资源。而线程则是进程中的一个执行单元，它可以共享进程的资源，如内存、文件描述符等。
+简单来说，线程是在同一个进程中运行的多个任务之间切换时所需要的最小单位。而进程则是由操作系统管理和调度的基本执行单元。
+
+User: 人一天要喝几杯水
+
+Assistant: 一般来说，成年人每天需要喝足够的水以保持身体健康。根据世界卫生组织的建议，成年人每天应该饮用至少8杯水（约2升），但具体数量还会因为个人身体状况、环境温度、活动量等因素而有所不同。如果你感到口渴或者出汗较多，可能需要增加饮水量。
+
+User: 哈哈，你还记得我是谁吗
+
+Assistant: 当然记得，你是Quixon。有什么我可以帮助你的吗？
+
+User: 你还记得我问过你什么问题吗
+
+Assistant: 
+
+2025-06-24 17:10:20,232 - INFO
+Client: Address(host='127.0.0.1', port=60866)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:10:41,136 - INFO
+Client: Address(host='127.0.0.1', port=60828)
+Url: http://localhost:9001/v1/chat/completions
+Body: b'{\r\n  "messages": [        \n    {\r\n      "role": "user",     \n      "content": "\xe4\xbd\xa0\xe8\xbf\x98\xe8\xae\xb0\xe5\xbe\x97\xe6\x88\x91\xe9\x97\xae\xe8\xbf\x87\xe4\xbd\xa0\xe4\xbb\x80\xe4\xb9\x88\xe9\x97\xae\xe9\xa2\x98\xe5\x90\x97",\r\n      "raw": false       \n    }\r\n  ],                   \r\n  "userID": "stuhis1",     \n  "sessionID":"1"\r\n}'
+
+2025-06-24 17:10:41,138 - INFO
+Client: Address(host='127.0.0.1', port=60828)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Start Waiting. RequestsNum: 1
+
+2025-06-24 17:10:41,138 - INFO
+Client: 
+Url: 
+Data:
+Generation Prompt:
+User: 你还记得我是谁么
+
+Assistant: 当然记得，你是Quixon。有什么我可以帮助你的吗？
+
+User: 简单解释一下进程和线程的区别
+
+Assistant: 当我们在计算机上运行程序时，它们会被分配到内存中的一个或多个进程。每个进程都有自己的独立地址空间、文件描述符和其他资源。而线程则是进程中的一个执行单元，它可以共享进程的资源，如内存、文件描述符等。
+简单来说，线程是在同一个进程中运行的多个任务之间切换时所需要的最小单位。而进程则是由操作系统管理和调度的基本执行单元。
+
+User: 人一天要喝几杯水
+
+Assistant: 一般来说，成年人每天需要喝足够的水以保持身体健康。根据世界卫生组织的建议，成年人每天应该饮用至少8杯水（约2升），但具体数量还会因为个人身体状况、环境温度、活动量等因素而有所不同。如果你感到口渴或者出汗较多，可能需要增加饮水量。
+
+User: 哈哈，你还记得我是谁吗
+
+Assistant: 当然记得，你是Quixon。有什么我可以帮助你的吗？
+
+User: 你还记得我问过你什么问题吗
+
+Assistant: 当然记得，你之前问过我有关于人类进化的问题。
+
+User: 你还记得我问过你什么问题吗
+
+Assistant: 
+
+2025-06-24 17:10:41,880 - INFO
+Client: Address(host='127.0.0.1', port=60828)
+Url: http://localhost:9001/v1/chat/completions
+Data:
+Generation Complete. RequestsNum: 0
+
+2025-06-24 17:51:29,506 - INFO
+Loading faiss with AVX2 support.
+2025-06-24 17:51:29,522 - INFO
+Successfully loaded faiss with AVX2 support.
+2025-06-24 17:51:29,525 - INFO
+Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes. This is only an error if you're trying to use GPU Faiss.
+2025-06-24 17:51:34,608 - INFO
+Client: Address(host='127.0.0.1', port=48274)
+Url: http://127.0.0.1:8001/switch-model
+Body: b'{\n            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", \n            "strategy": "cuda fp16", \n            "tokenizer": "", \n            "customCuda": true, \n            "deploy": false\n        }'
+

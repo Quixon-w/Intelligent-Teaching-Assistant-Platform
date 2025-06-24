@@ -17,18 +17,28 @@ from config.database import DATABASE_CONFIG
 router = APIRouter()
 
 
+def get_user_path(user_id: str, is_teacher: bool) -> str:
+    """根据userID和isTeacher确定用户路径"""
+    user_type = "Teachers" if is_teacher else "Students"
+    return os.path.join("/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge", user_type, user_id)
+
+
 class ExerciseBody(BaseModel):
+    userID: str = Field(..., description="用户ID，用于确定存储路径")
     sessionId: str = Field(..., description="会话ID")
     courseId: str = Field(..., description="课程ID")
     lessonNum: str = Field(..., description="课时号")
+    isTeacher: bool = Field(False, description="是否为教师用户")
     targetCount: int = Field(10, description="目标题目数量", ge=1, le=20)
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "sessionId": "teacher001",
+                "userID": "teacher001",
+                "sessionId": "session456",
                 "courseId": "MATH101",
                 "lessonNum": "lesson03",
+                "isTeacher": True,
                 "targetCount": 10
             }
         }
@@ -40,7 +50,7 @@ def load_embeddings_model():
     加载文本嵌入模型
     """
     try:
-        model = SentenceTransformer("/data-extend/wangqianxu/wqxspace/RWKV/model/m3e-base")
+        model = SentenceTransformer("/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base")
         return model
     except Exception as e:
         print(f"加载嵌入模型失败: {e}")
@@ -218,20 +228,24 @@ def search_questions_by_knowledge(knowledge_points: List[str], target_count: int
         return []
 
 
-def get_knowledge_content(sessionId: str, courseId: str, lessonNum: str) -> str:
+def get_knowledge_content(user_id: str, course_id: str, lesson_num: str, is_teacher: bool) -> str:
     """
     获取课时知识库内容
     
     Args:
-        sessionId: 会话ID
-        courseId: 课程ID
-        lessonNum: 课时号
+        user_id: 用户ID
+        course_id: 课程ID
+        lesson_num: 课时号
+        is_teacher: 是否为教师用户
         
     Returns:
         str: 知识库内容
     """
+    # 获取用户路径
+    user_path = get_user_path(user_id, is_teacher)
+    
     # 构建知识库路径
-    vector_kb_path = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{sessionId}/{courseId}/{lessonNum}/vector_kb"
+    vector_kb_path = os.path.join(user_path, course_id, lesson_num, "vector_kb")
     
     if not os.path.exists(vector_kb_path):
         print(f"知识库路径不存在: {vector_kb_path}")
@@ -329,7 +343,7 @@ async def get_exercises(body: ExerciseBody):
     """
     try:
         # 获取课时知识库内容
-        content = get_knowledge_content(body.sessionId, body.courseId, body.lessonNum)
+        content = get_knowledge_content(body.userID, body.courseId, body.lessonNum, body.isTeacher)
         
         if not content:
             raise HTTPException(
@@ -358,7 +372,7 @@ async def get_exercises(body: ExerciseBody):
             )
         
         # 生成课时ID（这里需要根据实际情况调整）
-        lesson_id = hash(f"{body.sessionId}_{body.courseId}_{body.lessonNum}") % 1000000
+        lesson_id = hash(f"{body.userID}_{body.courseId}_{body.lessonNum}") % 1000000
         
         # 调用映射API
         question_ids = [q['id'] for q in questions]
@@ -366,9 +380,11 @@ async def get_exercises(body: ExerciseBody):
         
         return {
             "success": True,
+            "userID": body.userID,
             "sessionId": body.sessionId,
             "courseId": body.courseId,
             "lessonNum": body.lessonNum,
+            "isTeacher": body.isTeacher,
             "targetCount": body.targetCount,
             "actualCount": len(questions),
             "knowledgePoints": knowledge_points,

@@ -62,7 +62,7 @@ from utils.rwkv import *
 from utils.torch import *
 from utils.ngrok import *
 from utils.log import log_middleware
-from routes import completion, config, state_cache, file_process, upload, search, create, exercise, download
+from routes import completion, config, state_cache, upload, search, create, exercise, download
 import global_var
 
 
@@ -84,7 +84,6 @@ app.add_middleware(
 
 app.include_router(completion.router)
 app.include_router(config.router)
-app.include_router(file_process.router)
 app.include_router(state_cache.router)
 app.include_router(upload.router)
 app.include_router(search.router)
@@ -143,7 +142,7 @@ def load_model():
         "curl", "-X", "POST", "http://127.0.0.1:8001/switch-model",
         "-H", "Content-Type: application/json",
         "-d", '''{
-            "model": "/data-extend/wangqianxu/wqxspace/RWKV/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", 
+            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", 
             "strategy": "cuda fp16", 
             "tokenizer": "", 
             "customCuda": true, 

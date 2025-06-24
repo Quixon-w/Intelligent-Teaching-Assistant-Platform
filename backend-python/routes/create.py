@@ -20,22 +20,32 @@ create_lock = Lock()
 
 
 class CreateOutlineBody(BaseModel):
+    userID: str = Field(..., description="用户ID，用于确定存储路径")
     sessionId: str = Field(..., description="会话ID")
     courseId: str = Field(..., description="课程ID")
     lessonNum: str = Field(..., description="课时号，必填")
+    isTeacher: bool = Field(False, description="是否为教师用户")
     # 教学大纲字数控制：课时大纲控制在800-1200字
     maxWords: int = Field(1000, description="最大字数限制，课时大纲建议1000字", ge=500, le=2000)
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "sessionId": "teacher123",
+                "userID": "teacher123",
+                "sessionId": "session456",
                 "courseId": "math101",
                 "lessonNum": "lesson01",
+                "isTeacher": True,
                 "maxWords": 1000
             }
         }
     }
+
+
+def get_user_path(user_id: str, is_teacher: bool) -> str:
+    """根据userID和isTeacher确定用户路径"""
+    user_type = "Teachers" if is_teacher else "Students"
+    return os.path.join("/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge", user_type, user_id)
 
 
 def extract_text_from_faiss_db(db_path: str) -> str:
@@ -163,14 +173,17 @@ def extract_text_from_faiss_db(db_path: str) -> str:
         return None
 
 
-def get_file_content(sessionId: str, courseId: str, lessonNum: str):
+def get_file_content(user_id: str, course_id: str, lesson_num: str, is_teacher: bool):
     """
     获取课时内容，优先从FAISS向量数据库获取，如果失败则从文件获取
     """
-    print(f"正在获取课时内容: sessionId={sessionId}, courseId={courseId}, lessonNum={lessonNum}")
+    print(f"正在获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
+    
+    # 获取用户路径
+    user_path = get_user_path(user_id, is_teacher)
     
     # 首先尝试从FAISS向量数据库获取内容
-    vector_db_path = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{sessionId}/{courseId}/{lessonNum}/vector_kb"
+    vector_db_path = os.path.join(user_path, course_id, lesson_num, "vector_kb")
     print(f"尝试从向量数据库获取课时内容: {vector_db_path}")
     
     content = extract_text_from_faiss_db(vector_db_path)
@@ -182,7 +195,7 @@ def get_file_content(sessionId: str, courseId: str, lessonNum: str):
     print("向量数据库获取失败，回退到文件读取方式")
     
     # 搜索特定课时的内容
-    lesson_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{sessionId}/{courseId}/{lessonNum}"
+    lesson_folder = os.path.join(user_path, course_id, lesson_num)
     
     # 读取特定课时的文件内容
     if not os.path.exists(lesson_folder):
@@ -262,13 +275,16 @@ def generate_outline_prompt(content: str, max_words: int) -> str:
     return prompt
 
 
-def save_outline_to_file(sessionId: str, courseId: str, lessonNum: str, outline_content: str) -> dict:
+def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_content: str, is_teacher: bool) -> dict:
     """
     将生成的大纲保存到文件
     """
     try:
+        # 获取用户路径
+        user_path = get_user_path(user_id, is_teacher)
+        
         # 创建大纲保存目录
-        outline_dir = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{sessionId}/{courseId}/{lessonNum}/outline"
+        outline_dir = os.path.join(user_path, course_id, lesson_num, "outline")
         os.makedirs(outline_dir, exist_ok=True)
         
         # 生成文件名（包含时间戳）
@@ -286,7 +302,7 @@ def save_outline_to_file(sessionId: str, courseId: str, lessonNum: str, outline_
             "success": True,
             "filePath": file_path,
             "filename": filename,
-            "downloadUrl": f"/v1/download/outline/{sessionId}/{courseId}/{lessonNum}/{filename}"
+            "downloadUrl": f"/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{filename}"
         }
         
     except Exception as e:
@@ -371,7 +387,7 @@ async def create_outline(body: CreateOutlineBody, request: Request):
             print(f"开始为课时 {body.lessonNum} 生成教学大纲")
             
             # 获取课时内容
-            content = get_file_content(body.sessionId, body.courseId, body.lessonNum)
+            content = get_file_content(body.userID, body.courseId, body.lessonNum, body.isTeacher)
             if not content:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -385,15 +401,17 @@ async def create_outline(body: CreateOutlineBody, request: Request):
             outline_content = await generate_outline_with_rwkv(prompt, request)
             
             # 保存大纲到文件
-            save_result = save_outline_to_file(body.sessionId, body.courseId, body.lessonNum, outline_content)
+            save_result = save_outline_to_file(body.userID, body.courseId, body.lessonNum, outline_content, body.isTeacher)
             
             if save_result["success"]:
                 return {
                     "success": True,
                     "message": "教学大纲生成成功",
+                    "userID": body.userID,
                     "sessionId": body.sessionId,
                     "courseId": body.courseId,
                     "lessonNum": body.lessonNum,
+                    "isTeacher": body.isTeacher,
                     "outlineContent": outline_content[:500] + "..." if len(outline_content) > 500 else outline_content,
                     "downloadUrl": save_result["downloadUrl"],
                     "filename": save_result["filename"]
@@ -415,13 +433,16 @@ async def create_outline(body: CreateOutlineBody, request: Request):
 
 
 @router.get("/v1/create/outline/status", tags=["Create"])
-async def get_outline_status(sessionId: str, courseId: str, lessonNum: str):
+async def get_outline_status(user_id: str, course_id: str, lesson_num: str, is_teacher: bool = False):
     """
     获取大纲生成状态
     """
     try:
+        # 获取用户路径
+        user_path = get_user_path(user_id, is_teacher)
+        
         # 检查大纲目录是否存在
-        outline_dir = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{sessionId}/{courseId}/{lessonNum}/outline"
+        outline_dir = os.path.join(user_path, course_id, lesson_num, "outline")
         
         if not os.path.exists(outline_dir):
             return {
@@ -440,8 +461,12 @@ async def get_outline_status(sessionId: str, courseId: str, lessonNum: str):
             return {
                 "hasOutline": True,
                 "message": "大纲已存在",
+                "userID": user_id,
+                "courseId": course_id,
+                "lessonNum": lesson_num,
+                "isTeacher": is_teacher,
                 "latestFile": latest_file,
-                "downloadUrl": f"/v1/download/outline/{sessionId}/{courseId}/{lessonNum}/{latest_file}",
+                "downloadUrl": f"/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{latest_file}",
                 "createdTime": datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
             }
         else:

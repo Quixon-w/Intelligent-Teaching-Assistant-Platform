@@ -24,8 +24,8 @@ rule cuda_compile
 rule link
   command = $cxx $in $ldflags -o $out
 
-build rwkv6_op.o: compile /data-extend/wangqianxu/wqxspace/RWKV/backend-python/rwkv_pip/cuda/rwkv6_op.cpp
-build rwkv6.cuda.o: cuda_compile /data-extend/wangqianxu/wqxspace/RWKV/backend-python/rwkv_pip/cuda/rwkv6.cu
+build rwkv6_op.o: compile /data-extend/wangqianxu/wqxspace/ITAP/Intelligent-Teaching-Assistant-Platform/backend-python/rwkv_pip/cuda/rwkv6_op.cpp
+build rwkv6.cuda.o: cuda_compile /data-extend/wangqianxu/wqxspace/ITAP/Intelligent-Teaching-Assistant-Platform/backend-python/rwkv_pip/cuda/rwkv6.cu
 
 
 

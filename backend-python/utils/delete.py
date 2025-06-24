@@ -12,8 +12,8 @@ class DeleteUtils:
     
     # 允许删除的路径前缀
     ALLOWED_BASE_PATHS = [
-        "/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers",
-        "/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Students"
+        "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers",
+        "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students"
     ]
     
     @classmethod

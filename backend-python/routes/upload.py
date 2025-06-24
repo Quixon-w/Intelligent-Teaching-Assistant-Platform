@@ -8,7 +8,8 @@ router = APIRouter()
 @router.post("/v1/upload")
 async def upload_file(
     file: UploadFile = File(...), 
-    sessionId: str = Form(...), 
+    sessionId: str = Form(...),
+    userId: str = Form(...),
     isTeacher: bool = Form(False),
     courseId: Optional[str] = Form(None),
     lessonNum: Optional[str] = Form(None),
@@ -20,7 +21,8 @@ async def upload_file(
     """
     上传文件并保存至服务器指定的路径
     :param file: 上传的文件
-    :param sessionId: 会话 ID，用于创建会话文件夹
+    :param sessionId: 会话 ID，用于会话标识
+    :param userId: 用户ID，用于确定存储路径
     :param isTeacher: 是否为教师，决定存储路径
     :param courseId: 课程ID，教师模式下必填（非ask文件时）
     :param lessonNum: 课时号，教师模式下必填（大纲与习题生成参考文件时）
@@ -53,31 +55,31 @@ async def upload_file(
             detail="教师模式下大纲与习题生成参考文件时lessonNum不能为空"
         )
     
-    # 根据isTeacher和文件类型决定存储路径
+    # 根据isTeacher和文件类型决定存储路径，使用userId作为主目录
     if isTeacher:
         # 教师模式
-        base_folder = "/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers"
+        base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers"
         if isResource:
             # 学习资料：保存到courseId级别
-            session_folder = f"{base_folder}/{sessionId}/{courseId}"
+            session_folder = f"{base_folder}/{userId}/{courseId}"
         elif isOutline:
             # 大纲与习题生成参考文件：保存到lessonNum级别
-            session_folder = f"{base_folder}/{sessionId}/{courseId}/{lessonNum}"
+            session_folder = f"{base_folder}/{userId}/{courseId}/{lessonNum}"
         elif isAsk:
             # 可对文件进行提问的文件：保存在ask文件夹
-            session_folder = f"{base_folder}/{sessionId}/ask"
+            session_folder = f"{base_folder}/{userId}/ask"
         else:
             # 默认情况（兼容旧版本）
-            session_folder = f"{base_folder}/{sessionId}/{courseId}/{lessonNum}"
+            session_folder = f"{base_folder}/{userId}/{courseId}/{lessonNum}"
     else:
-        # 学生模式：存储在Students目录下的sessionId文件夹中
-        base_folder = "/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Students"
+        # 学生模式：存储在Students目录下的userId文件夹中
+        base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students"
         if isAsk:
             # 学生上传的可提问文件：保存在ask文件夹
-            session_folder = f"{base_folder}/{sessionId}/ask"
+            session_folder = f"{base_folder}/{userId}/ask"
         else:
-            # 其他文件：保存在sessionId文件夹
-            session_folder = f"{base_folder}/{sessionId}"
+            # 其他文件：保存在userId文件夹
+            session_folder = f"{base_folder}/{userId}"
     
     # 创建目录结构
     os.makedirs(session_folder, exist_ok=True)
@@ -102,10 +104,12 @@ async def upload_file(
             # 生成下载URL（仅对学习资料生成）
             download_url = None
             if isResource and isTeacher:
-                download_url = f"/v1/download/resource/{sessionId}/{courseId}/{file.filename}"
+                download_url = f"/v1/download/resource/{userId}/{courseId}/{file.filename}"
             
             response_data = {
                 "message": f"文件已成功上传",
+                "sessionId": sessionId,
+                "userId": userId,
                 "isTeacher": isTeacher,
                 "courseId": courseId,
                 "lessonNum": lessonNum,
@@ -129,7 +133,7 @@ async def upload_file(
 
 # 注意：下载相关的路由已移至 routes/download.py
 # 包括：
-# - /v1/download/resource/{sessionId}/{courseId}/{filename}
-# - /v1/download/outline/{sessionId}/{courseId}/{lessonNum}/{filename}
-# - /v1/list/resources/{sessionId}/{courseId}
-# - /v1/list/outlines/{sessionId}/{courseId}/{lessonNum}
+# - /v1/download/resource/{userId}/{courseId}/{filename}
+# - /v1/download/outline/{userId}/{courseId}/{lessonNum}/{filename}
+# - /v1/list/resources/{userId}/{courseId}
+# - /v1/list/outlines/{userId}/{courseId}/{lessonNum}
