@@ -191,7 +191,8 @@ public class UserController {
             @RequestParam Integer pageNum,
             @RequestParam Integer pageSize,
             @RequestParam String username,
-            HttpServletRequest request) {
+            HttpServletRequest request
+    ) {
         // 校验参数
         if (pageNum == null || pageNum <= 0 || pageSize == null || pageSize <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "分页参数非法");

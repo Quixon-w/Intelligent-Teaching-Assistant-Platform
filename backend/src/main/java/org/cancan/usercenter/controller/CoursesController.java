@@ -14,11 +14,16 @@ import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.model.domain.Courses;
+import org.cancan.usercenter.model.domain.Enroll;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.CoursesService;
+import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Objects;
+
+import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
 import static org.cancan.usercenter.constant.UserConstant.TEACHER_ROLE;
 
 /**
@@ -34,6 +39,9 @@ public class CoursesController {
 
     @Resource
     private CoursesService coursesService;
+
+    @Resource
+    private EnrollService enrollService;
 
     @Resource
     private UserService userService;
@@ -80,11 +88,7 @@ public class CoursesController {
             @Parameter(name = "courseName", description = "课程名", required = true),
             @Parameter(name = "comment", description = "课程描述")
     })
-    public BaseResponse<Courses> addCourse(
-            @RequestParam String courseName,
-            @RequestParam(required = false) String comment,
-            HttpServletRequest request
-    ) {
+    public BaseResponse<Courses> addCourse(@RequestParam String courseName, @RequestParam(required = false) String comment, HttpServletRequest request) {
         User currentUser = userService.getCurrentUser(request);
         // 仅老师可开课
         if (currentUser.getUserRole() != TEACHER_ROLE) {
@@ -109,15 +113,44 @@ public class CoursesController {
             @Parameter(name = "courseId", description = "课程id", required = true),
             @Parameter(name = "comment", description = "课程简介", required = true)
     })
-    public BaseResponse<Boolean> editComment(
-            @RequestParam Long courseId,
-            @RequestParam String comment,
-            HttpServletRequest request
-    ) {
+    public BaseResponse<Boolean> editComment(@RequestParam Long courseId, @RequestParam String comment, HttpServletRequest request) {
         if (!coursesService.isTeacher(courseId, request)) {
             throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可删除课程");
         }
         return ResultUtils.success(coursesService.editComment(courseId, comment));
+    }
+
+    @PostMapping("/over")
+    @Operation(summary = "结束课程")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程id", required = true)
+    })
+    public BaseResponse<Boolean> over(@RequestParam Long courseId, HttpServletRequest request) {
+        Courses course = coursesService.getValidCourseById(courseId);
+        if (!coursesService.isTeacher(courseId, request) && userService.getCurrentUser(request).getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可结束课程");
+        }
+        return ResultUtils.success(coursesService.over(course));
+    }
+
+    @GetMapping("/score")
+    @Operation(summary = "获取该课程学生分数")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程id", required = true),
+            @Parameter(name = "studentId", description = "学生id", required = true)
+    })
+    public BaseResponse<Float> getScore(@RequestParam Long courseId, @RequestParam Long studentId, HttpServletRequest request) {
+        // 非老师，非学生，非管理员不可查看成绩
+        if (!coursesService.isTeacher(courseId, request)
+                && !Objects.equals(userService.getCurrentUser(request).getId(), studentId)
+                && userService.getCurrentUser(request).getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可获取学生分数");
+        }
+        // 查询成绩
+        QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("courses_id", courseId).eq("student_id", studentId);
+        Enroll enroll = enrollService.getOne(queryWrapper);
+        return ResultUtils.success(enroll.getFinalScore());
     }
 
 }

@@ -100,7 +100,7 @@ public class EnrollController {
         if (!Objects.equals(currentUser.getId(), studentId) && currentUser.getUserRole() != ADMIN_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
         }
-        List<Courses> coursesList = enrollService.getCoursesByStudentId(studentId);
+        List<Courses> coursesList = coursesService.getCoursesByStudentId(studentId);
         if (coursesList == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "学生无选课记录");
         }

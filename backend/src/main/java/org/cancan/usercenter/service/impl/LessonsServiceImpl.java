@@ -5,14 +5,14 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.mapper.CoursesMapper;
 import org.cancan.usercenter.mapper.LessonsMapper;
+import org.cancan.usercenter.mapper.QuestionRecordsMapper;
 import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.QuestionRecords;
 import org.cancan.usercenter.model.domain.User;
-import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.LessonsService;
-import org.cancan.usercenter.service.QuestionRecordsService;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
 
@@ -27,10 +27,9 @@ import java.util.List;
 public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> implements LessonsService {
 
     @Resource
-    private CoursesService coursesService;
-
+    private CoursesMapper coursesMapper;
     @Resource
-    private QuestionRecordsService questionRecordsService;
+    private QuestionRecordsMapper questionRecordsMapper;
 
     /**
      * 创建课时
@@ -64,7 +63,7 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
         QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("course_id", lessons.getCourseId());
         queryWrapper.eq("teacher_id", currentUser.getId());
-        if (!coursesService.exists(queryWrapper)) {
+        if (!coursesMapper.exists(queryWrapper)) {
             throw new BusinessException(ErrorCode.NO_AUTH, "非老师本人开设的课时");
         }
     }
@@ -92,19 +91,21 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
      * @return 学生的分数
      */
     @Override
-    public Integer getLessonScore(Long lessonId, Long studentId) {
+    public Float getLessonScore(Long lessonId, Long studentId) {
+        // ! 前置条件：已确认该 lesson 存在习题
         // 筛选该学生答题记录
         QueryWrapper<QuestionRecords> queryWrapperR = new QueryWrapper<>();
         queryWrapperR.eq("student_id", studentId);
         queryWrapperR.eq("lesson_id", lessonId);
-        List<QuestionRecords> questionRecords = questionRecordsService.list(queryWrapperR);
+        List<QuestionRecords> questionRecords = questionRecordsMapper.selectList(queryWrapperR);
+        // 该学生该课程无答题记录
         if (questionRecords.isEmpty()) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "该课时无答题记录");
+            return (float) 0;
         }
         // 计算分数
         long rightNum = questionRecords.stream()
                 .filter(questionRecord -> questionRecord.getIsCorrect() == 1).count();
-        return (int) (rightNum * 100 / questionRecords.size());
+        return (float) (rightNum * 100 / questionRecords.size());
     }
 
 }

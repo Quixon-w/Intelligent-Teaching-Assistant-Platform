@@ -188,7 +188,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             // 校验旧密码正确
             String encryptOldPassword = DigestUtils.md5DigestAsHex((SALT + oldPassword).getBytes(StandardCharsets.UTF_8));
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("id", userId).eq("userPassword", encryptOldPassword);
+            queryWrapper.eq("id", userId).eq("user_password", encryptOldPassword);
             if (!userMapper.exists(queryWrapper)) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "旧密码错误");
             }
@@ -196,7 +196,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 更新密码
         UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + newPassword).getBytes(StandardCharsets.UTF_8));
-        updateWrapper.eq("id", userId).set("userPassword", encryptPassword);
+        updateWrapper.eq("id", userId).set("user_password", encryptPassword);
+        // 执行更新操作
+        int rows = userMapper.update(null, updateWrapper);
+        if (rows == 0) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "密码更新失败");
+        }
     }
 
     /**

@@ -1,7 +1,6 @@
 package org.cancan.usercenter.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Enroll;
 import org.cancan.usercenter.model.domain.User;
 
@@ -36,9 +35,9 @@ public interface EnrollService extends IService<Enroll> {
      * 获取某学生的所有选课
      *
      * @param studentId 学生id
-     * @return 选课列表
+     * @return 选课结果
      */
-    List<Courses> getCoursesByStudentId(Long studentId);
+    List<Long> getCoursesByStudentId(Long studentId);
 
     /**
      * 获取某课程的所有选课学生
@@ -55,4 +54,20 @@ public interface EnrollService extends IService<Enroll> {
      * @param studentId 学生id
      */
     void isEnrolled(Long courseId, Long studentId);
+
+    /**
+     * 计算某课程的所有选课学生的该课程分数
+     *
+     * @param courseId 课程 id
+     */
+    void calculateStudentsScores(Long courseId);
+
+    /**
+     * 计算某学生某课程的分数
+     *
+     * @param studentId 学生id
+     * @param courseId  课程id
+     * @return 该学生的该课程的分数
+     */
+    float calculateScore(Long studentId, Long courseId);
 }

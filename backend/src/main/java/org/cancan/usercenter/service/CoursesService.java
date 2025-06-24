@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.cancan.usercenter.model.domain.Courses;
 
+import java.util.List;
+
 /**
  * @author 洪
  * {@code @description} 针对表【courses】的数据库操作Service
@@ -55,4 +57,20 @@ public interface CoursesService extends IService<Courses> {
      * @return 查询条件
      */
     QueryWrapper<Courses> buildCourseQuery(String courseName, String teacherName);
+
+    /**
+     * 课程结束
+     *
+     * @param course 课程
+     * @return 是否成功
+     */
+    Boolean over(Courses course);
+
+    /**
+     * 获取该学生的所有课程
+     *
+     * @param studentId 学生 id
+     * @return 课程列表
+     */
+    List<Courses> getCoursesByStudentId(Long studentId);
 }

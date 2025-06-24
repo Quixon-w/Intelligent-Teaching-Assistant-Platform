@@ -3,8 +3,6 @@ package org.cancan.usercenter.model.domain;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
-import java.util.Date;
-
 /**
  * {@code @TableName} lesson_question_map
  */
@@ -21,8 +19,4 @@ public class LessonQuestionMap {
      */
     private Long questionId;
 
-    /**
-     * 习题在测试中的时间顺序
-     */
-    private Date timeOrder;
 }

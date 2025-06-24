@@ -10,4 +10,12 @@ import org.cancan.usercenter.model.domain.LessonQuestionMap;
  */
 public interface LessonQuestionMapService extends IService<LessonQuestionMap> {
 
+    /**
+     * 判断课时中是否有此题
+     *
+     * @param lessonId 课时id
+     * @return 是否有题
+     */
+    Boolean hasQuestion(Long lessonId);
+
 }

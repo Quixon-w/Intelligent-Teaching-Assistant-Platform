@@ -5,14 +5,16 @@
 <mapper namespace="org.cancan.usercenter.mapper.CoursesMapper">
 
     <resultMap id="BaseResultMap" type="org.cancan.usercenter.model.domain.Courses">
-            <id property="id" column="id" />
-            <result property="name" column="name" />
-            <result property="teacherId" column="teacher_id" />
-            <result property="createTime" column="create_time" />
-            <result property="comment" column="comment" />
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="teacherId" column="teacher_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="comment" column="comment"/>
+        <result property="teacherName" column="teacher_name"/>
+        <result property="over" column="over"/>
     </resultMap>
 
-<!--    <sql id="Base_Column_List">-->
-<!--        id,name,teacher_id,create_time,comment-->
-<!--    </sql>-->
+    <!--    <sql id="Base_Column_List">-->
+    <!--        id,name,teacher_id,create_time,comment,teacher_name,over-->
+    <!--    </sql>-->
 </mapper>

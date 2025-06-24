@@ -8,10 +8,9 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * 
  * {@code @TableName} courses
  */
-@TableName(value ="courses")
+@TableName(value = "courses")
 @Data
 public class Courses {
     /**
@@ -31,6 +30,11 @@ public class Courses {
     private Long teacherId;
 
     /**
+     * 教师名字
+     */
+    private String teacherName;
+
+    /**
      * 创建时间
      */
     private Date createTime;
@@ -39,4 +43,9 @@ public class Courses {
      * 课程简介
      */
     private String comment;
+
+    /**
+     * 课程是否结束
+     */
+    private Integer over;
 }

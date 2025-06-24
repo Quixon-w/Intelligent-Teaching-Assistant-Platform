@@ -8,10 +8,9 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * 
  * {@code @TableName} enroll
  */
-@TableName(value ="enroll")
+@TableName(value = "enroll")
 @Data
 public class Enroll {
     /**
@@ -33,7 +32,7 @@ public class Enroll {
     /**
      * 最终成绩
      */
-    private Double finalScore;
+    private Float finalScore;
 
     /**
      * 选课时间

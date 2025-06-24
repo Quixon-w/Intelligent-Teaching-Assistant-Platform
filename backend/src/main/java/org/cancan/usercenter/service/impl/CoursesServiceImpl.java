@@ -8,9 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.mapper.CoursesMapper;
+import org.cancan.usercenter.mapper.UserMapper;
 import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.CoursesService;
+import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,12 @@ import static org.cancan.usercenter.constant.UserConstant.TEACHER_ROLE;
 public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> implements CoursesService {
 
     @Resource
+    private UserMapper userMapper;
+
+    @Resource
     private UserService userService;
+    @Resource
+    private EnrollService enrollService;
 
     /**
      * @param courseName 课程名
@@ -114,10 +121,10 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
             queryWrapper.like("course_name", courseName);
         }
         if (StringUtils.isNotBlank(teacherName)) {
-            QueryWrapper<User> queryWrapperName = new QueryWrapper<>();
-            queryWrapperName.like("username", teacherName);
-            queryWrapperName.eq("user_role", TEACHER_ROLE);
-            List<Long> teacherIds = userService.list(queryWrapperName).stream().map(User::getId).toList();
+            QueryWrapper<User> queryWrapperN = new QueryWrapper<>();
+            queryWrapperN.like("username", teacherName);
+            queryWrapperN.eq("user_role", TEACHER_ROLE);
+            List<Long> teacherIds = userMapper.selectList(queryWrapperN).stream().map(User::getId).toList();
             if (!teacherIds.isEmpty()) {
                 queryWrapper.in("teacher_id", teacherIds);
             } else {
@@ -126,6 +133,33 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
             }
         }
         return queryWrapper;
+    }
+
+    /**
+     * @param course 课程
+     * @return 是否成功
+     */
+    @Override
+    public Boolean over(Courses course) {
+        if (course.getOver() == 1) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "课程已结束");
+        }
+        enrollService.calculateStudentsScores(course.getId());
+        course.setOver(1);
+        return this.updateById(course);
+    }
+
+    /**
+     * @param studentId 学生id
+     * @return 课程列表
+     */
+    @Override
+    public List<Courses> getCoursesByStudentId(Long studentId) {
+        List<Long> courseIds = enrollService.getCoursesByStudentId(studentId);
+        if (courseIds == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "该学生无选课记录");
+        }
+        return this.listByIds(courseIds);
     }
 
 }

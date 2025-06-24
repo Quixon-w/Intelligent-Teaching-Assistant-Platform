@@ -7,10 +7,9 @@
     <resultMap id="BaseResultMap" type="org.cancan.usercenter.model.domain.LessonQuestionMap">
         <result property="lessonId" column="lesson_id"/>
         <result property="questionId" column="question_id"/>
-        <result property="timeOrder" column="time_order"/>
     </resultMap>
 
     <!--    <sql id="Base_Column_List">-->
-    <!--        lesson_id,question_id,time_order-->
+    <!--        lesson_id,question_id-->
     <!--    </sql>-->
 </mapper>

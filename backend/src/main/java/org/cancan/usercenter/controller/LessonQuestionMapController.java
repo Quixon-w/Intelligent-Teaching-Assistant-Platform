@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
@@ -15,7 +14,6 @@ import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.model.domain.LessonQuestionMap;
 import org.cancan.usercenter.service.LessonQuestionMapService;
 import org.cancan.usercenter.service.LessonsService;
-import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,11 +38,8 @@ public class LessonQuestionMapController {
     @Resource
     private LessonsService lessonsService;
 
-    @Resource
-    private UserService userService;
-
     @PostMapping("/add")
-    @Operation(summary = "批量添加课时问题")
+    @Operation(summary = "批量添加某课时的习题")
     @Parameters({
             @Parameter(name = "lessonId", description = "课时ID", required = true),
             @Parameter(name = "questionIds", description = "问题ID列表", required = true)
@@ -76,24 +71,24 @@ public class LessonQuestionMapController {
         return ResultUtils.success(records);
     }
 
-    @PostMapping("/delete")
-    @Operation(summary = "删除某个课时的某个问题")
-    @Parameters({
-            @Parameter(name = "lessonId", description = "课时ID", required = true),
-            @Parameter(name = "questionId", description = "问题ID", required = true)
-    })
-    public BaseResponse<Boolean> delete(Long lessonId, Long questionId, HttpServletRequest request) {
-        // 检查有效性与权限
-        lessonsService.isTeacher(lessonId, userService.getCurrentUser(request));
-        // 删除 lesson-question 记录
-        QueryWrapper<LessonQuestionMap> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("lesson_id", lessonId);
-        queryWrapper.eq("question_id", questionId);
-        return ResultUtils.success(lessonQuestionMapService.remove(queryWrapper));
-    }
+//    @PostMapping("/delete")
+//    @Operation(summary = "删除某个课时的某个问题")
+//    @Parameters({
+//            @Parameter(name = "lessonId", description = "课时ID", required = true),
+//            @Parameter(name = "questionId", description = "问题ID", required = true)
+//    })
+//    public BaseResponse<Boolean> delete(Long lessonId, Long questionId, HttpServletRequest request) {
+//        // 检查有效性与权限
+//        lessonsService.isTeacher(lessonId, userService.getCurrentUser(request));
+//        // 删除 lesson-question 记录
+//        QueryWrapper<LessonQuestionMap> queryWrapper = new QueryWrapper<>();
+//        queryWrapper.eq("lesson_id", lessonId);
+//        queryWrapper.eq("question_id", questionId);
+//        return ResultUtils.success(lessonQuestionMapService.remove(queryWrapper));
+//    }
 
     @GetMapping("/list")
-    @Operation(summary = "获取课时问题列表")
+    @Operation(summary = "获取某课时的习题列表")
     @Parameters({
             @Parameter(name = "lessonId", description = "课时ID", required = true)
     })
@@ -103,6 +98,7 @@ public class LessonQuestionMapController {
         // 获取课时问题列表
         QueryWrapper<LessonQuestionMap> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("lesson_id", lessonId);
+        queryWrapper.orderByAsc("question_id");
         return ResultUtils.success(lessonQuestionMapService.list(queryWrapper));
     }
 

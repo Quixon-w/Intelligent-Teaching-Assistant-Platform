@@ -43,5 +43,6 @@ public interface LessonsService extends IService<Lessons> {
      * @param studentId 学生ID
      * @return 分数
      */
-    Integer getLessonScore(Long lessonId, Long studentId);
+    Float getLessonScore(Long lessonId, Long studentId);
+
 }

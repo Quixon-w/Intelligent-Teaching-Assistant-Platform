@@ -12,8 +12,7 @@ import org.springframework.stereotype.Service;
  * {@code @createDate} 2025-06-23 13:47:55
  */
 @Service
-public class QuestionRecordsServiceImpl extends ServiceImpl<QuestionRecordsMapper, QuestionRecords>
-        implements QuestionRecordsService {
+public class QuestionRecordsServiceImpl extends ServiceImpl<QuestionRecordsMapper, QuestionRecords> implements QuestionRecordsService {
 
 }
 
