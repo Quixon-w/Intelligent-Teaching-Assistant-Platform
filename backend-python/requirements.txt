@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+langchain-community
+faiss-cpu
+sentence-transformers
+mysql-connector-python
+torch
+numpy
+httpx
+requests 
