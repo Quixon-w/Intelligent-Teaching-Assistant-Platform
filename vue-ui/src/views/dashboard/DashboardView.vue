@@ -36,6 +36,7 @@ const handleCommand = (command) => {
     <el-container>
       <el-header class="header">
         <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="50" height="50"/>
+        <el-button type="success" @click="router.push('/dashboard/aitalk')">与ai对话</el-button>
         <div>
           <el-text style="color: #B0C4DE;font-size: 30px">{{role}}</el-text>
           <el-dropdown @command="handleCommand">

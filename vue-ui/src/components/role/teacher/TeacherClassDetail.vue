@@ -2,35 +2,68 @@
 import { useRoute } from 'vue-router'
 import { onMounted, ref } from 'vue'
 import { addLesson, getLessons } from '@/api/course/lesson.js'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { deleteCourse } from '@/api/course/coures.js'
+import { ElMessage, ElMessageBox, } from 'element-plus'
+import {deleteCourse, findCourseByID, getAllStudents, getLessonQuestions, updateCourse} from '@/api/course/coures.js'
 const route=useRoute();
 const showView=ref(0);
 const dialogLessonFormVisible=ref(false);
 const courseDetail=ref({
-  name:"Class"+route.params.id,
-  teacher:"K",
-  info:"This is a class",
-  students:['S1','S2','S3','S4','S5'],
+  name:"",
+  teacher:"",
+  createTime:"",
+  info:"",
+  students:[],
 })
 const lessonDetail=ref({
   lessons:[],
   lessonForm:{
     courseId:route.params.id,
     lessonName:'',
-  }
+  },
+  lessonQuestions:[],
 })
 
 const getLesson=()=>{
   getLessons(route.params.id)
     .then(res=>{
-      if (res.code===0){
-        lessonDetail.value.lessons=res.data;
+      if (res.data.code===0){
+        lessonDetail.value.lessons=res.data.data;
       }else {
         ElMessage(res.description);
       }
     })
     .catch(err=>{ElMessage(err);})
+}
+const getCourseByID=()=>{
+  findCourseByID(route.params.id)
+    .then(res=>{
+      if (res.data.code===0){
+        courseDetail.value.name=res.data.data.name;
+        courseDetail.value.teacher=res.data.data.teacherName;
+        courseDetail.value.createTime=res.data.data.createTime;
+        courseDetail.value.info=res.data.data.comment;
+      }else {
+        ElMessage(res.description);
+      }
+    })
+}
+const changeCourseInfo=()=>{
+  ElMessageBox.prompt('请输入新的课程简介', '修改课程简介', {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(({ value }) => {
+    updateCourse(route.params.id,value).then(res=>{
+      ElMessage(res.description);
+    }).catch(err=>{
+      ElMessage(err);
+    })
+  }).catch(() => {
+    ElMessage({
+      type: 'info',
+      message: '取消修改'
+    });
+  });
 }
 const removeCourse=()=>{
   ElMessageBox.confirm('你是否确认删除课程？', '删除请求确认', {
@@ -40,7 +73,7 @@ const removeCourse=()=>{
   }).then(() => {
     deleteCourse(route.params.id)
       .then(res => {
-        if (res.code === 0) {
+        if (res.data.code === 0) {
           ElMessage.success('删除成功');
         } else {
           ElMessage.error(res.message);
@@ -64,9 +97,31 @@ const addLessonSubmit=()=>{
       ElMessage(err);
     })
 }
+const getStudents=()=>{
+  getAllStudents(route.params.id)
+    .then(res=>{
+      if (res.data.code===0){
+        courseDetail.value.students=res.data.data;
+      }else {
+        ElMessage(res.description);
+      }
+    })
+    .catch(err=>{ElMessage(err);})
+}
+const getLessonQuestion=(lessonId)=>{
+  getLessonQuestions(lessonId)
+      .then(res=>{
+        lessonDetail.value.lessonQuestions=res.data;
+        ElMessage(res.data);
+      }).catch(err=>{{
+        ElMessage(err);
+  }})
+}
 
 onMounted(()=>{
   getLesson();
+  getCourseByID();
+  getStudents();
 })
 </script>
 
@@ -85,9 +140,13 @@ onMounted(()=>{
             <span>课程信息</span>
           </div>
         </template>
-        <el-text>课程名：{{courseDetail.name}}</el-text><br>
+        <el-text>课程名程：{{courseDetail.name}}</el-text><br>
         <el-text>任课老师：{{courseDetail.teacher}}</el-text><br>
+        <el-text>创建时间：{{courseDetail.createTime}}</el-text><br>
         <el-text>课程简介：{{courseDetail.info}}</el-text>
+        <template #footer>
+          <el-button type="primary" @click="changeCourseInfo">修改课程简介</el-button>
+        </template>
       </el-card>
       <el-card class="class-card" v-if="showView===1">
         <template #header>
@@ -101,8 +160,8 @@ onMounted(()=>{
           <el-table-column property="createTime" label="创建时间" width="120" />
           <el-table-column label="操作">
             <template #default="scope">
-              <el-button size="small" @click="">编辑</el-button>
-              <el-button size="small" type="danger" @click="">删除</el-button>
+              <el-button size="default" @click="getLessonQuestion(scope.row.lessonId)">编辑</el-button>
+              <el-button size="default" type="danger" @click="">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -113,7 +172,18 @@ onMounted(()=>{
             <span>学生</span>
           </div>
         </template>
-        <el-text v-for="student in courseDetail.students">学生：{{student}}<br></el-text>
+        <el-table :data="courseDetail.students" border style="width: 100%">
+          <el-table-column type="selection" width="55" />
+          <el-table-column property="id" label="ID" v-if="false"></el-table-column>
+          <el-table-column property="username" label="学生姓名" width="120"></el-table-column>
+          <el-table-column property="gender" label="学生性别" width="120"></el-table-column>
+          <el-table-column label="操作">
+            <template #default="scope">
+              <el-button size="small" @click="">编辑</el-button>
+              <el-button size="small" type="danger" @click="">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
       </el-card>
     </el-main>
   </el-container>
