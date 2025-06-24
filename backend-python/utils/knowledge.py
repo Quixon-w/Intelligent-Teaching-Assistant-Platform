@@ -201,7 +201,7 @@ def create_vector_db(documents, vector_kb_folder):
     try:
         # 使用 m3e-base 模型（safetensors格式，避免PyTorch版本问题）
         embeddings = HuggingFaceEmbeddings(
-            model_name='/data-extend/wangqianxu/wqxspace/RWKV/model/m3e-base',
+            model_name='/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base',
             model_kwargs={'device': 'cpu'},  # 强制使用CPU避免CUDA问题
             encode_kwargs={'normalize_embeddings': True}
         )
@@ -212,7 +212,7 @@ def create_vector_db(documents, vector_kb_folder):
         # 备用方案：使用SentenceTransformer并手动处理
         try:
             from sentence_transformers import SentenceTransformer
-            model = SentenceTransformer('/data-extend/wangqianxu/wqxspace/RWKV/model/m3e-base')
+            model = SentenceTransformer('/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base')
             
             # 手动创建嵌入
             texts = [doc.page_content for doc in documents]
@@ -269,10 +269,10 @@ def update_knowledge_db(session_id, isTeacher=False, courseID=None, lessonNum=No
         if not lessonNum:
             print("教师模式下lessonNum不能为空")
             return None
-        session_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{session_id}/{courseID}/{lessonNum}"
+        session_folder = f"/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers/{session_id}/{courseID}/{lessonNum}"
     else:
         # 学生模式：存储在Students目录下的session_id文件夹中
-        session_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Students/{session_id}"
+        session_folder = f"/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students/{session_id}"
     
     vector_kb_folder = os.path.join(session_folder, "vector_kb")
     os.makedirs(vector_kb_folder, exist_ok=True)
@@ -306,10 +306,10 @@ def load_vector_db(session_id, isTeacher=False, courseID=None, lessonNum=None):
         if not lessonNum:
             print("教师模式下lessonNum不能为空")
             return None
-        vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{session_id}/{courseID}/{lessonNum}/vector_kb"
+        vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers/{session_id}/{courseID}/{lessonNum}/vector_kb"
     else:
         # 学生模式：从Students目录下的session_id文件夹中加载
-        vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Students/{session_id}/vector_kb"
+        vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students/{session_id}/vector_kb"
     
     if not os.path.exists(vector_kb_folder):
         print(f"向量数据库不存在: {vector_kb_folder}")
@@ -318,7 +318,7 @@ def load_vector_db(session_id, isTeacher=False, courseID=None, lessonNum=None):
     try:
         # 使用 m3e-base 模型（safetensors格式，避免PyTorch版本问题）
         embeddings = HuggingFaceEmbeddings(
-            model_name='/data-extend/wangqianxu/wqxspace/RWKV/model/m3e-base',
+            model_name='/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base',
             model_kwargs={'device': 'cpu'},
             encode_kwargs={'normalize_embeddings': True}
         )
@@ -331,7 +331,7 @@ def load_vector_db(session_id, isTeacher=False, courseID=None, lessonNum=None):
         try:
             # 备用方案：使用SentenceTransformer
             from sentence_transformers import SentenceTransformer
-            model = SentenceTransformer('/data-extend/wangqianxu/wqxspace/RWKV/model/m3e-base')
+            model = SentenceTransformer('/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base')
             
             class CustomEmbeddings:
                 def __init__(self, model):

@@ -10,8 +10,15 @@ from sentence_transformers import SentenceTransformer
 router = APIRouter()
 
 
+def get_user_path(user_id: str, is_teacher: bool) -> str:
+    """根据userID和isTeacher确定用户路径"""
+    user_type = "Teachers" if is_teacher else "Students"
+    return os.path.join("/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge", user_type, user_id)
+
+
 class SearchBody(BaseModel):
     query: str = Field(..., description="查询内容")
+    userID: str = Field(..., description="用户ID，用于确定存储路径")
     sessionId: str = Field(..., description="会话ID")
     isTeacher: bool = Field(False, description="是否为教师模式")
     courseId: Union[str, None] = Field(None, description="课程ID，已有文件查询模式下必填")
@@ -23,8 +30,9 @@ class SearchBody(BaseModel):
         "json_schema_extra": {
             "example": {
                 "query": "什么是微积分？",
-                "sessionId": "session123",
-                "isTeacher": False,
+                "userID": "teacher123",
+                "sessionId": "session456",
+                "isTeacher": True,
                 "courseId": "MATH101",
                 "lessonNum": "lesson01",
                 "topK": 2,
@@ -39,36 +47,33 @@ def load_embeddings_model():
     加载文本嵌入模型
     """
     try:
-        model = SentenceTransformer("/data-extend/wangqianxu/wqxspace/RWKV/model/m3e-base")
+        model = SentenceTransformer("/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base")
         return model
     except Exception as e:
         print(f"加载嵌入模型失败: {e}")
         return None
 
 
-def search_knowledge_db(sessionId, query, isTeacher=False, courseId=None, lessonNum=None, top_k=2, search_mode="existing"):
+def search_knowledge_db(user_id, session_id, query, is_teacher=False, course_id=None, lesson_num=None, top_k=2, search_mode="existing"):
     """
     从知识库中搜索相关内容 - 使用直接的向量相似度查询
     """
-    # 根据搜索模式和用户类型决定知识库路径
+    # 获取用户路径
+    user_path = get_user_path(user_id, is_teacher)
+    
+    # 根据搜索模式决定知识库路径
     if search_mode == "uploaded":
-        # 用户上传文件查询模式 - 区分学生和教师
-        if isTeacher:
-            # 教师模式：从Teachers/sessionId/ask/vector_kb中搜索
-            vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{sessionId}/ask/vector_kb"
-        else:
-            # 学生模式：从Students/sessionId/ask/vector_kb中搜索
-            vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Students/{sessionId}/ask/vector_kb"
+        # 用户上传文件查询模式 - 从用户路径下的ask/vector_kb中搜索
+        vector_kb_folder = os.path.join(user_path, "ask", "vector_kb")
     else:
-        # 已有文件查询模式 - 统一从Teachers目录下查找
-        if not courseId:
+        # 已有文件查询模式 - 从用户路径下的课程/课时/vector_kb中搜索
+        if not course_id:
             print("已有文件查询模式下courseId不能为空")
             return None
-        if not lessonNum:
+        if not lesson_num:
             print("已有文件查询模式下lessonNum不能为空")
             return None
-        # 不管用户是教师还是学生，都从Teachers目录下查找
-        vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/RWKV/base_knowledge/Teachers/{sessionId}/{courseId}/{lessonNum}/vector_kb"
+        vector_kb_folder = os.path.join(user_path, course_id, lesson_num, "vector_kb")
     
     if not os.path.exists(vector_kb_folder):
         print(f"知识库路径不存在: {vector_kb_folder}")
@@ -188,6 +193,7 @@ async def search_knowledge(body: SearchBody):
     
     # 执行搜索
     search_result = search_knowledge_db(
+        body.userID,
         body.sessionId, 
         body.query, 
         body.isTeacher, 
@@ -206,6 +212,7 @@ async def search_knowledge(body: SearchBody):
     return {
         "success": True,
         "query": body.query,
+        "userID": body.userID,
         "sessionId": body.sessionId,
         "isTeacher": body.isTeacher,
         "courseId": body.courseId,

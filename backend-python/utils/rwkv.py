@@ -26,7 +26,7 @@ class AbstractRWKV(ABC):
         self.EOS_ID = 0
 
         self.name = "rwkv"
-        self.model_path = "/data-extend/wangqianxu/wqxspace/RWKV/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth"
+        self.model_path = "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth"
         self.version = 4
         self.model = model
         self.pipeline = pipeline
@@ -35,7 +35,7 @@ class AbstractRWKV(ABC):
         self.rwkv_type: RWKVType = RWKVType.NoneType
         self.tokenizer_len = len(model.w["emb.weight"])
 
-        self.max_tokens_per_generation = 500
+        self.max_tokens_per_generation = 1000
         self.temperature = 1
         self.top_p = 0.3
         self.top_k = 0
