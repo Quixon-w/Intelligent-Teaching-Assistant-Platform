@@ -39,6 +39,11 @@ const router = createRouter({
           component: () => import('../views/user/UserCentralView.vue'),
         },
         {
+          path: 'aitalk',
+          name: 'aitalk',
+          component: () => import('../views/dashboard/AITalkView.vue'),
+        },
+        {
           path: 'admin',
           name: 'admin',
           component: RouterReplaceComp(() => import('../views/role/admin/AdminDashboardView.vue')),
