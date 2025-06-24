@@ -84,13 +84,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
         // 校验
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            return null;
+            throw new BusinessException(ErrorCode.NULL_ERROR, "参数为空");
         }
         if (userAccount.length() < 4) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号过短，不少于四位");
         }
         if (userPassword.length() < 8) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码过短，不少于八位");
         }
         // 账户不能包含特殊字符
         SpecialCode.validateCode(userAccount);
@@ -101,16 +101,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         queryWrapper.eq("user_account", userAccount);
         queryWrapper.eq("user_password", encryptPassword);
         User user = userMapper.selectOne(queryWrapper);
-        // 用户不存在
+        // 用户找不到
         if (user == null) {
-            log.info("user login failed, userAccount cannot match userAccount");
             return null;
         }
         // 用户脱敏
         User safetyUser = getSafetyUser(user);
         // 将用户登录态存储到 Redis
         String sessionId = request.getSession().getId(); // 使用 session ID 作为 Redis 的 key
-        redisUtil.set(sessionId, JSON.toJSONString(safetyUser), 3600, TimeUnit.SECONDS); // 1小时过期
+        redisUtil.set(sessionId, JSON.toJSONString(safetyUser), 2 * 24 * 3600, TimeUnit.SECONDS);
 
         return safetyUser;
     }
@@ -137,7 +136,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         userMapper.updateById(safetyUser);
         // 将用户信息更新到 Redis
         String sessionId = request.getSession().getId(); // 使用 session ID 作为 Redis 的 key
-        redisUtil.set(sessionId, JSON.toJSONString(safetyUser), 3600, TimeUnit.SECONDS); // 1小时过期
+        redisUtil.set(sessionId, JSON.toJSONString(safetyUser), 2 * 24 * 3600, TimeUnit.SECONDS); // 1小时过期
 
         return safetyUser;
     }
@@ -210,7 +209,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public User getCurrentUser(HttpServletRequest request) {
-        String userJson = redisUtil.get(request.getSession().getId());
+        String sessionId = request.getSession().getId();
+        String userJson = redisUtil.get(sessionId);
         if (userJson == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
