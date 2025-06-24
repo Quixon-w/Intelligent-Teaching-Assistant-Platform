@@ -1,6 +1,6 @@
 import request from '@/utils/request.js'
 export function login(username, password) {
-  return request.post('/user/login', {
+  return request.post('/api/user/login', {
         "userAccount": username,
         "userPassword": password,
   },{

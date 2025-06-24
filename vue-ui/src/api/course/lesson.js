@@ -1,6 +1,6 @@
 import request from '@/utils/request.js'
 export function getLessons(courseId) {
-  return request.get('/lesson/list',{
+  return request.get('/api/lesson/list',{
     params :{
       courseId:courseId
     },
@@ -14,7 +14,7 @@ export function getLessons(courseId) {
     })
 }
 export function addLesson(courseId,lessonName){
-  return request.post('/lesson/add',null,{
+  return request.post('/api/lesson/add',null,{
     params:{
       courseId:courseId,
       lessonName:lessonName,
