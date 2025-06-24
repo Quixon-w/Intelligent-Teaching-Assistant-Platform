@@ -7,6 +7,17 @@
       <h3>编辑个人信息</h3>
       <form @submit.prevent="changeUserInfo">
         <label>
+          id:
+          <input v-model="editInfo.id" type="text">
+        </label>
+        <label>
+          身份:
+          <select v-model="editInfo.userRole">
+            <option :value="0">学生</option>
+            <option :value="1">老师</option>
+          </select>
+        </label>
+        <label>
           用户名:
           <input v-model="editInfo.username" type="text">
         </label>
@@ -56,7 +67,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import {getCurrentUserId, getUserInfoById,updateUserInfo,changePassword} from '@/api/user/userinfo';
+import {getCurrentUser,updateUserInfo,changePassword} from '@/api/user/userinfo';
 import { ElMessage } from 'element-plus';
 const oldPassword = ref('');
 const newPassword = ref('');
@@ -78,33 +89,30 @@ const userInfo = ref({
 
 const editInfo = ref({ ...userInfo.value });
 
-// 获取当前用户 ID
-const fetchUserId = async () => {
+const fetchCurrentUser = async () => {
   try {
-    const res = await getCurrentUserId();
-    return res.data.id;
+    const user = await getCurrentUser();
+    userInfo.value = user.data;
+    editInfo.value = { ...user.data };
   } catch (error) {
-    ElMessage.error('无法获取用户信息，请重试');
-    return null;
+    ElMessage.error('无法加载当前用户信息');
   }
 };
 
-// 根据用户 ID 获取详细信息
-const fetchUserInfo = async (userId) => {
-  try {
-    const res = await getUserInfoById(userId);
-    console.log('获取到的用户数据:', res.data);
-    userInfo.value = res.data;
-    editInfo.value = { ...userInfo.value };
-  } catch (error) {
-    ElMessage.error('加载用户信息失败');
-  }
-};
 
 const changeUserInfo = async () => {
   try {
-    const res = await updateUserInfo(editInfo.value);
-    if (res.code === 200) {
+    const res = await updateUserInfo(
+        editInfo.value.id,
+        editInfo.value.username,
+        editInfo.value.userAccount,
+        editInfo.value.avatarUrl,
+        editInfo.value.gender,
+        editInfo.value.phone,
+        editInfo.value.email,
+        editInfo.value.userRole,
+    );
+    if (res.code === 0) {
       ElMessage.success('信息更新成功');
       userInfo.value = { ...editInfo.value };
     } else {
@@ -116,26 +124,16 @@ const changeUserInfo = async () => {
   }
 };
 
+
+
 const updatePassword = async () => {
-  if (newPassword.value !== checkPassword.value) {
-    ElMessage.warning('两次输入的新密码不一致');
-    return;
-  }
-
-  if (!oldPassword.value || !newPassword.value) {
-    ElMessage.warning('请填写完整信息');
-    return;
-  }
-
   try {
-    const res = await changePassword({
-      userId: userInfo.value.id,
-      oldPassword: oldPassword.value,
-      newPassword: newPassword.value,
-      checkPassword: checkPassword.value
-    });
+    const res = await changePassword(
+     userInfo.value.id, oldPassword.value,
+     newPassword.value, checkPassword.value
+    );
 
-    if (res.code === 200) {
+    if (res.code === 0) {
       ElMessage.success('密码修改成功');
       oldPassword.value = '';
       newPassword.value = '';
@@ -151,11 +149,9 @@ const updatePassword = async () => {
 
 // 组件挂载时获取用户信息
 onMounted(async () => {
-  const userId = await fetchUserId();
-  if (userId) {
-    await fetchUserInfo(userId);
-  }
+  await fetchCurrentUser();
 });
+
 
 </script>
 
