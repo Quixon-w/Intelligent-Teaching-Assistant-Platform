@@ -39,7 +39,7 @@ const getCourseByID=()=>{
     .then(res=>{
       if (res.data.code===0){
         courseDetail.value.name=res.data.data.name;
-        courseDetail.value.teacher=res.data.data.teacherId;
+        courseDetail.value.teacher=res.data.data.teacherName;
         courseDetail.value.createTime=res.data.data.createTime;
         courseDetail.value.info=res.data.data.comment;
       }else {
