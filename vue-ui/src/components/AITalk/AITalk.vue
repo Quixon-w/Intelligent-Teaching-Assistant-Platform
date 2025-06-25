@@ -9,10 +9,12 @@ const messagesEndRef = ref(null);
 const scrollToBottom = () => {
   messagesEndRef.value?.scrollIntoView({ behavior: "smooth" });
 };
+
 watch(messages, () => {
   localStorage.setItem('chatMessages', JSON.stringify(messages.value));
   scrollToBottom();
 });
+
 const handleSubmit = async () => {
   if (!input.value.trim()) return;
 
@@ -23,41 +25,54 @@ const handleSubmit = async () => {
   };
 
   messages.value.push(userMessage);
+  const userInput = input.value.trim();
   input.value = '';
   isLoading.value = true;
 
   try {
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: input.value.trim() }],
-      stream: true,
+    // 直接使用fetch调用后端API
+    const response = await fetch('/ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: userInput, raw: false }],
+        userID: "test",
+        sessionID: "session_" + Date.now(),
+        isTeacher: false,
+        stream: false
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // 获取响应文本
+    const responseText = await response.text();
+    console.log(responseText);
+
+    // 解析JSON字符串
+    let aiResponse;
+    try {
+      aiResponse = JSON.parse(responseText);
+    } catch (e) {
+      console.error('解析响应失败:', e);
+    }
+
+    // 提取AI回复内容
+    const aiContent = aiResponse.choices?.[0]?.message?.content || "抱歉，我没有得到有效的回复";
+    console.log(aiContent)
 
     const aiMessage = {
       id: Date.now() + 1,
-      content: "",
+      content: aiContent,
       isAI: true,
     };
 
     messages.value.push(aiMessage);
-    isLoading.value = false;
 
-    let isFirstChunk = true;
-    for await (const chunk of response) {
-      const delta = chunk.choices[0]?.delta?.content || "";
-      if (delta) {
-        if (isFirstChunk) {
-          aiMessage.content = delta;
-          isFirstChunk = false;
-        } else {
-          aiMessage.content += delta;
-        }
-        const index = messages.value.findIndex(m => m.id === aiMessage.id);
-        if (index !== -1) {
-          messages.value[index] = aiMessage;
-        }
-      }
-    }
   } catch (error) {
     console.error("API请求失败:", error);
     messages.value.push({
@@ -69,6 +84,7 @@ const handleSubmit = async () => {
     isLoading.value = false;
   }
 };
+
 const handleKeyDown = (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -89,7 +105,7 @@ const clearChatHistory = () => {
       <div v-for="message in messages" :key="message.id" class="flex items-start" :class="message.isAI ? 'justify-start' : 'justify-end'">
         <div v-if="message.isAI" style="display: flex; gap: 0.75rem; align-items: flex-start; width: 100%;">
           <div style="margin-top: 0.5rem;width: 3rem;height: 3rem;">
-            <img src="../assets/logo.svg" alt="StreamAI" style="object-fit: cover; border-radius: 9999px; width: 100%; height: 100%;" />
+            <img src="../../assets/logo.svg" alt="StreamAI" style="object-fit: cover; border-radius: 9999px; width: 100%; height: 100%;" />
           </div>
           <div class="message-box">
             <div style="display: flex; padding: 1rem; flex: 1 1 0; align-items: center; border-radius: 0.5rem; border-width: 1px; border-color: #E5E7EB; background-color: #ffffff; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); " v-html="message.content"></div>
@@ -102,17 +118,17 @@ const clearChatHistory = () => {
             </div>
           </div>
           <div style="margin-top: 0.5rem;width: 3rem;height: 3rem;">
-            <img src="../assets/logo.svg" alt="User" style="object-fit: cover;border-radius: 9999px;width: 100%;height: 100%;" />
+            <img src="../../assets/logo.svg" alt="User" style="object-fit: cover;border-radius: 9999px;width: 100%;height: 100%;" />
           </div>
         </div>
       </div>
 
       <div v-if="isLoading" style="display: flex;gap: 0.75rem;align-items: flex-start;width: 100%;">
         <div style="margin-top: 0.5rem;width: 3rem;height: 3rem;">
-          <img src="../assets/logo.svg" alt="StreamAI" style="object-fit: cover;border-radius: 9999px;width: 100%;height: 100%;"/>
+          <img src="../../assets/logo.svg" alt="StreamAI" style="object-fit: cover;border-radius: 9999px;width: 100%;height: 100%;"/>
         </div>
         <div class="message-box">
-          <div style="display: flex;padding: 1rem;flex: 1 1 0%;align-items: center;border-radius: 0.5rem;border-width: 1px;border-color: #E5E7EB;background-color: #ffffff;box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+          <div style="display: flex;padding: 1rem;flex: 1 1 0;align-items: center;border-radius: 0.5rem;border-width: 1px;border-color: #E5E7EB;background-color: #ffffff;box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
             <div class="loading-dots">
               <span></span>
               <span></span>

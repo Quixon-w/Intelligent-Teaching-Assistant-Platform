@@ -4,9 +4,12 @@ import { onMounted, ref } from 'vue'
 import { addLesson, getLessons } from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
 import {deleteCourse, findCourseByID, getAllStudents, getLessonQuestions, updateCourse} from '@/api/course/coures.js'
+import FileUp from "@/components/file/FileUp.vue";
 const route=useRoute();
 const showView=ref(0);
 const dialogLessonFormVisible=ref(false);
+const dialogQuestionVisible=ref(false);
+const dialogCourseOutlineVisible=ref(false);
 const courseDetail=ref({
   name:"",
   teacher:"",
@@ -20,7 +23,23 @@ const lessonDetail=ref({
     courseId:route.params.id,
     lessonName:'',
   },
-  lessonQuestions:[],
+  lessonQuestions:[{
+    lessonId:1,
+    question:'第一题答案是A',
+    radio:ref(['','选项A','选项B','选项C','选项D']),
+  },{
+    lessonId:2,
+    question:'第二题答案是B',
+    radio:ref(['','选项A','选项B','选项C','选项D']),
+  },{
+    lessonId:3,
+    question:'第三题答案是C',
+    radio:ref(['','选项A','选项B','选项C','选项D']),
+  },{
+    lessonId:4,
+    question:'第四题答案是D',
+    radio:ref(['','选项A','选项B','选项C','选项D']),
+  }],
 })
 
 const getLesson=()=>{
@@ -33,6 +52,14 @@ const getLesson=()=>{
       }
     })
     .catch(err=>{ElMessage(err);})
+}
+const haveLessonQuestion=(lessonId)=>{
+  for(let lesson of lessonDetail.value.lessons){
+    if(lesson.lessonId===lessonId){
+      return lesson.hasQuestion;
+    }
+  }
+  return null;
 }
 const getCourseByID=()=>{
   findCourseByID(route.params.id)
@@ -113,6 +140,7 @@ const getLessonQuestion=(lessonId)=>{
       .then(res=>{
         lessonDetail.value.lessonQuestions=res.data;
         ElMessage(res.data);
+        dialogQuestionVisible.value=true;
       }).catch(err=>{{
         ElMessage(err);
   }})
@@ -132,6 +160,7 @@ onMounted(()=>{
       <el-button type="primary" @click="showView=1">课时管理</el-button>
       <el-button type="success" @click="showView=2">学生管理</el-button>
       <el-button type="danger" @click="removeCourse">删除课程</el-button>
+      <el-button type="warning" @click="dialogQuestionVisible=true">测试</el-button>
     </el-header>
     <el-main class="class-main">
       <el-card class="class-card" v-if="showView===0">
@@ -146,6 +175,8 @@ onMounted(()=>{
         <el-text>课程简介：{{courseDetail.info}}</el-text>
         <template #footer>
           <el-button type="primary" @click="changeCourseInfo">修改课程简介</el-button>
+          <el-button type="warning" @click="">查看课程大纲</el-button>
+          <el-button type="success" @click="dialogCourseOutlineVisible=true">创建课程大纲</el-button>
         </template>
       </el-card>
       <el-card class="class-card" v-if="showView===1">
@@ -160,8 +191,10 @@ onMounted(()=>{
           <el-table-column property="createTime" label="创建时间" width="120" />
           <el-table-column label="操作">
             <template #default="scope">
-              <el-button size="default" @click="getLessonQuestion(scope.row.lessonId)">编辑</el-button>
-              <el-button size="default" type="danger" @click="">删除</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测试</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="">创建测试</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="">删除测试</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="">查看测试完成情况</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -204,7 +237,25 @@ onMounted(()=>{
       </div>
     </template>
   </el-dialog>
-
+  <el-dialog v-model="dialogQuestionVisible" title="测验信息">
+    <el-card v-for="question in lessonDetail.lessonQuestions">
+      <template #header>
+        <el-text>第{{question.lessonId}}}题</el-text>
+      </template>
+      <el-text>{{question.question}}<</el-text>
+      <template #footer>
+        <el-radio-group v-model="question.radio[0]">
+          <el-radio value="A" size="large" border>{{question.radio[1]}}</el-radio>
+          <el-radio value="B" size="large" border>{{question.radio[2]}}</el-radio>
+          <el-radio value="C" size="large" border>{{question.radio[3]}}</el-radio>
+          <el-radio value="D" size="large" border>{{question.radio[4]}}</el-radio>
+        </el-radio-group>
+      </template>
+    </el-card>
+  </el-dialog>
+  <el-dialog v-model="dialogCourseOutlineVisible" title="创建课程大纲">
+    <FileUp/>
+  </el-dialog>
 </template>
 
 <style scoped>
