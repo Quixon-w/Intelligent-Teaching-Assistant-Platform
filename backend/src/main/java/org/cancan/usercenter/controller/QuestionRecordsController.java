@@ -1,5 +1,6 @@
 package org.cancan.usercenter.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -16,6 +17,7 @@ import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.service.*;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
@@ -51,7 +53,7 @@ public class QuestionRecordsController {
     @Parameters({
             @Parameter(name = "lessonId", description = "课时ID", required = true),
     })
-    public BaseResponse<List<QuestionRecords>> add(Long lessonId, List<String> answers, HttpServletRequest request) {
+    public BaseResponse<List<QuestionRecords>> add(@RequestParam Long lessonId, @RequestParam List<String> answers, HttpServletRequest request) {
         // 校验课时
         Lessons lessons = lessonsService.getValidLessonById(lessonId);
         Courses courses = coursesMapper.selectById(lessons.getCourseId());
@@ -61,8 +63,18 @@ public class QuestionRecordsController {
         // 校验选课
         User currentUser = userService.getCurrentUser(request);
         List<Courses> coursesList = coursesService.getCoursesByStudentId(currentUser.getId());
-        if (coursesList == null || !coursesList.contains(courses)) {
+        if (coursesList == null || coursesList.isEmpty()) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "选课列表为空");
+        }
+        if (!coursesList.contains(courses)) {
             throw new BusinessException(ErrorCode.NO_AUTH, "未选该课");
+        }
+        // 校验答题
+        QueryWrapper<QuestionRecords> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("lesson_id", lessonId);
+        queryWrapper.eq("student_id", currentUser.getId());
+        if (questionRecordsService.exists(queryWrapper)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "已提交过该课时的习题");
         }
         // 获取习题列表
         List<Questions> questionsList = lessonQuestionMapService.getOrderedQuestions(lessonId);

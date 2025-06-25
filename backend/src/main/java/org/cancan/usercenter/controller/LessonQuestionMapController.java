@@ -16,10 +16,7 @@ import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.Questions;
 import org.cancan.usercenter.service.LessonQuestionMapService;
 import org.cancan.usercenter.service.LessonsService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -46,7 +43,7 @@ public class LessonQuestionMapController {
             @Parameter(name = "lessonId", description = "课时ID", required = true),
             @Parameter(name = "questionIds", description = "问题ID列表", required = true)
     })
-    public BaseResponse<List<LessonQuestionMap>> add(Long lessonId, List<Long> questionIds) {
+    public BaseResponse<List<LessonQuestionMap>> add(@RequestParam Long lessonId, @RequestParam List<Long> questionIds) {
         // 确认课时有效性
         Lessons lessons = lessonsService.getValidLessonById(lessonId);
         // 问题列表不为空

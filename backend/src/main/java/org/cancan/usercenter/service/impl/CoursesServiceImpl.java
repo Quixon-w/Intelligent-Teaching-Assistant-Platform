@@ -158,7 +158,11 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
      */
     @Override
     public List<Courses> getCoursesByStudentId(Long studentId) {
-        return coursesMapper.selectByIds(enrollService.getCoursesByStudentId(studentId));
+        List<Long> courseIds = enrollService.getCoursesByStudentId(studentId);
+        if (courseIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "该学生无选课记录");
+        }
+        return coursesMapper.selectByIds(courseIds);
     }
 
 }

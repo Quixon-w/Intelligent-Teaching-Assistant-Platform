@@ -41,7 +41,7 @@ server:
       cookie:
         name: SESSION
         same-site: None
-        secure: false
+        secure: true
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true

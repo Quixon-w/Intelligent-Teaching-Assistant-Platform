@@ -14,12 +14,14 @@ import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.mapper.CoursesMapper;
+import org.cancan.usercenter.mapper.EnrollMapper;
 import org.cancan.usercenter.model.domain.Courses;
+import org.cancan.usercenter.model.domain.Enroll;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.model.domain.request.PasswordChangeRequest;
 import org.cancan.usercenter.model.domain.request.UserLoginRequest;
 import org.cancan.usercenter.model.domain.request.UserRegisterRequest;
-import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,7 +44,9 @@ public class UserController {
     private UserService userService;
 
     @Resource
-    private CoursesService coursesService;
+    private CoursesMapper coursesMapper;
+    @Resource
+    private EnrollMapper enrollMapper;
 
     @PostMapping("/register")
     @Operation(summary = "用户注册")
@@ -136,9 +140,16 @@ public class UserController {
             if (user.getUserRole() != null && currentUser.getUserRole() == TEACHER_ROLE && user.getUserRole() == STUDENT_ROLE) {
                 QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
                 queryWrapper.eq("teacher_id", currentUser.getId());
-                boolean result = coursesService.exists(queryWrapper);
-                if (result) {
+                if (coursesMapper.exists(queryWrapper)) {
                     throw new BusinessException(ErrorCode.NO_AUTH, "老师有课程时不可变为学生");
+                }
+            }
+            // 学生有课程时不可变为老师
+            if (user.getUserRole() != null && currentUser.getUserRole() == STUDENT_ROLE && user.getUserRole() == TEACHER_ROLE) {
+                QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
+                queryWrapper.eq("student_id", currentUser.getId());
+                if (enrollMapper.exists(queryWrapper)) {
+                    throw new BusinessException(ErrorCode.NO_AUTH, "学生有课程时不可变为老师");
                 }
             }
         }
