@@ -21,6 +21,7 @@ import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Objects;
 
 import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
@@ -54,6 +55,17 @@ public class CoursesController {
     public BaseResponse<Courses> findOne(@RequestParam Long courseId) {
         Courses courses = coursesService.getValidCourseById(courseId);
         return ResultUtils.success(courses);
+    }
+
+    @GetMapping("/listById")
+    @Operation(summary = "获取教师课程列表")
+    @Parameters({
+            @Parameter(name = "teacherId", description = "老师id", required = true)
+    })
+    public BaseResponse<List<Courses>> listById(@RequestParam Long teacherId) {
+        QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("teacher_id", teacherId);
+        return ResultUtils.success(coursesService.list(queryWrapper));
     }
 
     @GetMapping("/listPage")
