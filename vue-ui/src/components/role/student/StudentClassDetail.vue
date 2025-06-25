@@ -1,59 +1,210 @@
 <script setup>
 import { useRoute } from 'vue-router'
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { addLesson, getLessons } from '@/api/course/lesson.js'
+import { ElMessage, ElMessageBox, } from 'element-plus'
+import {deleteCourse, findCourseByID, getAllStudents, getLessonQuestions, updateCourse} from '@/api/course/coures.js'
 const route=useRoute();
-const classDetail=ref({
-  name:"Class"+route.params.id,
-  teacher:"K",
-  info:"This is a class",
-  students:['S1','S2','S3','S4','S5'],
+const showView=ref(0);
+const dialogLessonFormVisible=ref(false);
+const courseDetail=ref({
+  name:"",
+  teacher:"",
+  createTime:"",
+  info:"",
+  students:[],
+})
+const lessonDetail=ref({
+  lessons:[],
+  lessonForm:{
+    courseId:route.params.id,
+    lessonName:'',
+  },
+  lessonQuestions:[],
+})
+
+const getLesson=()=>{
+  getLessons(route.params.id)
+      .then(res=>{
+        if (res.data.code===0){
+          lessonDetail.value.lessons=res.data.data;
+        }else {
+          ElMessage(res.description);
+        }
+      })
+      .catch(err=>{ElMessage(err);})
+}
+const getCourseByID=()=>{
+  findCourseByID(route.params.id)
+      .then(res=>{
+        if (res.data.code===0){
+          courseDetail.value.name=res.data.data.name;
+          courseDetail.value.teacher=res.data.data.teacherName;
+          courseDetail.value.createTime=res.data.data.createTime;
+          courseDetail.value.info=res.data.data.comment;
+        }else {
+          ElMessage(res.description);
+        }
+      })
+}
+const changeCourseInfo=()=>{
+  ElMessageBox.prompt('请输入新的课程简介', '修改课程简介', {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(({ value }) => {
+    updateCourse(route.params.id,value).then(res=>{
+      ElMessage(res.description);
+    }).catch(err=>{
+      ElMessage(err);
+    })
+  }).catch(() => {
+    ElMessage({
+      type: 'info',
+      message: '取消修改'
+    });
+  });
+}
+const removeCourse=()=>{
+  ElMessageBox.confirm('你是否确认删除课程？', '删除请求确认', {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    deleteCourse(route.params.id)
+        .then(res => {
+          if (res.data.code === 0) {
+            ElMessage.success('删除成功');
+          } else {
+            ElMessage.error(res.message);
+          }
+        })
+        .catch(err => {
+          ElMessage.error('删除失败: ' + err);
+        });
+  }).catch(() => {
+    // 用户点击取消时的操作
+    ElMessage.info('删除操作已取消');
+  });
+}
+const addLessonSubmit=()=>{
+  dialogLessonFormVisible.value=false;
+  addLesson(lessonDetail.value.lessonForm.courseId,lessonDetail.value.lessonForm.lessonName)
+      .then(res=>{
+        ElMessage(res.description);
+      })
+      .catch(err=>{
+        ElMessage(err);
+      })
+}
+const getStudents=()=>{
+  getAllStudents(route.params.id)
+      .then(res=>{
+        if (res.data.code===0){
+          courseDetail.value.students=res.data.data;
+        }else {
+          ElMessage(res.description);
+        }
+      })
+      .catch(err=>{ElMessage(err);})
+}
+const getLessonQuestion=(lessonId)=>{
+  getLessonQuestions(lessonId)
+      .then(res=>{
+        lessonDetail.value.lessonQuestions=res.data;
+        ElMessage(res.data);
+      }).catch(err=>{{
+    ElMessage(err);
+  }})
+}
+
+onMounted(()=>{
+  getLesson();
+  getCourseByID();
+  getStudents();
 })
 </script>
 
 <template>
   <el-container class="class-container">
     <el-header class="class-header">
-      <el-card class="class-card">
+      <el-button type="info" @click="showView=0">课程信息</el-button>
+      <el-button type="primary" @click="showView=1">课时管理</el-button>
+      <el-button type="success" @click="showView=2">学生管理</el-button>
+      <el-button type="danger" @click="removeCourse">删除课程</el-button>
+    </el-header>
+    <el-main class="class-main">
+      <el-card class="class-card" v-if="showView===0">
         <template #header>
           <div class="card-header">
             <span>课程信息</span>
           </div>
         </template>
-        <el-text>课程名：{{classDetail.name}}</el-text><br>
-        <el-text>任课老师：{{classDetail.teacher}}</el-text><br>
-        <el-text>课程简介：{{classDetail.info}}</el-text>
+        <el-text>课程名程：{{courseDetail.name}}</el-text><br>
+        <el-text>任课老师：{{courseDetail.teacher}}</el-text><br>
+        <el-text>创建时间：{{courseDetail.createTime}}</el-text><br>
+        <el-text>课程简介：{{courseDetail.info}}</el-text>
+        <template #footer>
+          <el-button type="primary" @click="changeCourseInfo">修改课程简介</el-button>
+        </template>
       </el-card>
-    </el-header>
-    <el-container>
-      <el-aside class="class-aside">
-        <el-card class="class-card">
-          <template #header>
-            <div class="card-header" style="display: flex;justify-content: space-between;">
-              <span>课时</span>
-              <el-button type="primary">新建课时</el-button>
-            </div>
-          </template>
-          <div style="display: flex;justify-content: space-between;">
-            <el-text>课时：2025-6-10 10:00</el-text>
-            <div>
-              <el-button type="primary">增加测试</el-button>
-              <el-button type="primary">查看测试结果</el-button>
-            </div>
+      <el-card class="class-card" v-if="showView===1">
+        <template #header>
+          <el-button @click="dialogLessonFormVisible=true">添加课时</el-button>
+        </template>
+        <el-table :data="lessonDetail.lessons" border style="width: 100%">
+          <el-table-column type="selection" width="55" />
+          <el-table-column property="lessonId" v-if="false" />
+          <el-table-column property="courseId" label="课程ID" width="120" />
+          <el-table-column property="lessonName" label="课时名称" width="120" />
+          <el-table-column property="createTime" label="创建时间" width="120" />
+          <el-table-column label="操作">
+            <template #default="scope">
+              <el-button size="default" @click="getLessonQuestion(scope.row.lessonId)">编辑</el-button>
+              <el-button size="default" type="danger" @click="">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+      <el-card class="class-card" v-if="showView===2">
+        <template #header>
+          <div class="card-header">
+            <span>学生</span>
           </div>
-        </el-card>
-      </el-aside>
-      <el-main class="class-main">
-        <el-card class="class-card">
-          <template #header>
-            <div class="card-header">
-              <span>学生</span>
-            </div>
-          </template>
-          <el-text v-for="student in classDetail.students">学生：{{student}}<br></el-text>
-        </el-card>
-      </el-main>
-    </el-container>
+        </template>
+        <el-table :data="courseDetail.students" border style="width: 100%">
+          <el-table-column type="selection" width="55" />
+          <el-table-column property="id" label="ID" v-if="false"></el-table-column>
+          <el-table-column property="username" label="学生姓名" width="120"></el-table-column>
+          <el-table-column property="gender" label="学生性别" width="120"></el-table-column>
+          <el-table-column label="操作">
+            <template #default="scope">
+              <el-button size="small" @click="">编辑</el-button>
+              <el-button size="small" type="danger" @click="">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+    </el-main>
   </el-container>
+
+  <el-dialog v-model="dialogLessonFormVisible" title="新增课时" width="500" id="addLessonForm">
+    <el-form :model="lessonDetail.lessonForm">
+      <el-form-item label="课程ID" >
+        <el-input v-model="lessonDetail.lessonForm.courseId" disabled />
+      </el-form-item>
+      <el-form-item label="课时名称" >
+        <el-input v-model="lessonDetail.lessonForm.lessonName"/>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="dialogLessonFormVisible = false">关闭</el-button>
+        <el-button type="primary" @click="addLessonSubmit">确认</el-button>
+      </div>
+    </template>
+  </el-dialog>
+
 </template>
 
 <style scoped>
@@ -65,17 +216,12 @@ const classDetail=ref({
 }
 .class-header{
   width: 100%;
-  height: 40%;
-  padding: 3px;
-}
-.class-aside{
-  width: 50%;
-  height: 100%;
+  height: 10%;
   padding: 3px;
 }
 .class-main{
-  width: 50%;
-  height: 100%;
+  width: 100%;
+  height: 90%;
   padding: 3px;
 }
 .class-card{
