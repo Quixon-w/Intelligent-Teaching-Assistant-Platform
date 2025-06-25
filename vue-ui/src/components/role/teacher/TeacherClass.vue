@@ -41,12 +41,12 @@ onMounted(()=>{
 <template>
   <div style="display: flex;gap: 50px">
     <el-form :model="tableSetting" label-width="auto" style="width: 600px">
-      <el-form-item label="课程id">
-        <el-input v-model="tableSetting.role"></el-input>
+      <el-form-item label="课程名">
+        <el-input v-model="tableSetting.courseName"></el-input>
       </el-form-item>
     </el-form>
     <div>
-      <el-button>查询课程</el-button>
+      <el-button @click="getData">查询课程</el-button>
       <el-button class="">创建课程</el-button>
     </div>
   </div>
