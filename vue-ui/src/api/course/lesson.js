@@ -6,7 +6,6 @@ export function getLessons(courseId) {
     },
   })
     .then(res =>{
-      console.log(res);
       return res;
     })
     .catch(err =>{
@@ -23,6 +22,29 @@ export function addLesson(courseId,lessonName){
     console.log(res);
     return res;
   }).catch(err =>{
+    return err;
+  })
+}
+export function getLessonQuestions(lessonId){
+  return request.get('/api/map/list',{
+    params:{
+      lessonId:lessonId
+    }
+  }).then(res=>{
+    let data=[];
+    for(let adata of res.data.data){
+      let options=JSON.parse(adata.options);
+      let aadata={
+        questionId:adata.questionId,
+        questionKonwledge:adata.knowledge,
+        questionContent:adata.question,
+        questionExplanation:adata.explanation,
+        questionAnswer:[adata.answer,'A、  '+options.A,'B、  '+options.B,'C、  '+options.C,'D、  '+options.D],
+      }
+      data.push(aadata);
+    }
+    return data;
+  }).catch(err=>{
     return err;
   })
 }

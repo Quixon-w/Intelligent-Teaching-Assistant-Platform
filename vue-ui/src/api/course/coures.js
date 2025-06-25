@@ -61,11 +61,35 @@ export function getAllStudents(courseId){
     return err;
   })
 }
+
 export function getLessonQuestions(lessonId){
   return request.get('/api/map/list',{
     params:{
       lessonId:lessonId
     }
+  }).then(res=>{
+    return res;
+  }).catch(err=>{
+    return err;
+  })
+}
+
+export const enrollCourse = (courseId) => {
+  return request.get('/api/enroll', {
+    params: {
+      courseId:courseId }
+  }).then(res=>{
+    return res;
+  }).catch(err=>{
+    return err;
+  })
+}
+
+export const dismissCourse = (studentId,courseId) => {
+  return request.get('/api/enroll/dismiss', {
+    params: {
+      studentId:studentId,
+      courseId:courseId}
   }).then(res=>{
     return res;
   }).catch(err=>{

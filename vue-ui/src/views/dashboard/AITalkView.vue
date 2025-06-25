@@ -1,6 +1,6 @@
 <script setup>
 
-import AITalk from "@/components/AITalk.vue";
+import AITalk from "@/components/AITalk/AITalk.vue";
 </script>
 
 <template>
