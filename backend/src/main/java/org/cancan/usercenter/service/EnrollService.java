@@ -52,8 +52,9 @@ public interface EnrollService extends IService<Enroll> {
      *
      * @param courseId  课程id
      * @param studentId 学生id
+     * @return 是否选课
      */
-    void isEnrolled(Long courseId, Long studentId);
+    boolean isEnrolled(Long courseId, Long studentId);
 
     /**
      * 计算某课程的所有选课学生的该课程分数

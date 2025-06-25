@@ -34,4 +34,9 @@ public class Lessons {
      */
     private Date createTime;
 
+    /**
+     * 是否有习题
+     */
+    private Integer hasQuestion;
+
 }
