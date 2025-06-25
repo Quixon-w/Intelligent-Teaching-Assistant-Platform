@@ -2,6 +2,9 @@ package org.cancan.usercenter.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.cancan.usercenter.model.domain.LessonQuestionMap;
+import org.cancan.usercenter.model.domain.Questions;
+
+import java.util.List;
 
 /**
  * @author 洪
@@ -10,12 +13,20 @@ import org.cancan.usercenter.model.domain.LessonQuestionMap;
  */
 public interface LessonQuestionMapService extends IService<LessonQuestionMap> {
 
+//    /**
+//     * 判断课时中是否有此题
+//     *
+//     * @param lessonId 课时id
+//     * @return 是否有题
+//     */
+//    Boolean hasQuestion(Long lessonId);
+
     /**
-     * 判断课时中是否有此题
+     * 获取课时中的所有题
      *
      * @param lessonId 课时id
-     * @return 是否有题
+     * @return 课时中的所有题
      */
-    Boolean hasQuestion(Long lessonId);
+    List<Questions> getOrderedQuestions(Long lessonId);
 
 }

@@ -15,6 +15,7 @@ import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
 import org.cancan.usercenter.utils.SpecialCode;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -37,6 +38,8 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
     private UserService userService;
     @Resource
     private EnrollService enrollService;
+    @Autowired
+    private CoursesMapper coursesMapper;
 
     /**
      * @param courseName 课程名
@@ -118,7 +121,7 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
         QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNotBlank(courseName)) {
             SpecialCode.validateCode(courseName);
-            queryWrapper.like("course_name", courseName);
+            queryWrapper.like("name", courseName);
         }
         if (StringUtils.isNotBlank(teacherName)) {
             QueryWrapper<User> queryWrapperN = new QueryWrapper<>();
@@ -141,11 +144,11 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
      */
     @Override
     public Boolean over(Courses course) {
-        if (course.getOver() == 1) {
+        if (course.getIsOver() == 1) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "课程已结束");
         }
         enrollService.calculateStudentsScores(course.getId());
-        course.setOver(1);
+        course.setIsOver(1);
         return this.updateById(course);
     }
 
@@ -155,11 +158,7 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
      */
     @Override
     public List<Courses> getCoursesByStudentId(Long studentId) {
-        List<Long> courseIds = enrollService.getCoursesByStudentId(studentId);
-        if (courseIds == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "该学生无选课记录");
-        }
-        return this.listByIds(courseIds);
+        return coursesMapper.selectByIds(enrollService.getCoursesByStudentId(studentId));
     }
 
 }

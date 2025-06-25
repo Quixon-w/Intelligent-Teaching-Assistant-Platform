@@ -241,7 +241,7 @@ public class UserController {
         }
         User user = userService.getById(id);
         if (user == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "用户不存在");
+            return ResultUtils.success(null);
         }
         return ResultUtils.success(user);
     }

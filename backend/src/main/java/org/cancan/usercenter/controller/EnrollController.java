@@ -43,7 +43,7 @@ public class EnrollController {
     @Resource
     private EnrollService enrollService;
 
-    @PostMapping("/")
+    @PostMapping("")
     @Operation(summary = "学生选课")
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true),
@@ -101,8 +101,8 @@ public class EnrollController {
             throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
         }
         List<Courses> coursesList = coursesService.getCoursesByStudentId(studentId);
-        if (coursesList == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "学生无选课记录");
+        if (coursesList == null || coursesList.isEmpty()) {
+            return ResultUtils.success(null);
         }
         return ResultUtils.success(coursesList);
     }
@@ -125,8 +125,8 @@ public class EnrollController {
             throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
         }
         List<User> studentsList = enrollService.getStudentsByCourseId(courseId);
-        if (studentsList == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "该课无选课学生");
+        if (studentsList == null || studentsList.isEmpty()) {
+            return ResultUtils.success(null);
         }
         return ResultUtils.success(studentsList);
     }

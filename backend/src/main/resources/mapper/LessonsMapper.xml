@@ -9,9 +9,10 @@
         <result property="courseId" column="course_id"/>
         <result property="lessonName" column="lesson_name"/>
         <result property="createTime" column="create_time"/>
+        <result property="hasQuestion" column="has_question"/>
     </resultMap>
 
     <!--    <sql id="Base_Column_List">-->
-    <!--        lesson_id,course_id,lesson_name,create_time-->
+    <!--        lesson_id,course_id,lesson_name,create_time,has_question-->
     <!--    </sql>-->
 </mapper>

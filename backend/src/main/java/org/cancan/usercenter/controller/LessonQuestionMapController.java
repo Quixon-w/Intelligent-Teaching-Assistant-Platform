@@ -12,6 +12,8 @@ import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.model.domain.LessonQuestionMap;
+import org.cancan.usercenter.model.domain.Lessons;
+import org.cancan.usercenter.model.domain.Questions;
 import org.cancan.usercenter.service.LessonQuestionMapService;
 import org.cancan.usercenter.service.LessonsService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,8 +48,8 @@ public class LessonQuestionMapController {
     })
     public BaseResponse<List<LessonQuestionMap>> add(Long lessonId, List<Long> questionIds) {
         // 确认课时有效性
-        lessonsService.getValidLessonById(lessonId);
-        // 插入 lesson-question 记录
+        Lessons lessons = lessonsService.getValidLessonById(lessonId);
+        // 问题列表不为空
         QueryWrapper<LessonQuestionMap> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("lesson_id", lessonId);
         if (questionIds != null && !questionIds.isEmpty()) {
@@ -55,9 +57,11 @@ public class LessonQuestionMapController {
         } else {
             throw new BusinessException(ErrorCode.NULL_ERROR, "问题ID列表不能为空");
         }
-        if (lessonQuestionMapService.exists(queryWrapper)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "存在课时已添加过的问题");
+        // 只允许添加一次习题
+        if (lessons.getHasQuestion() != 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "课时已添加过的问题");
         }
+        // 插入 lesson-question 记录
         List<LessonQuestionMap> records = questionIds.stream()
                 .map(qid -> {
                     LessonQuestionMap lq = new LessonQuestionMap();
@@ -68,6 +72,8 @@ public class LessonQuestionMapController {
         if (!lessonQuestionMapService.saveBatch(records)) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "添加课时问题失败");
         }
+        lessons.setHasQuestion(1);
+        lessonsService.updateById(lessons);
         return ResultUtils.success(records);
     }
 
@@ -88,18 +94,19 @@ public class LessonQuestionMapController {
 //    }
 
     @GetMapping("/list")
-    @Operation(summary = "获取某课时的习题列表")
+    @Operation(summary = "获取某课时的顺序习题列表")
     @Parameters({
             @Parameter(name = "lessonId", description = "课时ID", required = true)
     })
-    public BaseResponse<List<LessonQuestionMap>> list(Long lessonId) {
+    public BaseResponse<List<Questions>> list(Long lessonId) {
         // 确认课时有效性
-        lessonsService.getValidLessonById(lessonId);
-        // 获取课时问题列表
-        QueryWrapper<LessonQuestionMap> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("lesson_id", lessonId);
-        queryWrapper.orderByAsc("question_id");
-        return ResultUtils.success(lessonQuestionMapService.list(queryWrapper));
+        Lessons lesson = lessonsService.getValidLessonById(lessonId);
+        // 确认是否有问题
+        if (lesson.getHasQuestion() == 0) {
+            return ResultUtils.success(null);
+        }
+        // 获取顺序课时习题列表
+        return ResultUtils.success(lessonQuestionMapService.getOrderedQuestions(lessonId));
     }
 
 }

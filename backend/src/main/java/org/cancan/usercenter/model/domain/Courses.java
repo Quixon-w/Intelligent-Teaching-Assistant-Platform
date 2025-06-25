@@ -47,5 +47,5 @@ public class Courses {
     /**
      * 课程是否结束
      */
-    private Integer over;
+    private Integer isOver;
 }

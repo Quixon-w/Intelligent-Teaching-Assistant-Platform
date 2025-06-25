@@ -11,7 +11,6 @@ import org.cancan.usercenter.model.domain.Enroll;
 import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.EnrollService;
-import org.cancan.usercenter.service.LessonQuestionMapService;
 import org.cancan.usercenter.service.LessonsService;
 import org.springframework.stereotype.Service;
 
@@ -32,8 +31,6 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
 
     @Resource
     private LessonsService lessonsService;
-    @Resource
-    private LessonQuestionMapService lessonQuestionMapService;
 
     /**
      * @param courseId  课程id
@@ -56,7 +53,9 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     @Override
     public Boolean enroll(Long courseId, Long studentId) {
         // 判断是否已选
-        this.isEnrolled(courseId, studentId);
+        if (this.isEnrolled(courseId, studentId)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该学生已选该课程");
+        }
         // 添加选课
         Enroll enroll = new Enroll();
         enroll.setCoursesId(courseId);
@@ -71,11 +70,7 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
      */
     @Override
     public List<Long> getCoursesByStudentId(Long studentId) {
-        List<Long> courseIds = enrollMapper.selectCourseIdsByStudentId(studentId);
-        if (courseIds == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "该学生无选课记录");
-        }
-        return courseIds;
+        return enrollMapper.selectCourseIdsByStudentId(studentId);
     }
 
     /**
@@ -85,8 +80,8 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     @Override
     public List<User> getStudentsByCourseId(Long courseId) {
         List<Long> studentIds = enrollMapper.selectStudentIdsByCourseId(courseId);
-        if (studentIds == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "该课无选课学生");
+        if (studentIds == null || studentIds.isEmpty()) {
+            return null;
         }
         return userMapper.selectByIds(studentIds);
     }
@@ -94,15 +89,14 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     /**
      * @param courseId  课程id
      * @param studentId 学生id
+     * @return 是否已选
      */
     @Override
-    public void isEnrolled(Long courseId, Long studentId) {
+    public boolean isEnrolled(Long courseId, Long studentId) {
         QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("courses_id", courseId);
         queryWrapper.eq("student_id", studentId);
-        if (!this.exists(queryWrapper)) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "未选该课");
-        }
+        return this.exists(queryWrapper);
     }
 
     /**
@@ -127,7 +121,7 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
         queryWrapperL.eq("course_id", courseId);
         List<Lessons> lessonsList = lessonsService.list(queryWrapperL);
         return lessonsList.stream()
-                .filter(lesson -> lessonQuestionMapService.hasQuestion(lesson.getLessonId()))
+                .filter(lesson -> lesson.getHasQuestion() == 0)
                 .map(lesson -> lessonsService.getLessonScore(lesson.getLessonId(), studentId))
                 .reduce(0.0f, Float::sum);
     }

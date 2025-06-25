@@ -3,9 +3,9 @@ spring:
     name: user-center
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: wjh
-    password: 123456
-    url: jdbc:mysql://192.168.240.226:3306/itap
+    username: root
+    password: 20040326hyc
+    url: jdbc:mysql://localhost:3306/itap
   data:
     redis:
       host: localhost
@@ -41,7 +41,7 @@ server:
       cookie:
         name: SESSION
         same-site: None
-        secure: true
+        secure: false
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
