@@ -1,9 +1,9 @@
 <script setup>
 import { useRoute } from 'vue-router'
 import { onMounted, ref } from 'vue'
-import { addLesson, getLessons } from '@/api/course/lesson.js'
+import { getLessonQuestions,addLesson, getLessons } from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
-import {deleteCourse, findCourseByID, getAllStudents, getLessonQuestions, updateCourse} from '@/api/course/coures.js'
+import {deleteCourse, findCourseByID, getAllStudents, updateCourse} from '@/api/course/coures.js'
 import FileUp from "@/components/file/FileUp.vue";
 const route=useRoute();
 const showView=ref(0);
@@ -23,23 +23,7 @@ const lessonDetail=ref({
     courseId:route.params.id,
     lessonName:'',
   },
-  lessonQuestions:[{
-    lessonId:1,
-    question:'第一题答案是A',
-    radio:ref(['','选项A','选项B','选项C','选项D']),
-  },{
-    lessonId:2,
-    question:'第二题答案是B',
-    radio:ref(['','选项A','选项B','选项C','选项D']),
-  },{
-    lessonId:3,
-    question:'第三题答案是C',
-    radio:ref(['','选项A','选项B','选项C','选项D']),
-  },{
-    lessonId:4,
-    question:'第四题答案是D',
-    radio:ref(['','选项A','选项B','选项C','选项D']),
-  }],
+  lessonQuestions:[],
 })
 
 const getLesson=()=>{
@@ -138,11 +122,21 @@ const getStudents=()=>{
 const getLessonQuestion=(lessonId)=>{
   getLessonQuestions(lessonId)
       .then(res=>{
+        console.log(res);
+        lessonDetail.value.lessonQuestions=res;
+        dialogQuestionVisible.value=true;
+      }).catch(err=>{{
+        ElMessage(err);
+  }})
+}
+const createLessonQuestion=(lessonId)=>{
+  createLessonQuestions(lessonId)
+      .then(res=>{
         lessonDetail.value.lessonQuestions=res.data;
         ElMessage(res.data);
         dialogQuestionVisible.value=true;
       }).catch(err=>{{
-        ElMessage(err);
+    ElMessage(err);
   }})
 }
 
@@ -192,7 +186,7 @@ onMounted(()=>{
           <el-table-column label="操作">
             <template #default="scope">
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测试</el-button>
-              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="">创建测试</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="createLessonQuestion(scope.row.lessonId)">创建测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="">删除测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="">查看测试完成情况</el-button>
             </template>
@@ -240,18 +234,21 @@ onMounted(()=>{
   <el-dialog v-model="dialogQuestionVisible" title="测验信息">
     <el-card v-for="question in lessonDetail.lessonQuestions">
       <template #header>
-        <el-text>第{{question.lessonId}}}题</el-text>
+        <el-text>第{{question.questionId}}题</el-text>
+        <el-text>{{question.questionKonwledge}}</el-text>
       </template>
-      <el-text>{{question.question}}<</el-text>
+      <el-text>{{question.questionContent}}<</el-text>
+      <el-text>{{question.questionExplanation}}</el-text>
       <template #footer>
-        <el-radio-group v-model="question.radio[0]">
-          <el-radio value="A" size="large" border>{{question.radio[1]}}</el-radio>
-          <el-radio value="B" size="large" border>{{question.radio[2]}}</el-radio>
-          <el-radio value="C" size="large" border>{{question.radio[3]}}</el-radio>
-          <el-radio value="D" size="large" border>{{question.radio[4]}}</el-radio>
+        <el-radio-group v-model="question.questionAnswer[0]" style="gap: 3px" disabled>
+          <el-radio-button value="A" size="large" border>{{question.questionAnswer[1]}}</el-radio-button>
+          <el-radio-button value="B" size="large" border>{{question.questionAnswer[2]}}</el-radio-button>
+          <el-radio-button value="C" size="large" border>{{question.questionAnswer[3]}}</el-radio-button>
+          <el-radio-button value="D" size="large" border>{{question.questionAnswer[4]}}</el-radio-button>
         </el-radio-group>
       </template>
     </el-card>
+    <el-button type="success">上传课时测试</el-button>
   </el-dialog>
   <el-dialog v-model="dialogCourseOutlineVisible" title="创建课程大纲">
     <FileUp/>

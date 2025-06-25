@@ -30,6 +30,14 @@ const beforeRemove: UploadProps['beforeRemove'] = (uploadFile, uploadFiles) => {
       () => false
   )
 }
+
+const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile, uploadFiles) => {
+  console.log(response, uploadFile, uploadFiles)
+}
+
+const handleError: UploadProps['onError'] = (error, uploadFile, uploadFiles) => {
+  console.log(error, uploadFile, uploadFiles)
+}
 </script>
 
 <template>
@@ -37,11 +45,14 @@ const beforeRemove: UploadProps['beforeRemove'] = (uploadFile, uploadFiles) => {
       v-model:file-list="fileList"
       class="upload-demo"
       action="http://192.168.240.200:9001/v1/upload"
-      headers=""
+      method="post"
+      :data="{ sessionId: 'test', userId: 'test' }"
       multiple
       :on-preview="handlePreview"
       :on-remove="handleRemove"
       :before-remove="beforeRemove"
+      :on-success="handleSuccess"
+      :on-error="handleError"
       :limit="3"
       :on-exceed="handleExceed"
   >

@@ -46,7 +46,7 @@ const handleSubmit = async () => {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      console.log( new Error(`HTTP error! status: ${response.status}`));
     }
 
     // 获取响应文本
@@ -62,7 +62,7 @@ const handleSubmit = async () => {
     }
 
     // 提取AI回复内容
-    const aiContent = aiResponse.choices?.[0]?.message?.content || "抱歉，我没有得到有效的回复";
+    const aiContent = JSON.parse(aiResponse).choices?.[0]?.message?.content || "抱歉，我没有得到有效的回复";
     console.log(aiContent)
 
     const aiMessage = {
