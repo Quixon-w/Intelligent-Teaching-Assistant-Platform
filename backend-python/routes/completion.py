@@ -378,7 +378,6 @@ async def eval_rwkv(
                                     if chat_mode
                                     else "text_completion"
                                 ),
-                                # "response": response,
                                 "model": model.name,
                                 "choices": [
                                     (
@@ -395,7 +394,8 @@ async def eval_rwkv(
                                         }
                                     )
                                 ],
-                            }
+                            },
+                            ensure_ascii=False
                         ) + "\n"
                     else:
                         response += delta
@@ -426,7 +426,8 @@ async def eval_rwkv(
                                 "completion_tokens": completion_tokens,
                                 "total_tokens": prompt_tokens + completion_tokens,
                             },
-                        }
+                        },
+                        ensure_ascii=False
                     )
             except Exception as e:
                 print(f"Generation error: {e}")
@@ -437,7 +438,8 @@ async def eval_rwkv(
                                 "message": f"Generation error: {str(e)}",
                                 "type": "generation_error",
                             }
-                        }
+                        },
+                        ensure_ascii=False
                     )
             finally:
                 requests_num = requests_num - 1
@@ -526,7 +528,8 @@ async def eval_rwkv_with_context(
                                         }
                                     )
                                 ],
-                            }
+                            },
+                            ensure_ascii=False
                         ) + "\n"
                     else:
                         response += delta
@@ -585,7 +588,8 @@ async def eval_rwkv_with_context(
                                 "completion_tokens": completion_tokens,
                                 "total_tokens": prompt_tokens + completion_tokens,
                             },
-                        }
+                        },
+                        ensure_ascii=False
                     )
             except Exception as e:
                 print(f"Generation error: {e}")
@@ -596,7 +600,8 @@ async def eval_rwkv_with_context(
                                 "message": f"Generation error: {str(e)}",
                                 "type": "generation_error",
                             }
-                        }
+                        },
+                        ensure_ascii=False
                     )
             finally:
                 requests_num = requests_num - 1
@@ -628,7 +633,6 @@ def chat_template(
 
 
 @router.post("/v1/chat/completions", tags=["Completions"])
-@router.post("/chat/completions", tags=["Completions"])
 async def chat_completions(body: ChatCompletionBody, request: Request):
     model: TextRWKV = global_var.get(global_var.Model)
     if model is None:
@@ -872,7 +876,8 @@ async def async_generator_stream_response_tool_call(
                         "index": 0,
                     }
                 ],
-            }
+            },
+            ensure_ascii=False
         ) + "\n"
 
         # Process tool calls
@@ -912,7 +917,8 @@ async def async_generator_stream_response_tool_call(
                                     "index": 0,
                                 }
                             ],
-                        }
+                        },
+                        ensure_ascii=False
                     ) + "\n"
                     
                 except json.JSONDecodeError:
@@ -932,7 +938,8 @@ async def async_generator_stream_response_tool_call(
                                     "index": 0,
                                 }
                             ],
-                        }
+                        },
+                        ensure_ascii=False
                     ) + "\n"
             else:
                 # Tool not found
@@ -951,7 +958,8 @@ async def async_generator_stream_response_tool_call(
                                 "index": 0,
                             }
                         ],
-                    }
+                    },
+                    ensure_ascii=False
                 ) + "\n"
 
         # Send final message
@@ -966,7 +974,8 @@ async def async_generator_stream_response_tool_call(
                         "index": 0,
                     }
                 ],
-            }
+            },
+            ensure_ascii=False
         ) + "\n"
     else:
         # No tool calls, send regular completion
@@ -981,7 +990,8 @@ async def async_generator_stream_response_tool_call(
                         "index": 0,
                     }
                 ],
-            }
+            },
+            ensure_ascii=False
         ) + "\n"
 
 
@@ -1023,25 +1033,25 @@ async def chat(
     # 返回普通聊天响应
     return completion_text
 
-
-# 会话管理相关的API端点
-@router.get("/v1/users/{user_id}/sessions/{session_id}/dialogues", tags=["Session Management"])
-async def get_session_dialogues(user_id: str, session_id: str, limit: int = 10, is_teacher: bool = False):
-    """获取指定会话的对话历史"""
-    try:
-        dialogues = session_manager.get_session_dialogues(user_id, session_id, limit=limit, is_teacher=is_teacher)
-        return {
-            "user_id": user_id,
-            "session_id": session_id,
-            "is_teacher": is_teacher,
-            "dialogues": dialogues,
-            "count": len(dialogues)
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving dialogues: {str(e)}"
-        )
+# # todo 这里isTeacher参数没用，永远是去看students目录下的记录 这里看的是所有的记录的内容，没用
+# # 会话管理相关的API端点
+# @router.get("/v1/users/{user_id}/sessions/{session_id}/dialogues", tags=["Session Management"])
+# async def get_session_dialogues(user_id: str, session_id: str, limit: int = 10, is_teacher: bool = False):
+#     """获取指定会话的对话历史"""
+#     try:
+#         dialogues = session_manager.get_session_dialogues(user_id, session_id, limit=limit, is_teacher=is_teacher)
+#         return {
+#             "user_id": user_id,
+#             "session_id": session_id,
+#             "is_teacher": is_teacher,
+#             "dialogues": dialogues,
+#             "count": len(dialogues)
+#         }
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Error retrieving dialogues: {str(e)}"
+#         )
 
 
 @router.delete("/v1/users/{user_id}/sessions/{session_id}/dialogues", tags=["Session Management"])
@@ -1093,74 +1103,74 @@ async def get_session_context(user_id: str, session_id: str, max_messages: int =
             detail=f"Error retrieving context: {str(e)}"
         )
 
-
-@router.get("/v1/users/{user_id}/sessions/{session_id}/info", tags=["Session Management"])
-async def get_session_info(user_id: str, session_id: str, is_teacher: bool = False):
-    """获取指定会话的基本信息"""
-    try:
-        session_path = session_manager._ensure_user_dialogue_dir(user_id, session_id, is_teacher)
+# # !这里是直接获取了历史记录的存储路径
+# @router.get("/v1/users/{user_id}/sessions/{session_id}/info", tags=["Session Management"])
+# async def get_session_info(user_id: str, session_id: str, is_teacher: bool = False):
+#     """获取指定会话的基本信息"""
+#     try:
+#         session_path = session_manager._ensure_user_dialogue_dir(user_id, session_id, is_teacher)
         
-        files = session_manager._get_session_files(session_path)
-        total_size = sum(os.path.getsize(f) for f in files)
+#         files = session_manager._get_session_files(session_path)
+#         total_size = sum(os.path.getsize(f) for f in files)
         
-        return {
-            "user_id": user_id,
-            "session_id": session_id,
-            "is_teacher": is_teacher,
-            "dialogue_count": len(files),
-            "total_size_bytes": total_size,
-            "max_dialogues": session_manager.max_dialogues,
-            "session_path": session_path
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving session info: {str(e)}"
-        )
+#         return {
+#             "user_id": user_id,
+#             "session_id": session_id,
+#             "is_teacher": is_teacher,
+#             "dialogue_count": len(files),
+#             "total_size_bytes": total_size,
+#             "max_dialogues": session_manager.max_dialogues,
+#             "session_path": session_path
+#         }
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Error retrieving session info: {str(e)}"
+#         )
 
+# # ?手动保存
+# @router.post("/v1/users/{user_id}/sessions/{session_id}/save", tags=["Session Management"])
+# async def save_session_history(user_id: str, session_id: str, messages: List[Dict[str, Any]], is_teacher: bool = False):
+#     """保存当前会话的完整历史记录"""
+#     try:
+#         success = session_manager.save_session_history(user_id, session_id, messages, is_teacher=is_teacher)
+#         if success:
+#             return {
+#                 "user_id": user_id,
+#                 "session_id": session_id,
+#                 "is_teacher": is_teacher,
+#                 "message": "Session history saved successfully",
+#                 "message_count": len(messages)
+#             }
+#         else:
+#             raise HTTPException(
+#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#                 detail="Failed to save session history"
+#             )
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Error saving session history: {str(e)}"
+#         )
 
-@router.post("/v1/users/{user_id}/sessions/{session_id}/save", tags=["Session Management"])
-async def save_session_history(user_id: str, session_id: str, messages: List[Dict[str, Any]], is_teacher: bool = False):
-    """保存当前会话的完整历史记录"""
-    try:
-        success = session_manager.save_session_history(user_id, session_id, messages, is_teacher=is_teacher)
-        if success:
-            return {
-                "user_id": user_id,
-                "session_id": session_id,
-                "is_teacher": is_teacher,
-                "message": "Session history saved successfully",
-                "message_count": len(messages)
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to save session history"
-            )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error saving session history: {str(e)}"
-        )
-
-
-@router.get("/v1/users/{user_id}/sessions/{session_id}/load", tags=["Session Management"])
-async def load_session_history(user_id: str, session_id: str, is_teacher: bool = False):
-    """加载指定会话的历史记录"""
-    try:
-        messages = session_manager.load_session_history(user_id, session_id, is_teacher=is_teacher)
-        return {
-            "user_id": user_id,
-            "session_id": session_id,
-            "is_teacher": is_teacher,
-            "messages": messages,
-            "message_count": len(messages)
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error loading session history: {str(e)}"
-        )
+# # ?看不懂这里的用意
+# @router.get("/v1/users/{user_id}/sessions/{session_id}/load", tags=["Session Management"])
+# async def load_session_history(user_id: str, session_id: str, is_teacher: bool = False):
+#     """加载指定会话的历史记录"""
+#     try:
+#         messages = session_manager.load_session_history(user_id, session_id, is_teacher=is_teacher)
+#         return {
+#             "user_id": user_id,
+#             "session_id": session_id,
+#             "is_teacher": is_teacher,
+#             "messages": messages,
+#             "message_count": len(messages)
+#         }
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Error loading session history: {str(e)}"
+#         )
 
 
 @router.get("/v1/users/{user_id}/sessions", tags=["Session Management"])
