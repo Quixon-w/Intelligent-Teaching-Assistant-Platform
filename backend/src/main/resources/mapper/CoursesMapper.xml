@@ -11,10 +11,10 @@
         <result property="createTime" column="create_time"/>
         <result property="comment" column="comment"/>
         <result property="teacherName" column="teacher_name"/>
-        <result property="over" column="over"/>
+        <result property="isOver" column="is_over"/>
     </resultMap>
 
     <!--    <sql id="Base_Column_List">-->
-    <!--        id,name,teacher_id,create_time,comment,teacher_name,over-->
+    <!--        id,name,teacher_id,create_time,comment,teacher_name,is_over-->
     <!--    </sql>-->
 </mapper>

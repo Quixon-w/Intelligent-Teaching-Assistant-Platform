@@ -15,7 +15,10 @@ import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.User;
-import org.cancan.usercenter.service.*;
+import org.cancan.usercenter.service.CoursesService;
+import org.cancan.usercenter.service.EnrollService;
+import org.cancan.usercenter.service.LessonsService;
+import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,9 +48,6 @@ public class LessonsController {
 
     @Resource
     private UserService userService;
-
-    @Resource
-    private LessonQuestionMapService lessonQuestionMapService;
 
     @PostMapping("/add")
     @Operation(summary = "添加课时")
@@ -82,10 +82,8 @@ public class LessonsController {
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true)
     })
-    public BaseResponse<List<Lessons>> listLessons(@RequestParam Long courseId, HttpServletRequest request) {
+    public BaseResponse<List<Lessons>> listLessons(@RequestParam Long courseId) {
         // 参数及权限校验
-        User currentUser = userService.getCurrentUser(request);
-        enrollService.isEnrolled(courseId, currentUser.getId());
         coursesService.getValidCourseById(courseId);
         // 查询
         QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();
@@ -104,7 +102,9 @@ public class LessonsController {
         Lessons lessons = lessonsService.getValidLessonById(lessonId);
         Courses courses = coursesService.getValidCourseById(lessons.getCourseId());
         // 学生已选该课
-        enrollService.isEnrolled(courses.getId(), studentId);
+        if (!enrollService.isEnrolled(courses.getId(), studentId)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "学生未选该课");
+        }
         // 验证权限
         User currentUser = userService.getCurrentUser(request);
         User student = userService.getById(studentId);
@@ -116,7 +116,7 @@ public class LessonsController {
             throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的分数");
         }
         // 确认该 lesson 存在习题
-        if (!lessonQuestionMapService.hasQuestion(lessonId)) {
+        if (lessons.getHasQuestion() == 0) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "该课时不存在习题");
         }
         // 查询返回
