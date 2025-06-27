@@ -36,10 +36,8 @@ public class EnrollController {
 
     @Resource
     private CoursesService coursesService;
-
     @Resource
     private UserService userService;
-
     @Resource
     private EnrollService enrollService;
 
@@ -112,22 +110,15 @@ public class EnrollController {
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true)
     })
-    public BaseResponse<List<User>> listStudents(@RequestParam Long courseId, HttpServletRequest request) {
+    public BaseResponse<List<User>> listStudents(@RequestParam Long courseId) {
         if (courseId == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
-        }
-        User currentUser = userService.getCurrentUser(request);
-        if (currentUser.getUserRole() != TEACHER_ROLE && currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "只有老师可以查看");
-        }
-        Courses course = coursesService.getById(courseId);
-        if (!Objects.equals(currentUser.getId(), course.getTeacherId()) && currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "只能查看自己的选课");
         }
         List<User> studentsList = enrollService.getStudentsByCourseId(courseId);
         if (studentsList == null || studentsList.isEmpty()) {
             return ResultUtils.success(null);
         }
-        return ResultUtils.success(studentsList);
+        List<User> safeUsers = studentsList.stream().map(userService::getSafetyUser).toList();
+        return ResultUtils.success(safeUsers);
     }
 }

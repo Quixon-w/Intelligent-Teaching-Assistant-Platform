@@ -1,9 +1,9 @@
 package org.cancan.usercenter.utils;
 
+import jakarta.annotation.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-import jakarta.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -32,5 +32,13 @@ public class RedisUtil {
     public void delete(String key) {
         stringRedisTemplate.delete(key);
     }
+
+    /**
+     * 设置 key 的过期时间
+     */
+    public void expire(String key, long timeout, TimeUnit unit) {
+        stringRedisTemplate.expire(key, timeout, unit);
+    }
+
 }
 

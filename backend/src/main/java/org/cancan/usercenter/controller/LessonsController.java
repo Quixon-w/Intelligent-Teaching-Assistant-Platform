@@ -15,12 +15,11 @@ import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.User;
-import org.cancan.usercenter.service.CoursesService;
-import org.cancan.usercenter.service.EnrollService;
-import org.cancan.usercenter.service.LessonsService;
-import org.cancan.usercenter.service.UserService;
+import org.cancan.usercenter.model.domain.response.GetListScoresResponse;
+import org.cancan.usercenter.service.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -39,15 +38,14 @@ public class LessonsController {
 
     @Resource
     private LessonsService lessonsService;
-
     @Resource
     private CoursesService coursesService;
-
     @Resource
     private EnrollService enrollService;
-
     @Resource
     private UserService userService;
+    @Resource
+    private ScoresService scoresService;
 
     @PostMapping("/add")
     @Operation(summary = "添加课时")
@@ -59,7 +57,7 @@ public class LessonsController {
         if (courseId == null || lessonName == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID和课时名不能为空");
         }
-        coursesService.isTeacher(courseId, request);
+        coursesService.isTeacher(courseId, userService.getCurrentUser(request).getId());
         return ResultUtils.success(lessonsService.addLesson(lessonName, courseId));
     }
 
@@ -120,7 +118,44 @@ public class LessonsController {
             throw new BusinessException(ErrorCode.NULL_ERROR, "该课时不存在习题");
         }
         // 查询返回
-        return ResultUtils.success(lessonsService.getLessonScore(lessonId, studentId));
+        return ResultUtils.success(scoresService.getScore(lessonId, studentId));
+    }
+
+    @GetMapping("/getListScores")
+    @Operation(summary = "查看某课时所有学生的分数")
+    @Parameters({
+            @Parameter(name = "lessonId", description = "课时id", required = true),
+    })
+    public BaseResponse<List<GetListScoresResponse>> getListScores(@RequestParam Long lessonId, HttpServletRequest request) {
+        // 校验参数，课程和课时都有效
+        Lessons lessons = lessonsService.getValidLessonById(lessonId);
+        Courses courses = coursesService.getValidCourseById(lessons.getCourseId());
+        // 验证权限
+        User currentUser = userService.getCurrentUser(request);
+        if (
+                !(currentUser.getUserRole() == ADMIN_ROLE)
+                        && !Objects.equals(currentUser.getId(), courses.getTeacherId())
+        ) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有老师能查看自己课程课时的分数");
+        }
+        // 确认该 lesson 存在习题
+        if (lessons.getHasQuestion() == 0) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "该课时不存在习题");
+        }
+        // 查询返回
+        List<User> students = enrollService.getStudentsByCourseId(courses.getId());
+        List<GetListScoresResponse> list = new ArrayList<>();
+        if (students != null && !students.isEmpty()) {
+            for (User student : students) {
+                GetListScoresResponse response = new GetListScoresResponse();
+                response.setStudent(userService.getSafetyUser(student));
+                response.setScore(scoresService.getScore(lessonId, student.getId()));
+                list.add(response);
+            }
+            return ResultUtils.success(list);
+        } else {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该课程无选课学生");
+        }
     }
 
 }

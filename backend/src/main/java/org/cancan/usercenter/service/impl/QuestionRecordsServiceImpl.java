@@ -1,10 +1,16 @@
 package org.cancan.usercenter.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
+import org.cancan.usercenter.common.ErrorCode;
+import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.mapper.QuestionRecordsMapper;
 import org.cancan.usercenter.model.domain.QuestionRecords;
 import org.cancan.usercenter.service.QuestionRecordsService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @author 洪
@@ -14,6 +20,25 @@ import org.springframework.stereotype.Service;
 @Service
 public class QuestionRecordsServiceImpl extends ServiceImpl<QuestionRecordsMapper, QuestionRecords> implements QuestionRecordsService {
 
+    @Resource
+    private QuestionRecordsMapper questionRecordsMapper;
+
+    /**
+     * @param lessonId 课时ID
+     * @return 做题记录
+     */
+    @Override
+    public List<QuestionRecords> getStudentLessonRecords(Long lessonId, Long studentId) {
+        // 搜索答题记录
+        QueryWrapper<QuestionRecords> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("student_id", studentId);
+        queryWrapper.eq("lesson_id", lessonId);
+        List<QuestionRecords> questionRecords = questionRecordsMapper.selectList(queryWrapper);
+        if (questionRecords.isEmpty()) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "没有该课时的答题记录");
+        }
+        return questionRecords;
+    }
 }
 
 

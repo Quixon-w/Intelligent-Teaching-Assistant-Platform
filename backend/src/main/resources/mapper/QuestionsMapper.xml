@@ -16,4 +16,11 @@
     <!--    <sql id="Base_Column_List">-->
     <!--        question_id,knowledge,question,options,answer,explanation-->
     <!--    </sql>-->
+
+    <select id="selectMatchedQuestions" resultType="org.cancan.usercenter.model.domain.Questions">
+        SELECT *
+        FROM questions
+        WHERE questions.knowledge LIKE CONCAT(#{father}, '/%')
+    </select>
+
 </mapper>

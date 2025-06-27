@@ -12,6 +12,7 @@ import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.LessonsService;
+import org.cancan.usercenter.service.ScoresService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,6 +32,8 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
 
     @Resource
     private LessonsService lessonsService;
+    @Resource
+    private ScoresService scoresService;
 
     /**
      * @param courseId  课程id
@@ -122,7 +125,7 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
         List<Lessons> lessonsList = lessonsService.list(queryWrapperL);
         return lessonsList.stream()
                 .filter(lesson -> lesson.getHasQuestion() == 0)
-                .map(lesson -> lessonsService.getLessonScore(lesson.getLessonId(), studentId))
+                .map(lesson -> scoresService.getScore(lesson.getLessonId(), studentId))
                 .reduce(0.0f, Float::sum);
     }
 
