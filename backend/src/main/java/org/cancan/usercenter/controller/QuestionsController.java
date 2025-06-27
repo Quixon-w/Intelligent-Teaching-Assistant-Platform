@@ -23,9 +23,9 @@ import java.util.List;
  * @author cancan
  */
 @RestController
-@RequestMapping("/api/question")
+@RequestMapping("/question")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "习题信息")
 public class QuestionsController {
 
     @Resource

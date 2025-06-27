@@ -26,9 +26,9 @@ import java.util.List;
  * @author cancan
  */
 @RestController
-@RequestMapping("/api/map")
+@RequestMapping("/map")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "课时与习题对应关系")
 public class LessonQuestionMapController {
 
     @Resource

@@ -33,9 +33,9 @@ import static org.cancan.usercenter.constant.UserConstant.TEACHER_ROLE;
  * @author 洪
  */
 @RestController
-@RequestMapping("/api/course")
+@RequestMapping("/course")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "课程信息")
 public class CoursesController {
 
     @Resource

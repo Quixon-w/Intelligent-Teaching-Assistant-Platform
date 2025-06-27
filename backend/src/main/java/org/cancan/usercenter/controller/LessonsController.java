@@ -31,9 +31,9 @@ import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
  * @author 洪
  */
 @RestController
-@RequestMapping("/api/lesson")
+@RequestMapping("/lesson")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "课时信息")
 public class LessonsController {
 
     @Resource
@@ -76,7 +76,7 @@ public class LessonsController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "查看某课程的课时")
+    @Operation(summary = "查看某课程的所有课时")
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true)
     })

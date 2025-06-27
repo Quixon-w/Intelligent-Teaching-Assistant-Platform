@@ -29,9 +29,9 @@ import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
  * @author cancan
  */
 @RestController
-@RequestMapping("/api/records")
+@RequestMapping("/records")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "做题记录")
 public class QuestionRecordsController {
 
     @Resource
