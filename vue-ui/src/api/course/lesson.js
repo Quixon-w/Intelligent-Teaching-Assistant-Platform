@@ -48,3 +48,6 @@ export function getLessonQuestions(lessonId){
     return err;
   })
 }
+export function createLessonQuestions(lessonId){
+  return true;
+}

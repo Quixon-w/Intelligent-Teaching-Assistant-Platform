@@ -11,8 +11,7 @@ const role=sessionStorage.getItem('role');
 const handleCommand = (command) => {
   if (command === 'onExit') {
     onExit().then(res=>{
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('role');
+      sessionStorage.clear();
       router.push('/login');
     }).catch(err=>{
       ElMessage({
