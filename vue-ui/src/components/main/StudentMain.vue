@@ -3,7 +3,7 @@
 </script>
 
 <template>
-
+  Welcome! Student!
 </template>
 
 <style scoped>

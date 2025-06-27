@@ -1,6 +1,9 @@
 <script setup>
 import {useRouter} from 'vue-router'
 const router = useRouter();
+const toDashboard = () => {
+  router.push('/dashboard/main');
+}
 const toClass = () => {
   router.push('/dashboard/teacher/class');
 }
@@ -12,7 +15,7 @@ const toClass = () => {
     <el-menu class="menu">
       <el-sub-menu index="0">
         <template #title><el-text style="color: #B0C4DE">仪表盘</el-text></template>
-        <el-menu-item index="0-1" style="background: #304156"><el-text style="color: #B0C4DE">仪表盘界面</el-text></el-menu-item>
+        <el-menu-item index="0-1" style="background: #304156" @click="toDashboard"><el-text style="color: #B0C4DE">仪表盘界面</el-text></el-menu-item>
         <el-menu-item index="0-2" style="background: #304156"><el-text style="color: #B0C4DE">数据分析</el-text></el-menu-item>
       </el-sub-menu>
       <el-sub-menu index="1">

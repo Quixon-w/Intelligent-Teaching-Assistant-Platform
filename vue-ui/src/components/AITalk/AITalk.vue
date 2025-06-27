@@ -1,10 +1,14 @@
 <script setup>
 import {ref, watch} from "vue";
+import {ElMessage} from "element-plus";
 
 const messages = ref([]);
 const input = ref('');
 const isLoading = ref(false);
 const messagesEndRef = ref(null);
+const userId=sessionStorage.getItem('userId');
+const sessionID = "session_" + Date.now();
+const role=sessionStorage.getItem('role');
 
 const scrollToBottom = () => {
   messagesEndRef.value?.scrollIntoView({ behavior: "smooth" });
@@ -38,9 +42,9 @@ const handleSubmit = async () => {
       },
       body: JSON.stringify({
         messages: [{ role: "user", content: userInput, raw: false }],
-        userID: "test",
-        sessionID: "session_" + Date.now(),
-        isTeacher: false,
+        userID: userId,
+        sessionID: sessionID,
+        isTeacher: role==='teacher',
         stream: false
       })
     });
@@ -94,7 +98,17 @@ const handleKeyDown = (e) => {
 
 const clearChatHistory = () => {
   messages.value = [];
-  localStorage.removeItem("chatMessages");
+  fetch('/ai/v1/users/'+userId+'/sessions/'+sessionID+'/dialogues', {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userID: userId,
+      sessionID: sessionID,
+      isTeacher: role==='teacher',
+    })
+  }).then(res=>{ElMessage("已清空会话"+res)}).catch(err=>{ElMessage(err)});
 };
 
 </script>

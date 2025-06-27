@@ -3,11 +3,18 @@ import { useRoute } from 'vue-router'
 import { onMounted, ref } from 'vue'
 import { addLesson, getLessons } from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
-import {deleteCourse, findCourseByID, getAllStudents, getLessonQuestions, updateCourse} from '@/api/course/coures.js'
+import {
+  deleteCourse, dismissCourse, enrollCourse,
+  findCourseByID,
+  getAllStudents,
+  getLessonQuestions,
+  isMyCourse,
+  updateCourse
+} from '@/api/course/coures.js'
 const route=useRoute();
 const showView=ref(0);
-const dialogLessonFormVisible=ref(false);
 const dialogQuestionVisible=ref(false);
+const isMine=ref(false);
 const courseDetail=ref({
   name:"",
   teacher:"",
@@ -48,67 +55,6 @@ const getCourseByID=()=>{
         }
       })
 }
-const changeCourseInfo=()=>{
-  ElMessageBox.prompt('请输入新的课程简介', '修改课程简介', {
-    confirmButtonText: '确认',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(({ value }) => {
-    updateCourse(route.params.id,value).then(res=>{
-      ElMessage(res.description);
-    }).catch(err=>{
-      ElMessage(err);
-    })
-  }).catch(() => {
-    ElMessage({
-      type: 'info',
-      message: '取消修改'
-    });
-  });
-}
-const removeCourse=()=>{
-  ElMessageBox.confirm('你是否确认删除课程？', '删除请求确认', {
-    confirmButtonText: '确认',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    deleteCourse(route.params.id)
-        .then(res => {
-          if (res.data.code === 0) {
-            ElMessage.success('删除成功');
-          } else {
-            ElMessage.error(res.message);
-          }
-        })
-        .catch(err => {
-          ElMessage.error('删除失败: ' + err);
-        });
-  }).catch(() => {
-    // 用户点击取消时的操作
-    ElMessage.info('删除操作已取消');
-  });
-}
-const addLessonSubmit=()=>{
-  dialogLessonFormVisible.value=false;
-  addLesson(lessonDetail.value.lessonForm.courseId,lessonDetail.value.lessonForm.lessonName)
-      .then(res=>{
-        ElMessage(res.description);
-      })
-      .catch(err=>{
-        ElMessage(err);
-      })
-}
-const getStudents=()=>{
-  getAllStudents(route.params.id)
-      .then(res=>{
-        if (res.data.code===0){
-          courseDetail.value.students=res.data.data;
-        }else {
-          ElMessage(res.description);
-        }
-      })
-      .catch(err=>{ElMessage(err);})
-}
 const getLessonQuestion=(lessonId)=>{
   getLessonQuestions(lessonId)
       .then(res=>{
@@ -118,11 +64,40 @@ const getLessonQuestion=(lessonId)=>{
     ElMessage(err);
   }})
 }
-
+const joinCourse=()=>{
+  ElMessageBox.confirm('确定要加入该课程吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+  }).then(() => {
+    enrollCourse(route.params.id)
+      .then(res=>{
+        ElMessage(res.data);
+        if (res.data.code===0){
+          ElMessageBox.alert('加入课程成功！', '提示', {})
+        }
+      })
+  })
+}
+const exitCourse=()=>{
+  ElMessageBox.confirm('确定要退出该课程吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+  }).then(() => {
+    dismissCourse(sessionStorage.getItem('userId'),route.params.id)
+      .then(res=>{
+        ElMessage(res.data);
+        if (res.data.code===0){
+          ElMessageBox.alert('退出课程成功！', '提示', {})
+        }
+      })
+  })
+}
 onMounted(()=>{
+  isMyCourse(sessionStorage.getItem('userId'), route.params.id).then(res=>{isMine.value=res;});
   getLesson();
   getCourseByID();
-  getStudents();
 })
 </script>
 
@@ -130,9 +105,10 @@ onMounted(()=>{
   <el-container class="class-container">
     <el-header class="class-header">
       <el-button type="info" @click="showView=0">课程信息</el-button>
-      <el-button type="primary" @click="showView=1">课时信息</el-button>
-      <el-button type="success" @click="">加入课程</el-button>
-      <el-button type="text" @click="">我的课程成绩统计</el-button>
+      <el-button type="primary" @click="showView=1" v-if="isMine===true">课时信息</el-button>
+      <el-button type="success" @click="joinCourse" v-if="isMine===false">加入课程</el-button>
+      <el-button type="text" @click="" v-if="isMine===true">我的课程成绩统计</el-button>
+      <el-button type="danger" @click="exitCourse" v-if="isMine===true">退出课程</el-button>
     </el-header>
     <el-main class="class-main">
       <el-card class="class-card" v-if="showView===0">

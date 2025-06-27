@@ -2,7 +2,7 @@
 import {useRouter} from 'vue-router'
 const router = useRouter();
 const toDashboard = () => {
-  router.push('/dashboard/admin')
+  router.push('/dashboard/main')
 }
 const toClass = () => {
   router.push('/dashboard/admin/class');

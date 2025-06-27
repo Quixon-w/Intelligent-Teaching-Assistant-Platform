@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import {useRouter} from 'vue-router'
-import { getCourses } from '@/api/course/coures.js'
+import {getCourses} from '@/api/course/coures.js'
 import { ElMessage } from 'element-plus'
 const router = useRouter();
 const studentClass=ref([]);
@@ -9,7 +9,7 @@ const toClass=(id)=>{
   router.push('/dashboard/student/class/'+id);
 }
 const getData=()=>{
-  getCourses(tableSetting.value.currentPage,tableSetting.value.pageSize,tableSetting.value.courseName, tableSetting.value.studentName)
+  getCourses(tableSetting.value.currentPage,tableSetting.value.pageSize,tableSetting.value.courseName, tableSetting.value.teacherName)
       .then(res=>{
         studentClass.value=res.data.data.records;
         tableSetting.value.total=res.data.data.total;
@@ -23,7 +23,7 @@ const tableSetting=ref({
   pageSize:10,
   currentPage:1,
   courseName:'',
-  studentName:'',
+  teacherName:'',
 })
 const handleSizeChange=(number)=>{
   console.log(number);
@@ -41,7 +41,7 @@ onMounted(()=>{
 <template>
   <div style="display: flex;gap: 50px">
     <el-form :model="tableSetting" label-width="auto" style="width: 600px">
-      <el-form-item label="课程id">
+      <el-form-item label="课程名称">
         <el-input v-model="tableSetting.courseName"></el-input>
       </el-form-item>
     </el-form>
