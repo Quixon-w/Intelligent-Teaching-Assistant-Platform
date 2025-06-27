@@ -362,7 +362,6 @@ async def generate_outline_with_rwkv(prompt: str, request: Request):
 
 
 @router.post("/v1/create/outline", tags=["Create"])
-@router.post("/create/outline", tags=["Create"])
 async def create_outline(body: CreateOutlineBody, request: Request):
     """
     创建教学大纲

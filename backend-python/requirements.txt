@@ -1,11 +1,50 @@
-fastapi
-uvicorn
-pydantic
-langchain-community
-faiss-cpu
-sentence-transformers
-mysql-connector-python
-torch
-numpy
-httpx
-requests 
+# Web框架和API
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+sse-starlette>=1.8.0
+
+# 数据处理和科学计算
+numpy>=1.24.0
+torch>=2.0.0
+safetensors>=0.4.0
+
+# AI和机器学习
+rwkv>=0.8.0
+langchain>=0.1.0
+langchain-community>=0.0.10
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.0
+tiktoken>=0.5.0
+tokenizers>=0.15.0
+
+# 文档处理
+PyMuPDF>=1.23.0  # fitz
+python-docx>=0.8.11
+unstructured>=0.10.0
+
+# 数据库和存储
+mysql-connector-python>=8.0.0
+
+# 网络和HTTP
+httpx>=0.25.0
+requests>=2.31.0
+
+# 系统工具
+psutil>=5.9.0
+
+# 文本处理
+ftfy>=6.1.0
+lm-dataformat>=0.0.20
+
+# 进度条和工具
+tqdm>=4.65.0
+
+# 文件上传处理
+python-multipart>=0.0.6
+
+# 高性能数据结构
+cyac>=2.0.0
+
+# 开发工具
+setuptools>=70.0.0 

@@ -15,7 +15,6 @@ async def upload_file(
     lessonNum: Optional[str] = Form(None),
     fileEncoding: Optional[str] = Form("utf-8"),
     isResource: bool = Form(False),
-    isOutline: bool = Form(False),
     isAsk: bool = Form(False)
 ):
     """
@@ -24,11 +23,10 @@ async def upload_file(
     :param sessionId: 会话 ID，用于会话标识
     :param userId: 用户ID，用于确定存储路径
     :param isTeacher: 是否为教师，决定存储路径
-    :param courseId: 课程ID，教师模式下必填（非ask文件时）
-    :param lessonNum: 课时号，教师模式下必填（大纲与习题生成参考文件时）
+    :param courseId: 课程ID，教师模式下非ask文件时必填
+    :param lessonNum: 课时号，教师模式下非ask文件时必填
     :param fileEncoding: 可选，指定文件编码，默认 utf-8
     :param isResource: 是否为学习资料
-    :param isOutline: 是否为各个课时的大纲与习题生成参考文件
     :param isAsk: 是否为自己上传的可提问文件
     :return: 返回上传结果消息
     """
@@ -49,10 +47,10 @@ async def upload_file(
             detail="教师模式下非ask文件时courseId不能为空"
         )
     
-    if isTeacher and isOutline and not lessonNum:
+    if isTeacher and not isAsk and not isResource and not lessonNum:
         raise HTTPException(
             status_code=400, 
-            detail="教师模式下大纲与习题生成参考文件时lessonNum不能为空"
+            detail="教师模式下大纲参考文件时lessonNum不能为空"
         )
     
     # 根据isTeacher和文件类型决定存储路径，使用userId作为主目录
@@ -62,14 +60,11 @@ async def upload_file(
         if isResource:
             # 学习资料：保存到courseId级别
             session_folder = f"{base_folder}/{userId}/{courseId}"
-        elif isOutline:
-            # 大纲与习题生成参考文件：保存到lessonNum级别
-            session_folder = f"{base_folder}/{userId}/{courseId}/{lessonNum}"
         elif isAsk:
             # 可对文件进行提问的文件：保存在ask文件夹
             session_folder = f"{base_folder}/{userId}/ask"
         else:
-            # 默认情况（兼容旧版本）
+            # 大纲与习题生成参考文件：保存到lessonNum级别
             session_folder = f"{base_folder}/{userId}/{courseId}/{lessonNum}"
     else:
         # 学生模式：存储在Students目录下的userId文件夹中
@@ -96,7 +91,7 @@ async def upload_file(
             knowledge_status = "知识库更新成功"
             knowledge_error = None
             try:
-                update_knowledge_db(sessionId, isTeacher, courseId, lessonNum)
+                update_knowledge_db(userId, isTeacher, courseId, lessonNum, isResource, isAsk)
             except Exception as e:
                 knowledge_status = "知识库更新失败"
                 knowledge_error = str(e)
@@ -114,7 +109,6 @@ async def upload_file(
                 "courseId": courseId,
                 "lessonNum": lessonNum,
                 "isResource": isResource,
-                "isOutline": isOutline,
                 "isAsk": isAsk,
                 "filePath": file_location,
                 "downloadUrl": download_url,

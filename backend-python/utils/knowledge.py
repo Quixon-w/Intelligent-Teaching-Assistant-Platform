@@ -252,32 +252,43 @@ def create_vector_db(documents, vector_kb_folder):
         print(f"创建向量数据库失败: {e}")
         return None
 
-def update_knowledge_db(session_id, isTeacher=False, courseID=None, lessonNum=None):
+def update_knowledge_db(userId, isTeacher=False, courseID=None, lessonNum=None, isResource=False, isAsk=False):
     """
     更新知识库
-    :param session_id: 会话ID
+    :param userId: 用户ID
     :param isTeacher: 是否为教师模式
-    :param courseID: 课程ID（教师模式下必填）
-    :param lessonNum: 课时号（教师模式下必填）
+    :param courseID: 课程ID（教师模式下非ask文件时必填）
+    :param lessonNum: 课时号（教师模式下非ask文件时必填）
+    :param isResource: 是否为学习资料
+    :param isAsk: 是否为可提问文件
     """
-    # 根据isTeacher决定存储路径
+    # 根据isTeacher和文件类型决定存储路径，与upload.py保持一致
     if isTeacher:
-        # 教师模式：存储在Teachers目录下的session_id/courseID/lessonNum文件夹中
-        if not courseID:
-            print("教师模式下courseID不能为空")
-            return None
-        if not lessonNum:
-            print("教师模式下lessonNum不能为空")
-            return None
-        session_folder = f"/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers/{session_id}/{courseID}/{lessonNum}"
+        # 教师模式
+        base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers"
+        if isResource:
+            # 学习资料：保存到courseId级别
+            session_folder = f"{base_folder}/{userId}/{courseID}"
+        elif isAsk:
+            # 可对文件进行提问的文件：保存在ask文件夹
+            session_folder = f"{base_folder}/{userId}/ask"
+        else:
+            # 大纲与习题生成参考文件：保存到lessonNum级别
+            session_folder = f"{base_folder}/{userId}/{courseID}/{lessonNum}"
     else:
-        # 学生模式：存储在Students目录下的session_id文件夹中
-        session_folder = f"/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students/{session_id}"
+        # 学生模式：存储在Students目录下的userId文件夹中
+        base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students"
+        if isAsk:
+            # 学生上传的可提问文件：保存在ask文件夹
+            session_folder = f"{base_folder}/{userId}/ask"
+        else:
+            # 其他文件：保存在userId文件夹
+            session_folder = f"{base_folder}/{userId}"
     
     vector_kb_folder = os.path.join(session_folder, "vector_kb")
     os.makedirs(vector_kb_folder, exist_ok=True)
 
-    print(f"开始更新知识库，session_id: {session_id}, isTeacher: {isTeacher}, courseID: {courseID}, lessonNum: {lessonNum}")  # 调试输出
+    print(f"开始更新知识库，userId: {userId}, isTeacher: {isTeacher}, courseID: {courseID}, lessonNum: {lessonNum}, isResource: {isResource}, isAsk: {isAsk}")  # 调试输出
 
     # 加载文档并生成或更新向量库
     docs = load_documents(session_folder)
