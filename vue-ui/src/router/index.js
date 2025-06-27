@@ -75,6 +75,11 @@ const router = createRouter({
               name: 'teacherClass/id',
               component: () => import('../views/role/teacher/TeacherClassDetailView.vue'),
             },
+            {
+                path: '/lessonScore',
+                name: 'lessonScore',
+                component: () => import('../views/role/teacher/LessonScoreView.vue'),
+            },
           ]
         },
         {

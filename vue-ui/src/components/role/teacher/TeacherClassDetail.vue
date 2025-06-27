@@ -1,5 +1,5 @@
 <script setup>
-import { useRoute } from 'vue-router'
+import {useRoute, useRouter} from 'vue-router'
 import { onMounted, ref } from 'vue'
 import { getLessonQuestions,addLesson, getLessons } from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
@@ -139,6 +139,13 @@ const createLessonQuestion=(lessonId)=>{
     ElMessage(err);
   }})
 }
+const router=useRouter();
+const gotoLessonScore = (lessonId) => {
+  router.push({
+    path: '/lessonScore',
+    query: { lessonId: lessonId } // 使用 query 参数传递 lessonId
+  })
+}
 
 onMounted(()=>{
   getLesson();
@@ -188,7 +195,7 @@ onMounted(()=>{
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="createLessonQuestion(scope.row.lessonId)">创建测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="">删除测试</el-button>
-              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="">查看测试完成情况</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="gotoLessonScore(scope.row.lessonId)">查看测试完成情况</el-button>
             </template>
           </el-table-column>
         </el-table>

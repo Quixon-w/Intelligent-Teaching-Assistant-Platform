@@ -48,3 +48,16 @@ export function getLessonQuestions(lessonId){
     return err;
   })
 }
+export function getLessonScores(lessonId) {
+  return request.get('/api/lesson/getListScores',{
+    params :{
+      lessonId:lessonId
+    },
+  })
+      .then(res =>{
+        return res.data;
+      })
+      .catch(err =>{
+        return err;
+      })
+}
