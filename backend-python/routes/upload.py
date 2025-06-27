@@ -8,73 +8,73 @@ router = APIRouter()
 @router.post("/v1/upload")
 async def upload_file(
     file: UploadFile = File(...), 
-    sessionId: str = Form(...),
-    userId: str = Form(...),
-    isTeacher: bool = Form(False),
-    courseId: Optional[str] = Form(None),
-    lessonNum: Optional[str] = Form(None),
-    fileEncoding: Optional[str] = Form("utf-8"),
-    isResource: bool = Form(False),
-    isAsk: bool = Form(False)
+    session_id: str = Form(...),
+    user_id: str = Form(...),
+    is_teacher: bool = Form(False),
+    course_id: Optional[str] = Form(None),
+    lesson_num: Optional[str] = Form(None),
+    file_encoding: Optional[str] = Form("utf-8"),
+    is_resource: bool = Form(False),
+    is_ask: bool = Form(False)
 ):
     """
     上传文件并保存至服务器指定的路径
     :param file: 上传的文件
-    :param sessionId: 会话 ID，用于会话标识
-    :param userId: 用户ID，用于确定存储路径
-    :param isTeacher: 是否为教师，决定存储路径
-    :param courseId: 课程ID，教师模式下非ask文件时必填
-    :param lessonNum: 课时号，教师模式下非ask文件时必填
-    :param fileEncoding: 可选，指定文件编码，默认 utf-8
-    :param isResource: 是否为学习资料
-    :param isAsk: 是否为自己上传的可提问文件
+    :param session_id: 会话 ID，用于会话标识
+    :param user_id: 用户ID，用于确定存储路径
+    :param is_teacher: 是否为教师，决定存储路径
+    :param course_id: 课程ID，教师模式下非ask文件时必填
+    :param lesson_num: 课时号，教师模式下非ask文件时必填
+    :param file_encoding: 可选，指定文件编码，默认 utf-8
+    :param is_resource: 是否为学习资料
+    :param is_ask: 是否为自己上传的可提问文件
     :return: 返回上传结果消息
     """
-    # 检查文件类型，只允许pdf和docx
-    allowed_extensions = ['.pdf', '.docx']
+    # 检查文件类型，只允许pdf、docx、md和txt
+    allowed_extensions = ['.pdf', '.docx', '.md', '.txt']
     file_extension = os.path.splitext(file.filename)[1].lower()
     
     if file_extension not in allowed_extensions:
         raise HTTPException(
             status_code=400,
-            detail=f"不支持的文件类型: {file_extension}。只支持 PDF 和 DOCX 格式"
+            detail=f"不支持的文件类型: {file_extension}。只支持 PDF、DOCX、MD 和 TXT 格式"
         )
     
     # 验证参数
-    if isTeacher and not isAsk and not courseId:
+    if is_teacher and not is_ask and not course_id:
         raise HTTPException(
             status_code=400, 
-            detail="教师模式下非ask文件时courseId不能为空"
+            detail="教师模式下非ask文件时course_id不能为空"
         )
     
-    if isTeacher and not isAsk and not isResource and not lessonNum:
+    if is_teacher and not is_ask and not is_resource and not lesson_num:
         raise HTTPException(
             status_code=400, 
-            detail="教师模式下大纲参考文件时lessonNum不能为空"
+            detail="教师模式下大纲参考文件时lesson_num不能为空"
         )
     
-    # 根据isTeacher和文件类型决定存储路径，使用userId作为主目录
-    if isTeacher:
+    # 根据is_teacher和文件类型决定存储路径，使用user_id作为主目录
+    if is_teacher:
         # 教师模式
         base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers"
-        if isResource:
-            # 学习资料：保存到courseId级别
-            session_folder = f"{base_folder}/{userId}/{courseId}"
-        elif isAsk:
+        if is_resource:
+            # 学习资料：保存到course_id级别
+            session_folder = f"{base_folder}/{user_id}/{course_id}"
+        elif is_ask:
             # 可对文件进行提问的文件：保存在ask文件夹
-            session_folder = f"{base_folder}/{userId}/ask"
+            session_folder = f"{base_folder}/{user_id}/ask"
         else:
-            # 大纲与习题生成参考文件：保存到lessonNum级别
-            session_folder = f"{base_folder}/{userId}/{courseId}/{lessonNum}"
+            # 大纲与习题生成参考文件：保存到lesson_num级别
+            session_folder = f"{base_folder}/{user_id}/{course_id}/{lesson_num}"
     else:
-        # 学生模式：存储在Students目录下的userId文件夹中
+        # 学生模式：存储在Students目录下的user_id文件夹中
         base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students"
-        if isAsk:
+        if is_ask:
             # 学生上传的可提问文件：保存在ask文件夹
-            session_folder = f"{base_folder}/{userId}/ask"
+            session_folder = f"{base_folder}/{user_id}/ask"
         else:
-            # 其他文件：保存在userId文件夹
-            session_folder = f"{base_folder}/{userId}"
+            # 其他文件：保存在user_id文件夹
+            session_folder = f"{base_folder}/{user_id}"
     
     # 创建目录结构
     os.makedirs(session_folder, exist_ok=True)
@@ -91,33 +91,33 @@ async def upload_file(
             knowledge_status = "知识库更新成功"
             knowledge_error = None
             try:
-                update_knowledge_db(userId, isTeacher, courseId, lessonNum, isResource, isAsk)
+                update_knowledge_db(user_id, is_teacher, course_id, lesson_num, is_resource, is_ask)
             except Exception as e:
                 knowledge_status = "知识库更新失败"
                 knowledge_error = str(e)
             
             # 生成下载URL（仅对学习资料生成）
             download_url = None
-            if isResource and isTeacher:
-                download_url = f"/v1/download/resource/{userId}/{courseId}/{file.filename}"
+            if is_resource and is_teacher:
+                download_url = f"/v1/download/resource/{user_id}/{course_id}/{file.filename}"
             
             response_data = {
                 "message": f"文件已成功上传",
-                "sessionId": sessionId,
-                "userId": userId,
-                "isTeacher": isTeacher,
-                "courseId": courseId,
-                "lessonNum": lessonNum,
-                "isResource": isResource,
-                "isAsk": isAsk,
-                "filePath": file_location,
-                "downloadUrl": download_url,
-                "knowledgeStatus": knowledge_status
+                "session_id": session_id,
+                "user_id": user_id,
+                "is_teacher": is_teacher,
+                "course_id": course_id,
+                "lesson_num": lesson_num,
+                "is_resource": is_resource,
+                "is_ask": is_ask,
+                "file_path": file_location,
+                "download_url": download_url,
+                "knowledge_status": knowledge_status
             }
             
             # 如果知识库更新失败，添加错误信息
             if knowledge_error:
-                response_data["knowledgeError"] = knowledge_error
+                response_data["knowledge_error"] = knowledge_error
             
             return response_data
         else:
@@ -125,9 +125,3 @@ async def upload_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
 
-# 注意：下载相关的路由已移至 routes/download.py
-# 包括：
-# - /v1/download/resource/{userId}/{courseId}/{filename}
-# - /v1/download/outline/{userId}/{courseId}/{lessonNum}/{filename}
-# - /v1/list/resources/{userId}/{courseId}
-# - /v1/list/outlines/{userId}/{courseId}/{lessonNum}
