@@ -4,14 +4,14 @@ import {useRouter} from 'vue-router'
 import { getCourses } from '@/api/course/coures.js'
 import { ElMessage } from 'element-plus'
 const router = useRouter();
-const teacherClass=ref([]);
+const studentClass=ref([]);
 const toClass=(id)=>{
-  router.push('/dashboard/teacher/class/'+id);
+  router.push('/dashboard/student/class/'+id);
 }
 const getData=()=>{
-  getCourses(tableSetting.value.currentPage,tableSetting.value.pageSize,tableSetting.value.courseName, tableSetting.value.teacherName)
+  getCourses(tableSetting.value.currentPage,tableSetting.value.pageSize,tableSetting.value.courseName, tableSetting.value.studentName)
       .then(res=>{
-        teacherClass.value=res.data.data.records;
+        studentClass.value=res.data.data.records;
         tableSetting.value.total=res.data.data.total;
       }).catch(err=>{
     ElMessage(err);
@@ -23,7 +23,7 @@ const tableSetting=ref({
   pageSize:10,
   currentPage:1,
   courseName:'',
-  teacherName:'',
+  studentName:'',
 })
 const handleSizeChange=(number)=>{
   console.log(number);
@@ -42,16 +42,15 @@ onMounted(()=>{
   <div style="display: flex;gap: 50px">
     <el-form :model="tableSetting" label-width="auto" style="width: 600px">
       <el-form-item label="课程id">
-        <el-input v-model="tableSetting.role"></el-input>
+        <el-input v-model="tableSetting.courseName"></el-input>
       </el-form-item>
     </el-form>
     <div>
       <el-button>查询课程</el-button>
-      <el-button class="">创建课程</el-button>
     </div>
   </div>
   <div class="classTable">
-    <div class="classOfTeacher" v-for="course in teacherClass" @click="toClass(course.id)">
+    <div class="classOfStudent" v-for="course in studentClass" @click="toClass(course.id)">
       <img src="@/assets/images/login-background.jpg" alt=""/>
       <div class="text-wrapper">
         <el-text>{{ course.name }}</el-text>
@@ -84,7 +83,7 @@ onMounted(()=>{
   width: 100%;
   height: 100%;
 }
-.classOfTeacher{
+.classOfStudent{
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -96,7 +95,7 @@ onMounted(()=>{
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
 }
-.classOfTeacher img{
+.classOfStudent img{
   flex: 9;
   width: 100%;
   height: 80%;
