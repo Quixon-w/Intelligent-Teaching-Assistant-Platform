@@ -1,15 +1,16 @@
 <script setup>
 import {useRoute, useRouter} from 'vue-router'
 import { onMounted, ref } from 'vue'
-import { getLessonQuestions,addLesson, getLessons } from '@/api/course/lesson.js'
+import {getLessonQuestions, addLesson, getLessons, createLessonQuestions} from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
-import {deleteCourse, findCourseByID, getAllStudents, updateCourse} from '@/api/course/coures.js'
+import {deleteCourse, endCourses, findCourseByID, getAllStudents, updateCourse} from '@/api/course/coures.js'
 import FileUp from "@/components/file/FileUp.vue";
 const route=useRoute();
 const showView=ref(0);
 const dialogLessonFormVisible=ref(false);
 const dialogQuestionVisible=ref(false);
 const dialogCourseOutlineVisible=ref(false);
+const isMine=ref(false);
 const courseDetail=ref({
   name:"",
   teacher:"",
@@ -53,6 +54,7 @@ const getCourseByID=()=>{
         courseDetail.value.teacher=res.data.data.teacherName;
         courseDetail.value.createTime=res.data.data.createTime;
         courseDetail.value.info=res.data.data.comment;
+        isMine.value=(sessionStorage.getItem('userId')==res.data.data.teacherId);
       }else {
         ElMessage(res.description);
       }
@@ -96,6 +98,27 @@ const removeCourse=()=>{
   }).catch(() => {
     // 用户点击取消时的操作
     ElMessage.info('删除操作已取消');
+  });
+}
+const endCourse=()=>{
+  ElMessageBox.confirm('是否确认结课？', '结课请求确认', {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    endCourses(route.params.id)
+        .then(res => {
+          if (res.data.code === 0) {
+            ElMessage.success('课程申请结束');
+          } else {
+            ElMessage.error(res.message);
+          }
+        })
+        .catch(err => {
+          ElMessage.error('课程申请结束失败: ' + err);
+        });
+  }).catch(() => {
+    ElMessage.info('结课操作已取消');
   });
 }
 const addLessonSubmit=()=>{
@@ -158,10 +181,10 @@ onMounted(()=>{
   <el-container class="class-container">
     <el-header class="class-header">
       <el-button type="info" @click="showView=0">课程信息</el-button>
-      <el-button type="primary" @click="showView=1">课时管理</el-button>
-      <el-button type="success" @click="showView=2">学生管理</el-button>
-      <el-button type="danger" @click="removeCourse">删除课程</el-button>
-      <el-button type="warning" @click="dialogQuestionVisible=true">测试</el-button>
+      <el-button type="primary" @click="showView=1" v-if="isMine===true">课时管理</el-button>
+      <el-button type="success" @click="showView=2" v-if="isMine===true">学生管理</el-button>
+      <el-button type="warning" @click="endCourse" v-if="isMine===true">结课</el-button>
+      <el-button type="danger" @click="removeCourse" v-if="false">删除课程</el-button>
     </el-header>
     <el-main class="class-main">
       <el-card class="class-card" v-if="showView===0">
@@ -175,9 +198,9 @@ onMounted(()=>{
         <el-text>创建时间：{{courseDetail.createTime}}</el-text><br>
         <el-text>课程简介：{{courseDetail.info}}</el-text>
         <template #footer>
-          <el-button type="primary" @click="changeCourseInfo">修改课程简介</el-button>
+          <el-button type="primary" @click="changeCourseInfo" v-if="isMine===true">修改课程简介</el-button>
           <el-button type="warning" @click="">查看课程大纲</el-button>
-          <el-button type="success" @click="dialogCourseOutlineVisible=true">创建课程大纲</el-button>
+          <el-button type="success" @click="dialogCourseOutlineVisible=true" v-if="isMine===true">创建课程大纲</el-button>
         </template>
       </el-card>
       <el-card class="class-card" v-if="showView===1">

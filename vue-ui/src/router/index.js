@@ -97,6 +97,16 @@ const router = createRouter({
               name: 'studentClass/id',
               component: () => import('../views/role/student/StudentClassDetailView.vue'),
             },
+            {
+              path: 'mycourse',
+              name: 'studentMyCourse',
+              component: () => import('../views/role/student/CoursesOfStudentView.vue'),
+            },
+            {
+              path: 'choosecourse',
+              name: 'studentChooseCourse',
+              component: () => import('../views/role/student/ChooseCourseView.vue'),
+            }
           ]
         },
 

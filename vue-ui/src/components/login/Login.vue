@@ -41,9 +41,10 @@ const loginForm = reactive({
 const onLogin = () => {
   login(loginForm.username, loginForm.password)
       .then(res => {
-        sessionStorage.setItem('token', res.data.data.userAccount)
-        sessionStorage.setItem('role', UserRoleMap[res.data.data.userRole])
-        router.push('/dashboard')
+        sessionStorage.setItem('token', res.data.data.userAccount);
+        sessionStorage.setItem('role', UserRoleMap[res.data.data.userRole]);
+        sessionStorage.setItem('userId',res.data.data.id);
+        router.push('/dashboard');
       })
       .catch(err => {
         ElMessage({

@@ -3,7 +3,7 @@
 </script>
 
 <template>
-
+Welcome! Admin!
 </template>
 
 <style scoped>

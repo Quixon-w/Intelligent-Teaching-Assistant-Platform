@@ -1,12 +1,25 @@
 import request from '@/utils/request.js'
 export function getCourses(pageNum,pageSize,courseName,teacherName){
-  console.log(pageNum,pageSize,courseName,teacherName)
   return request.get('/api/course/listPage',{
     params:{
       "pageNum":pageNum,
       "pageSize":pageSize,
       "courseName":courseName,
       "teacherName":teacherName
+    },
+  }).then(res=>{
+    console.log(res);
+    return res;
+  }).catch(err=>{
+    console.log(err);
+    return err;
+  })
+}
+export function getCoursesOfStu(studentId){
+  console.log(studentId)
+  return request.get('/api/enroll/list/student',{
+    params:{
+      "studentId":studentId,
     },
   }).then(res=>{
     console.log(res);
@@ -73,9 +86,19 @@ export function getLessonQuestions(lessonId){
     return err;
   })
 }
-
+export function endCourses(courseId){
+  return request.post('/api/course/over',null,{
+    params:{
+      courseId:courseId
+    }
+  }).then(res=>{
+    return res;
+  }).catch(err=>{
+    return err;
+  })
+}
 export const enrollCourse = (courseId) => {
-  return request.get('/api/enroll', {
+  return request.post('/api/enroll',null, {
     params: {
       courseId:courseId }
   }).then(res=>{
@@ -86,12 +109,28 @@ export const enrollCourse = (courseId) => {
 }
 
 export const dismissCourse = (studentId,courseId) => {
-  return request.get('/api/enroll/dismiss', {
+  return request.post('/api/enroll/dismiss',null, {
     params: {
       studentId:studentId,
       courseId:courseId}
   }).then(res=>{
     return res;
+  }).catch(err=>{
+    return err;
+  })
+}
+
+export const isMyCourse=(studentId,courseId)=>{
+  return request.get('/api/enroll/list/student', {
+    params: {
+      studentId:studentId}
+  }).then(res=>{
+    for(let i=0;i<res.data.data.length;i++){
+      if(res.data.data[i].id==courseId){
+        return true;
+      }
+    }
+    return false;
   }).catch(err=>{
     return err;
   })

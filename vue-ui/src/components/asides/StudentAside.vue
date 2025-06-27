@@ -1,8 +1,17 @@
 <script setup>
 import {useRouter} from 'vue-router'
 const router = useRouter();
+const toDashboard = () => {
+  router.push('/dashboard/main');
+}
 const toClass = () => {
   router.push('/dashboard/student/class');
+}
+const toMyCourses = () => {
+  router.push('/dashboard/student/mycourse');
+}
+const toChooseCourse = () => {
+  router.push('/dashboard/student/choosecourse');
 }
 </script>
 
@@ -12,13 +21,15 @@ const toClass = () => {
     <el-menu class="menu">
       <el-sub-menu index="0">
         <template #title><el-text style="color: #B0C4DE">仪表盘</el-text></template>
-        <el-menu-item index="0-1" style="background: #304156"><el-text style="color: #B0C4DE">仪表盘界面</el-text></el-menu-item>
+        <el-menu-item index="0-1" style="background: #304156" @click="toDashboard"><el-text style="color: #B0C4DE">仪表盘界面</el-text></el-menu-item>
         <el-menu-item index="0-2" style="background: #304156"><el-text style="color: #B0C4DE">数据分析</el-text></el-menu-item>
       </el-sub-menu>
       <el-sub-menu index="1">
         <template #title><el-text style="color: #B0C4DE">课程管理</el-text></template>
-        <el-menu-item @click="toClass" index="1-1" style="background: #304156"><el-text style="color: #B0C4DE">我的课程</el-text></el-menu-item>
-        <el-menu-item @click="" index="1-2" style="background: #304156"><el-text style="color: #B0C4DE">查看测验</el-text></el-menu-item>
+        <el-menu-item @click="toClass" index="1-1" style="background: #304156"><el-text style="color: #B0C4DE">查询课程</el-text></el-menu-item>
+        <el-menu-item @click="toMyCourses" index="1-2" style="background: #304156"><el-text style="color: #B0C4DE">我的课程</el-text></el-menu-item>
+        <el-menu-item @click="toChooseCourse" index="1-1" style="background: #304156"><el-text style="color: #B0C4DE">选课</el-text></el-menu-item>
+        <el-menu-item @click="" index="1-4" style="background: #304156"><el-text style="color: #B0C4DE">查看测验</el-text></el-menu-item>
       </el-sub-menu>
     </el-menu>
   </el-scrollbar>

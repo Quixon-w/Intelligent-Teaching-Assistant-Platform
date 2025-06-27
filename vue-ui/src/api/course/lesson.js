@@ -61,3 +61,6 @@ export function getLessonScores(lessonId) {
         return err;
       })
 }
+export function createLessonQuestions(lessonId){
+  return true;
+}
