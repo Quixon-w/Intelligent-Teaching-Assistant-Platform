@@ -7,6 +7,7 @@ import {deleteCourse, endCourses, findCourseByID, getAllStudents, updateCourse} 
 import FileUp from "@/components/file/FileUp.vue";
 import FilePreview from "@/components/file/FilePreview.vue";
 import {downloadFile} from "@/api/file.js";
+import {createLessonOutline} from "@/api/ai/ai.js";
 const route=useRoute();
 const showView=ref(0);
 const dialogLessonFormVisible=ref(false);
@@ -15,7 +16,9 @@ const dialogCourseOutlineVisible=ref(false);
 const isMine=ref(false);
 const dialogPreviewVisible=ref(false);
 const previewLessonId=ref(null);
+const fileupLessonId=ref(null);
 const dialogCreateQuestionVisible=ref(false);
+const dialogDownloadVisible=ref(false);
 const courseDetail=ref({
   name:"",
   teacher:"",
@@ -35,11 +38,7 @@ const lessonDetail=ref({
 const getLesson=()=>{
   getLessons(route.params.id)
     .then(res=>{
-      if (res.data.code===0){
-        lessonDetail.value.lessons=res.data.data;
-      }else {
-        ElMessage(res.description);
-      }
+      lessonDetail.value.lessons=res;
     })
     .catch(err=>{ElMessage(err);})
 }
@@ -176,7 +175,11 @@ const gotoLessonScore = (lessonId) => {
   })
 }
 const createLessonFile=(lessonId)=>{
-  dialogCourseOutlineVisible.value=true;
+  createLessonOutline(route.params.id,lessonId).then(res=>{
+    ElMessage(res);
+  }).catch(err=>{
+    ElMessage(err);
+  })
 }
 const previewFile=(lessonId)=>{
   previewLessonId.value=lessonId
@@ -227,14 +230,14 @@ onMounted(()=>{
           <el-table-column property="createTime" label="创建时间" width="120" />
           <el-table-column label="操作">
             <template #default="scope">
-              <el-button size="default" @click="dialogCourseOutlineVisible=true" v-if="isMine===true">上传文件</el-button>
+              <el-button size="default" @click="fileupLessonId=scope.row.lessonId;dialogCourseOutlineVisible=true" v-if="isMine===true">上传文件</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="createLessonQuestion(scope.row.lessonId)">创建测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="">删除测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="gotoLessonScore(scope.row.lessonId)">查看测试完成情况</el-button>
               <el-button type="success" @click="createLessonFile(scope.row.lessonId)" v-if="isMine===true">创建课程大纲</el-button>
               <el-button type="warning" @click="previewFile(scope.row.lessonId)">查看课程大纲</el-button>
-              <el-button type="danger" @click="downloadFile(route.params.id,scope.row.lessonId)">下载课程大纲</el-button>
+              <el-button type="danger" @click="dialogDownloadVisible=true">下载课程大纲</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -320,10 +323,13 @@ onMounted(()=>{
     </template>
   </el-dialog>
   <el-dialog v-model="dialogCourseOutlineVisible" title="上传文件">
-    <FileUp/>
+    <FileUp :courseId=parseInt(route.params.id) :lessonId=parseInt(fileupLessonId)></FileUp>
   </el-dialog>
   <el-dialog v-model="dialogPreviewVisible" title="文件预览" width="800" align-center fullscreen>
     <FilePreview :courseId=parseInt(route.params.id) :lessonId=parseInt(previewLessonId)></FilePreview>
+  </el-dialog>
+  <el-dialog v-model="dialogDownloadVisible" title="文件下载">
+    <el-text>{{lessonDetail.lessons.outlineDownload}}</el-text>
   </el-dialog>
 </template>
 

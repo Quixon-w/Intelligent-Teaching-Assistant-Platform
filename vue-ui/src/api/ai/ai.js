@@ -8,9 +8,10 @@ export function getAllSessions(){
             is_teacher:isTeacher
         }
     }).then(res=>{
-        return res.sessions;
+        return res.data.sessions;
     }).catch(err=>{
-        return err;
+        console.log(err);
+        return null;
     })
 }
 export function getSession(sessionId){
@@ -21,7 +22,11 @@ export function getSession(sessionId){
             is_teacher:isTeacher
         }
     }).then(res=>{
-        return res;
+        if (res.data.context_messages.length===0){
+            return null;
+        }else{
+            return res.data.context_messages[0].content;
+        }
     }).catch(err=>{
         return err;
     })
@@ -48,6 +53,45 @@ export function clearChat(sessionId){
         is_teacher: isTeacher,
     }).then(res=>{
         return res;
+    }).catch(err=>{
+        return err;
+    })
+}
+export function createLessonOutline(courseId,lessonId){
+    return request.post('/ai/v1/create/outline',{
+        user_id: userId,
+        session_id: "testtest",
+        course_id: courseId,
+        lesson_num: lessonId,
+        is_teacher: isTeacher,
+    }).then(res=>{
+        return res;
+    }).catch(err=>{
+        return err;
+    })
+}
+export function lessonOutlineStatus(courseId,lessonId){
+    return request.get('/ai/v1/create/outline/status',null,{
+        params:{
+            user_id: userId,
+            course_id:courseId,
+            lesson_num:lessonId,
+            is_teacher:isTeacher,
+        }
+    }).then(res=>{
+        return res.data.status;
+    }).catch(err=>{
+        return err;
+    })
+}
+export function lessonOutlineDownload(courseId,lessonId){
+    return request.get("/ai/v1/list/outlines/"+userId+"/"+courseId+"/"+lessonId).then(res=>{
+        let files=res.data.files;
+        let urls=[];
+        for(let file of files){
+            urls.push(file.download_url);
+        }
+        return urls;
     }).catch(err=>{
         return err;
     })

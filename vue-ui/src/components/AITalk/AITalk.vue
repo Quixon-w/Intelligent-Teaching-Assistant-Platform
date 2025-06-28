@@ -117,7 +117,9 @@ const clearChatHistory = () => {
   }).then(res=>{ElMessage("已清空会话"+res)}).catch(err=>{ElMessage(err)});*/
 };
 onMounted(()=>{
+  console.log(sessionID.value);
   sessionID.value=route.params.sessionId;
+  console.log(sessionID.value);
 })
 </script>
 

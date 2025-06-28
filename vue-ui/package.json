@@ -10,6 +10,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@vue-office/docx": "^1.6.3",
     "@vue-office/pdf": "^2.0.10",
     "axios": "^1.10.0",
     "echarts": "^5.6.0",
