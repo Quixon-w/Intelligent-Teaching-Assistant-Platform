@@ -1,5 +1,5 @@
 <script setup>
-import { useRoute } from 'vue-router'
+import {useRoute, useRouter} from 'vue-router'
 import { onMounted, ref } from 'vue'
 import { addLesson, getLessons } from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
@@ -90,10 +90,19 @@ const exitCourse=()=>{
       })
   })
 }
+const router=useRouter();
+const gotoStudentStatics = (courseId) => {
+  router.push({
+    path: '/studentStatics',
+    query: { courseId: courseId } // 使用 query 参数传递 lessonId
+  })
+}
+
 const previewFile=(lessonId)=>{
   previewLessonId.value=lessonId
   dialogPreviewVisible.value=true;
 }
+
 onMounted(()=>{
   isMyCourse(sessionStorage.getItem('userId'), route.params.id).then(res=>{isMine.value=res;});
   getLesson();
@@ -107,7 +116,7 @@ onMounted(()=>{
       <el-button type="info" @click="showView=0">课程信息</el-button>
       <el-button type="primary" @click="showView=1" v-if="isMine===true">课时信息</el-button>
       <el-button type="success" @click="joinCourse" v-if="isMine===false">加入课程</el-button>
-      <el-button type="text" @click="" v-if="isMine===true">我的课程成绩统计</el-button>
+      <el-button type="text" @click="gotoStudentStatics(route.params.id)" v-if="isMine===true">我的课程成绩统计</el-button>
       <el-button type="danger" @click="exitCourse" v-if="isMine===true">退出课程</el-button>
     </el-header>
     <el-main class="class-main">
