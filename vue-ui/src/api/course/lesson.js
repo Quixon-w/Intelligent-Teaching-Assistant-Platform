@@ -1,16 +1,29 @@
 import request from '@/utils/request.js'
+import {lessonOutlineDownload, lessonOutlineStatus} from "@/api/ai/ai.js";
 export function getLessons(courseId) {
   return request.get('/api/lesson/list',{
     params :{
       courseId:courseId
     },
+  }).then(res =>{
+    let lessons=res.data.data;
+    for(let lesson of lessons){
+      lessonOutlineStatus(courseId,lesson.lessonId).then(res=>{
+        lesson.outlineStatus=res;
+      }).catch(err=>{
+        console.log(err);
+      });
+      lessonOutlineDownload(courseId,lesson.lessonId).then(res=>{
+        lesson.outlineDownload=res;
+      }).catch(err=>{
+        console.log(err);
+      })
+    }
+    console.log(lessons);
+    return lessons;
+  }).catch(err =>{
+    return err;
   })
-    .then(res =>{
-      return res;
-    })
-    .catch(err =>{
-      return err;
-    })
 }
 export function addLesson(courseId,lessonName){
   return request.post('/api/lesson/add',null,{

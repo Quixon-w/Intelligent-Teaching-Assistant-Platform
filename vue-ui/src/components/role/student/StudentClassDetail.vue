@@ -90,19 +90,10 @@ const exitCourse=()=>{
       })
   })
 }
-const router=useRouter();
-const gotoStudentStatics = (courseId) => {
-  router.push({
-    path: '/studentStatics',
-    query: { courseId: courseId } // 使用 query 参数传递 lessonId
-  })
-}
-
 const previewFile=(lessonId)=>{
   previewLessonId.value=lessonId
   dialogPreviewVisible.value=true;
 }
-
 onMounted(()=>{
   isMyCourse(sessionStorage.getItem('userId'), route.params.id).then(res=>{isMine.value=res;});
   getLesson();

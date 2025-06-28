@@ -3,7 +3,9 @@
 </script>
 
 <template>
-  Welcome! Student!
+  <el-card>
+    <template #header>学生端介绍</template>
+  </el-card>
 </template>
 
 <style scoped>

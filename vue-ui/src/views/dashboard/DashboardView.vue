@@ -1,5 +1,5 @@
 <script setup>
-import { RouterView } from 'vue-router'
+import {RouterView, useRoute} from 'vue-router'
 import {useRouter} from 'vue-router'
 import { ElMessage } from 'element-plus'
 import CommonAside from '@/components/asides/AdminAside.vue'
@@ -7,6 +7,7 @@ import TeacherAside from '@/components/asides/TeacherAside.vue'
 import { onExit } from '@/api/dashboard.js'
 import StudentAside from '@/components/asides/StudentAside.vue'
 const router = useRouter();
+const route = useRoute();
 const role=sessionStorage.getItem('role');
 const handleCommand = (command) => {
   if (command === 'onExit') {
@@ -35,7 +36,6 @@ const handleCommand = (command) => {
     <el-container>
       <el-header class="header">
         <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="50" height="50"/>
-        <el-button type="success" @click="router.push('/dashboard/aitalk')">与ai对话</el-button>
         <div>
           <el-text style="color: #B0C4DE;font-size: 30px">{{role}}</el-text>
           <el-dropdown @command="handleCommand">
@@ -52,7 +52,7 @@ const handleCommand = (command) => {
         </div>
       </el-header>
       <el-main class="main">
-        <Router-view />
+        <Router-view :key="route.path"/>
       </el-main>
     </el-container>
   </el-container>

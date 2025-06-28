@@ -5,12 +5,20 @@ import {getLessonQuestions, addLesson, getLessons, createLessonQuestions} from '
 import { ElMessage, ElMessageBox, } from 'element-plus'
 import {deleteCourse, endCourses, findCourseByID, getAllStudents, updateCourse} from '@/api/course/coures.js'
 import FileUp from "@/components/file/FileUp.vue";
+import FilePreview from "@/components/file/FilePreview.vue";
+import {downloadFile} from "@/api/file.js";
+import {createLessonOutline} from "@/api/ai/ai.js";
 const route=useRoute();
 const showView=ref(0);
 const dialogLessonFormVisible=ref(false);
 const dialogQuestionVisible=ref(false);
 const dialogCourseOutlineVisible=ref(false);
 const isMine=ref(false);
+const dialogPreviewVisible=ref(false);
+const previewLessonId=ref(null);
+const fileupLessonId=ref(null);
+const dialogCreateQuestionVisible=ref(false);
+const dialogDownloadVisible=ref(false);
 const courseDetail=ref({
   name:"",
   teacher:"",
@@ -30,11 +38,7 @@ const lessonDetail=ref({
 const getLesson=()=>{
   getLessons(route.params.id)
     .then(res=>{
-      if (res.data.code===0){
-        lessonDetail.value.lessons=res.data.data;
-      }else {
-        ElMessage(res.description);
-      }
+      lessonDetail.value.lessons=res;
     })
     .catch(err=>{ElMessage(err);})
 }
@@ -153,14 +157,15 @@ const getLessonQuestion=(lessonId)=>{
   }})
 }
 const createLessonQuestion=(lessonId)=>{
-  createLessonQuestions(lessonId)
+  /*createLessonQuestions(lessonId)
       .then(res=>{
         lessonDetail.value.lessonQuestions=res.data;
         ElMessage(res.data);
-        dialogQuestionVisible.value=true;
+        dialogCreateQuestionVisible.value=true;
       }).catch(err=>{{
     ElMessage(err);
-  }})
+  }})*/
+  dialogCreateQuestionVisible.value=true;
 }
 const router=useRouter();
 const gotoLessonScore = (lessonId) => {
@@ -169,7 +174,17 @@ const gotoLessonScore = (lessonId) => {
     query: { lessonId: lessonId } // 使用 query 参数传递 lessonId
   })
 }
-
+const createLessonFile=(lessonId)=>{
+  createLessonOutline(route.params.id,lessonId).then(res=>{
+    ElMessage(res);
+  }).catch(err=>{
+    ElMessage(err);
+  })
+}
+const previewFile=(lessonId)=>{
+  previewLessonId.value=lessonId
+  dialogPreviewVisible.value=true;
+}
 onMounted(()=>{
   getLesson();
   getCourseByID();
@@ -210,15 +225,19 @@ onMounted(()=>{
         <el-table :data="lessonDetail.lessons" border style="width: 100%">
           <el-table-column type="selection" width="55" />
           <el-table-column property="lessonId" v-if="false" />
-          <el-table-column property="courseId" label="课程ID" width="120" />
+          <el-table-column property="courseId" label="课程ID" width="80" />
           <el-table-column property="lessonName" label="课时名称" width="120" />
           <el-table-column property="createTime" label="创建时间" width="120" />
           <el-table-column label="操作">
             <template #default="scope">
+              <el-button size="default" @click="fileupLessonId=scope.row.lessonId;dialogCourseOutlineVisible=true" v-if="isMine===true">上传文件</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="createLessonQuestion(scope.row.lessonId)">创建测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="">删除测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="gotoLessonScore(scope.row.lessonId)">查看测试完成情况</el-button>
+              <el-button type="success" @click="createLessonFile(scope.row.lessonId)" v-if="isMine===true">创建课程大纲</el-button>
+              <el-button type="warning" @click="previewFile(scope.row.lessonId)">查看课程大纲</el-button>
+              <el-button type="danger" @click="dialogDownloadVisible=true">下载课程大纲</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -278,10 +297,39 @@ onMounted(()=>{
         </el-radio-group>
       </template>
     </el-card>
-    <el-button type="success">上传课时测试</el-button>
   </el-dialog>
-  <el-dialog v-model="dialogCourseOutlineVisible" title="创建课程大纲">
-    <FileUp/>
+  <el-dialog v-model="dialogCreateQuestionVisible" title="创建测试">
+    <el-button type="success">生成测试</el-button>
+    <el-card v-for="question in lessonDetail.lessonQuestions">
+      <template #header>
+        <el-text>第{{question.questionId}}题</el-text>
+        <el-text>{{question.questionKonwledge}}</el-text>
+        <el-button type="danger" @click="">删除</el-button>
+      </template>
+      <el-text>{{question.questionContent}}<</el-text>
+      <el-text>{{question.questionExplanation}}</el-text>
+      <template #footer>
+        <el-radio-group v-model="question.questionAnswer[0]" style="gap: 3px" disabled>
+          <el-radio-button value="A" size="large" border>{{question.questionAnswer[1]}}</el-radio-button>
+          <el-radio-button value="B" size="large" border>{{question.questionAnswer[2]}}</el-radio-button>
+          <el-radio-button value="C" size="large" border>{{question.questionAnswer[3]}}</el-radio-button>
+          <el-radio-button value="D" size="large" border>{{question.questionAnswer[4]}}</el-radio-button>
+        </el-radio-group>
+      </template>
+    </el-card>
+    <template #footer>
+      <el-button type="success">新增测试</el-button>
+      <el-button type="primary">发布测试</el-button>
+    </template>
+  </el-dialog>
+  <el-dialog v-model="dialogCourseOutlineVisible" title="上传文件">
+    <FileUp :courseId=parseInt(route.params.id) :lessonId=parseInt(fileupLessonId)></FileUp>
+  </el-dialog>
+  <el-dialog v-model="dialogPreviewVisible" title="文件预览" width="800" align-center fullscreen>
+    <FilePreview :courseId=parseInt(route.params.id) :lessonId=parseInt(previewLessonId)></FilePreview>
+  </el-dialog>
+  <el-dialog v-model="dialogDownloadVisible" title="文件下载">
+    <el-text>{{lessonDetail.lessons.outlineDownload}}</el-text>
   </el-dialog>
 </template>
 

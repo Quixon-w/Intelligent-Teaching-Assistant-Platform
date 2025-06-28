@@ -1,11 +1,10 @@
 <script setup>
 
+import FindCourses from "@/components/main/FindCourses.vue";
 </script>
 
 <template>
-  <el-card>
-    <template #header>教师端介绍</template>
-  </el-card>
+<FindCourses/>
 </template>
 
 <style scoped>
