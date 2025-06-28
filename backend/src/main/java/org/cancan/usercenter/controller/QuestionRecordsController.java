@@ -77,7 +77,7 @@ public class QuestionRecordsController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "已提交过该课时的习题");
         }
         // 获取习题列表
-        List<Questions> questionsList = lessonQuestionMapService.getOrderedQuestions(lessonId);
+        List<Questions> questionsList = lessonQuestionMapService.getOrderedQuestions(lessonId, true);
         // 校验答案数量
         if (answers == null || answers.size() != questionsList.size()) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "答案数量与题目数量不一致");

@@ -71,7 +71,9 @@ public class LessonsController {
         lessonsService.getValidLessonById(lessonId);
         // 判断是否是老师本人
         User currentUser = userService.getCurrentUser(request);
-        lessonsService.isTeacher(lessonId, currentUser);
+        if (!lessonsService.isTeacher(lessonId, currentUser) && currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "非老师本人开设的课时");
+        }
         return ResultUtils.success(lessonsService.removeById(lessonId));
     }
 
@@ -81,7 +83,7 @@ public class LessonsController {
             @Parameter(name = "courseId", description = "课程id", required = true)
     })
     public BaseResponse<List<Lessons>> listLessons(@RequestParam Long courseId) {
-        // 参数及权限校验
+        // 参数校验
         coursesService.getValidCourseById(courseId);
         // 查询
         QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();

@@ -109,7 +109,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User safetyUser = getSafetyUser(user);
         // 将用户登录态存储到 Redis
         String sessionId = request.getSession().getId(); // 使用 session ID 作为 Redis 的 key
-        redisUtil.set(sessionId, JSON.toJSONString(safetyUser), 3600, TimeUnit.SECONDS);
+        redisUtil.set(sessionId, JSON.toJSONString(safetyUser), EXPIRE_TIME, TimeUnit.SECONDS);
 
         return safetyUser;
     }
@@ -136,7 +136,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         userMapper.updateById(safetyUser);
         // 将用户信息更新到 Redis
         String sessionId = request.getSession().getId(); // 使用 session ID 作为 Redis 的 key
-        redisUtil.set(sessionId, JSON.toJSONString(safetyUser), 3600, TimeUnit.SECONDS); // 1小时过期
+        redisUtil.set(sessionId, JSON.toJSONString(safetyUser), EXPIRE_TIME, TimeUnit.SECONDS); // 1小时过期
 
         return safetyUser;
     }
@@ -218,7 +218,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (currentUser == null) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
-        redisUtil.expire(sessionId, 3600, TimeUnit.SECONDS);
+        // 续期
+        redisUtil.expire(sessionId, EXPIRE_TIME, TimeUnit.SECONDS);
         return currentUser;
     }
 

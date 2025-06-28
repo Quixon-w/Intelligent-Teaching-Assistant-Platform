@@ -19,4 +19,9 @@ public class LessonQuestionMap {
      */
     private Long questionId;
 
+    /**
+     * 是否已发布
+     */
+    private Integer committed;
+
 }
