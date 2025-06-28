@@ -32,6 +32,7 @@ const lessonDetail=ref({
     courseId:route.params.id,
     lessonName:'',
   },
+  lessonDownloadUrls:[],
   lessonQuestions:[],
 })
 
@@ -185,6 +186,14 @@ const previewFile=(lessonId)=>{
   previewLessonId.value=lessonId
   dialogPreviewVisible.value=true;
 }
+const downloadUrls=(lessonId)=>{
+  for(let lesson of lessonDetail.value.lessons){
+    if(lesson.lessonId===lessonId){
+      lessonDetail.value.lessonDownloadUrls=lesson.outlineDownload;
+    }
+  }
+  dialogDownloadVisible.value=true;
+}
 onMounted(()=>{
   getLesson();
   getCourseByID();
@@ -237,7 +246,7 @@ onMounted(()=>{
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="gotoLessonScore(scope.row.lessonId)">查看测试完成情况</el-button>
               <el-button type="success" @click="createLessonFile(scope.row.lessonId)" v-if="isMine===true">创建课程大纲</el-button>
               <el-button type="warning" @click="previewFile(scope.row.lessonId)">查看课程大纲</el-button>
-              <el-button type="danger" @click="dialogDownloadVisible=true">下载课程大纲</el-button>
+              <el-button type="danger" @click="downloadUrls(scope.row.lessonId)">下载课程大纲</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -329,7 +338,7 @@ onMounted(()=>{
     <FilePreview :courseId=parseInt(route.params.id) :lessonId=parseInt(previewLessonId)></FilePreview>
   </el-dialog>
   <el-dialog v-model="dialogDownloadVisible" title="文件下载">
-    <el-text>{{lessonDetail.lessons.outlineDownload}}</el-text>
+    <el-text v-for="url in lessonDetail.lessonDownloadUrls" @click="url">{{url}}</el-text>
   </el-dialog>
 </template>
 
