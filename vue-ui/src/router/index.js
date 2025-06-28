@@ -106,7 +106,12 @@ const router = createRouter({
               path: 'choosecourse',
               name: 'studentChooseCourse',
               component: () => import('../views/role/student/ChooseCourseView.vue'),
-            }
+            },
+            {
+              path: '/studentStatics',
+              name: 'studentStatics',
+              component: () => import('../views/role/student/StudentStaticsView.vue'),
+            },
           ]
         },
 
