@@ -1,13 +1,16 @@
 <script setup>
-import {ref, watch} from "vue";
+import {onMounted, ref, watch} from "vue";
 import {ElMessage} from "element-plus";
+import {useRoute} from "vue-router";
+import {chat, clearChat} from "@/api/ai/ai.js";
 
+const route = useRoute();
 const messages = ref([]);
 const input = ref('');
 const isLoading = ref(false);
 const messagesEndRef = ref(null);
 const userId=sessionStorage.getItem('userId');
-const sessionID = "session_" + Date.now();
+const sessionID = ref(route.params.sessionID);
 const role=sessionStorage.getItem('role');
 
 const scrollToBottom = () => {
@@ -34,27 +37,30 @@ const handleSubmit = async () => {
   isLoading.value = true;
 
   try {
+    const response=await chat(sessionID.value,[{ role: "user", content: userInput, raw: false }]);
     // 直接使用fetch调用后端API
-    const response = await fetch('/ai/v1/chat/completions', {
+    /*const response = await fetch('/ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         messages: [{ role: "user", content: userInput, raw: false }],
-        userID: userId,
-        sessionID: sessionID,
-        isTeacher: role==='teacher',
+        user_id: userId,
+        session_id: sessionID.value,
+        is_teacher: role=='teacher',
         stream: false
       })
-    });
+    });*/
 
+    console.log(response);
     if (!response.ok) {
       console.log( new Error(`HTTP error! status: ${response.status}`));
     }
-
     // 获取响应文本
     const responseText = await response.text();
+    console.log("+++++++++++++++++++++++")
+
     console.log(responseText);
 
     // 解析JSON字符串
@@ -97,8 +103,8 @@ const handleKeyDown = (e) => {
 };
 
 const clearChatHistory = () => {
-  messages.value = [];
-  fetch('/ai/v1/users/'+userId+'/sessions/'+sessionID+'/dialogues', {
+  clearChat(sessionID).then(res => {messages.value = [];ElMessage.success('清除成功')}).catch(err => {ElMessage.error('清除失败')});
+  /*fetch('/ai/v1/users/'+userId+'/sessions/'+sessionID+'/dialogues', {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -108,9 +114,11 @@ const clearChatHistory = () => {
       sessionID: sessionID,
       isTeacher: role==='teacher',
     })
-  }).then(res=>{ElMessage("已清空会话"+res)}).catch(err=>{ElMessage(err)});
+  }).then(res=>{ElMessage("已清空会话"+res)}).catch(err=>{ElMessage(err)});*/
 };
-
+onMounted(()=>{
+  sessionID.value=route.params.sessionId;
+})
 </script>
 
 <template>

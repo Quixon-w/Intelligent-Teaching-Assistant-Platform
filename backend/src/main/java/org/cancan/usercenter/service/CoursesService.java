@@ -2,7 +2,6 @@ package org.cancan.usercenter.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.cancan.usercenter.model.domain.Courses;
 
 import java.util.List;
@@ -27,10 +26,10 @@ public interface CoursesService extends IService<Courses> {
      * 判断是否是本老师在操作
      *
      * @param coursesId 课程id
-     * @param request   请求
+     * @param userId    用户id
      * @return 是否是老师
      */
-    Boolean isTeacher(Long coursesId, HttpServletRequest request);
+    Boolean isTeacher(Long coursesId, Long userId);
 
     /**
      * 获取有效课程
@@ -73,4 +72,5 @@ public interface CoursesService extends IService<Courses> {
      * @return 课程列表
      */
     List<Courses> getCoursesByStudentId(Long studentId);
+
 }

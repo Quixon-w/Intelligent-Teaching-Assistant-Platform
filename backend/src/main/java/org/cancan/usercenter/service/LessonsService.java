@@ -36,13 +36,4 @@ public interface LessonsService extends IService<Lessons> {
      */
     Lessons getValidLessonById(Long lessonId);
 
-    /**
-     * 获取课时分数
-     *
-     * @param lessonId  课时ID
-     * @param studentId 学生ID
-     * @return 分数
-     */
-    Float getLessonScore(Long lessonId, Long studentId);
-
 }

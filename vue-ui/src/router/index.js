@@ -39,7 +39,7 @@ const router = createRouter({
           component: () => import('../views/user/UserCentralView.vue'),
         },
         {
-          path: 'aitalk',
+          path: 'aitalk/:sessionId',
           name: 'aitalk',
           component: () => import('../views/dashboard/AITalkView.vue'),
         },

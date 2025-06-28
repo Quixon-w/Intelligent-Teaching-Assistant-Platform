@@ -22,7 +22,6 @@ springdoc:
     path: /swagger-ui
     tags-sorter: alpha
     operations-sorter: alpha
-    url: /v3/api-docs
   api-docs:
     enabled: true
     path: /v3/api-docs
@@ -42,6 +41,7 @@ server:
         name: SESSION
         same-site: None
         secure: true
+    context-path: /api
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true

@@ -13,9 +13,9 @@ import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
-import org.cancan.usercenter.model.domain.Courses;
-import org.cancan.usercenter.model.domain.Enroll;
-import org.cancan.usercenter.model.domain.User;
+import org.cancan.usercenter.mapper.LessonsMapper;
+import org.cancan.usercenter.mapper.ScoresMapper;
+import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
@@ -33,17 +33,20 @@ import static org.cancan.usercenter.constant.UserConstant.TEACHER_ROLE;
  * @author 洪
  */
 @RestController
-@RequestMapping("/api/course")
+@RequestMapping("/course")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "课程信息")
 public class CoursesController {
 
     @Resource
-    private CoursesService coursesService;
+    private ScoresMapper scoresMapper;
+    @Resource
+    private LessonsMapper lessonsMapper;
 
     @Resource
+    private CoursesService coursesService;
+    @Resource
     private EnrollService enrollService;
-
     @Resource
     private UserService userService;
 
@@ -115,7 +118,8 @@ public class CoursesController {
             @Parameter(name = "courseId", description = "课程id", required = true)
     })
     public BaseResponse<Boolean> deleteCourse(@RequestParam Long courseId, HttpServletRequest request) {
-        coursesService.isTeacher(courseId, request);
+        User currentUser = userService.getCurrentUser(request);
+        coursesService.isTeacher(courseId, currentUser.getId());
         return ResultUtils.success(coursesService.removeById(courseId));
     }
 
@@ -126,7 +130,8 @@ public class CoursesController {
             @Parameter(name = "comment", description = "课程简介", required = true)
     })
     public BaseResponse<Boolean> editComment(@RequestParam Long courseId, @RequestParam String comment, HttpServletRequest request) {
-        if (!coursesService.isTeacher(courseId, request)) {
+        User currentUser = userService.getCurrentUser(request);
+        if (!coursesService.isTeacher(courseId, currentUser.getId())) {
             throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可删除课程");
         }
         return ResultUtils.success(coursesService.editComment(courseId, comment));
@@ -139,23 +144,25 @@ public class CoursesController {
     })
     public BaseResponse<Boolean> over(@RequestParam Long courseId, HttpServletRequest request) {
         Courses course = coursesService.getValidCourseById(courseId);
-        if (!coursesService.isTeacher(courseId, request) && userService.getCurrentUser(request).getUserRole() != ADMIN_ROLE) {
+        User currentUser = userService.getCurrentUser(request);
+        if (!coursesService.isTeacher(courseId, currentUser.getId()) && currentUser.getUserRole() != ADMIN_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可结束课程");
         }
         return ResultUtils.success(coursesService.over(course));
     }
 
     @GetMapping("/score")
-    @Operation(summary = "获取该课程学生分数")
+    @Operation(summary = "获取该课程下某学生的总成绩")
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true),
             @Parameter(name = "studentId", description = "学生id", required = true)
     })
     public BaseResponse<Float> getScore(@RequestParam Long courseId, @RequestParam Long studentId, HttpServletRequest request) {
         // 非老师，非学生，非管理员不可查看成绩
-        if (!coursesService.isTeacher(courseId, request)
-                && !Objects.equals(userService.getCurrentUser(request).getId(), studentId)
-                && userService.getCurrentUser(request).getUserRole() != ADMIN_ROLE) {
+        User currentUser = userService.getCurrentUser(request);
+        if (!coursesService.isTeacher(courseId, currentUser.getId())
+                && !Objects.equals(currentUser.getId(), studentId)
+                && currentUser.getUserRole() != ADMIN_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可获取学生分数");
         }
         // 查询成绩
@@ -163,6 +170,35 @@ public class CoursesController {
         queryWrapper.eq("courses_id", courseId).eq("student_id", studentId);
         Enroll enroll = enrollService.getOne(queryWrapper);
         return ResultUtils.success(enroll.getFinalScore());
+    }
+
+    @GetMapping("/scoreList")
+    @Operation(summary = "获取该课程下某学生的所有课时成绩")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程id", required = true),
+            @Parameter(name = "studentId", description = "学生id", required = true)
+    })
+    public BaseResponse<List<Scores>> getListScores(@RequestParam Long courseId, @RequestParam Long studentId, HttpServletRequest request) {
+        // 非老师，非学生，非管理员不可查看成绩
+        User currentUser = userService.getCurrentUser(request);
+        if (!coursesService.isTeacher(courseId, currentUser.getId())
+                && !Objects.equals(currentUser.getId(), studentId)
+                && currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可获取学生分数");
+        }
+        // 获得课程下所有课时
+        QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("course_id", courseId);
+        List<Long> lessonsIds = lessonsMapper.selectList(queryWrapper).stream().map(Lessons::getLessonId).toList();
+        if (lessonsIds.isEmpty()) {
+            return null;
+        }
+        // 查询成绩
+        QueryWrapper<Scores> queryWrapperS = new QueryWrapper<>();
+        queryWrapperS.eq("student_id", studentId);
+        queryWrapperS.in("lesson_id", lessonsIds);
+        List<Scores> scores = scoresMapper.selectList(queryWrapperS);
+        return ResultUtils.success(scores);
     }
 
 }

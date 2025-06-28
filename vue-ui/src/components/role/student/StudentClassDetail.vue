@@ -3,18 +3,15 @@ import {useRoute, useRouter} from 'vue-router'
 import { onMounted, ref } from 'vue'
 import { addLesson, getLessons } from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
-import {
-  deleteCourse, dismissCourse, enrollCourse,
-  findCourseByID,
-  getAllStudents,
-  getLessonQuestions,
-  isMyCourse,
-  updateCourse
-} from '@/api/course/coures.js'
+import {dismissCourse, enrollCourse, findCourseByID, getLessonQuestions, isMyCourse,} from '@/api/course/coures.js'
+import FilePreview from "@/components/file/FilePreview.vue";
+import {downloadFile} from "@/api/file.js";
 const route=useRoute();
 const showView=ref(0);
 const dialogQuestionVisible=ref(false);
 const isMine=ref(false);
+const dialogPreviewVisible=ref(false);
+const previewLessonId=ref(null);
 const courseDetail=ref({
   name:"",
   teacher:"",
@@ -30,7 +27,6 @@ const lessonDetail=ref({
   },
   lessonQuestions:[],
 })
-
 const getLesson=()=>{
   getLessons(route.params.id)
       .then(res=>{
@@ -102,6 +98,11 @@ const gotoStudentStatics = (courseId) => {
   })
 }
 
+const previewFile=(lessonId)=>{
+  previewLessonId.value=lessonId
+  dialogPreviewVisible.value=true;
+}
+
 onMounted(()=>{
   isMyCourse(sessionStorage.getItem('userId'), route.params.id).then(res=>{isMine.value=res;});
   getLesson();
@@ -130,7 +131,7 @@ onMounted(()=>{
         <el-text>创建时间：{{courseDetail.createTime}}</el-text><br>
         <el-text>课程简介：{{courseDetail.info}}</el-text>
         <template #footer>
-          <el-button type="primary" @click="">查看课件</el-button>
+          <el-button type="primary" @click="dialogPreviewVisible=true">查看课件</el-button>
           <el-button type="danger" @click="">下载课件</el-button>
         </template>
       </el-card>
@@ -146,6 +147,8 @@ onMounted(()=>{
             <template #default="scope">
               <el-button size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测验</el-button>
               <el-button size="default" type="danger" @click="">完成测验</el-button>
+              <el-button size="default" type="success" @click="previewFile(scope.row.lessonId)">查看课件</el-button>
+              <el-button size="default" type="primary" @click="downloadFile(route.params.id,scope.row.lessonId)">下载课件</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -173,8 +176,10 @@ onMounted(()=>{
     </el-card>
     <el-button type="success">完成测试</el-button>
   </el-dialog>
+  <el-dialog v-model="dialogPreviewVisible" title="文件预览" width="800" align-center fullscreen>
+    <FilePreview :courseId=parseInt(route.params.id) :lessonId=parseInt(previewLessonId)></FilePreview>
+  </el-dialog>
 </template>
-
 <style scoped>
 .class-container{
   display: flex;

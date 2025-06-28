@@ -26,9 +26,9 @@ import java.util.List;
  * @author cancan
  */
 @RestController
-@RequestMapping("/api/map")
+@RequestMapping("/map")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "课时与习题对应关系")
 public class LessonQuestionMapController {
 
     @Resource
@@ -95,7 +95,7 @@ public class LessonQuestionMapController {
     @Parameters({
             @Parameter(name = "lessonId", description = "课时ID", required = true)
     })
-    public BaseResponse<List<Questions>> list(Long lessonId) {
+    public BaseResponse<List<Questions>> list(@RequestParam Long lessonId) {
         // 确认课时有效性
         Lessons lesson = lessonsService.getValidLessonById(lessonId);
         // 确认是否有问题

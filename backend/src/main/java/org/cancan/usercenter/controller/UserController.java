@@ -25,6 +25,7 @@ import org.cancan.usercenter.model.domain.request.UserRegisterRequest;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Objects;
 
 import static org.cancan.usercenter.constant.UserConstant.*;
@@ -35,9 +36,9 @@ import static org.cancan.usercenter.constant.UserConstant.*;
  * @author cancan
  */
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/user")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "用户")
 public class UserController {
 
     @Resource
@@ -50,11 +51,6 @@ public class UserController {
 
     @PostMapping("/register")
     @Operation(summary = "用户注册")
-    @Parameters({
-            @Parameter(name = "userAccount", description = "用户账号", required = true),
-            @Parameter(name = "userPassword", description = "用户密码", required = true),
-            @Parameter(name = "checkPassword", description = "确认密码", required = true)
-    })
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         if (userRegisterRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -71,10 +67,6 @@ public class UserController {
 
     @PostMapping("/login")
     @Operation(summary = "用户登录")
-    @Parameters({
-            @Parameter(name = "userAccount", description = "用户账号", required = true),
-            @Parameter(name = "userPassword", description = "用户密码", required = true)
-    })
     public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         if (userLoginRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -110,16 +102,11 @@ public class UserController {
         if (user.getUserStatus() == 1) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户状态失效");
         }
-        User result = userService.getSafetyUser(user);
-        return ResultUtils.success(result);
+        return ResultUtils.success(userService.getSafetyUser(user));
     }
 
     @PostMapping("/update")
     @Operation(summary = "更新用户")
-    @Parameters({
-            @Parameter(name = "id", description = "用户id", required = true),
-            @Parameter(name = "userAccount", description = "用户账号", required = true),
-    })
     public BaseResponse<User> updateUser(@RequestBody User user, HttpServletRequest request) {
         if (user == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -154,18 +141,11 @@ public class UserController {
             }
         }
         User updateUser = userService.userUpdate(user, request);
-        User safeUser = userService.getSafetyUser(updateUser);
-        return ResultUtils.success(safeUser);
+        return ResultUtils.success(userService.getSafetyUser(updateUser));
     }
 
     @PostMapping("/password")
     @Operation(summary = "修改密码")
-    @Parameters({
-            @Parameter(name = "userId", description = "要更新的用户的id", required = true),
-            @Parameter(name = "oldPassword", description = "旧密码", required = true),
-            @Parameter(name = "newPassword", description = "新密码", required = true),
-            @Parameter(name = "checkPassword", description = "确认密码", required = true)
-    })
     public BaseResponse<Boolean> updatePassword(@RequestBody PasswordChangeRequest passwordChangeRequest, HttpServletRequest request) {
         if (passwordChangeRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -218,6 +198,11 @@ public class UserController {
         // 分页查询
         Page<User> page = new Page<>(pageNum, pageSize);
         Page<User> resultPage = userService.page(page, queryWrapper);
+        // 对 records 进行脱敏处理
+        List<User> safeUserList = resultPage.getRecords().stream()
+                .map(userService::getSafetyUser).toList();
+        // 构造新的分页结果（保留分页信息，替换 records）
+        resultPage.setRecords(safeUserList);
         return ResultUtils.success(resultPage);
     }
 
@@ -226,7 +211,7 @@ public class UserController {
     @Parameters({
             @Parameter(name = "id", description = "用户id", required = true),
     })
-    public BaseResponse<Boolean> deleteUsers(@RequestBody long id, HttpServletRequest request) {
+    public BaseResponse<Boolean> deleteUsers(@RequestParam long id, HttpServletRequest request) {
         // 获取当前用户
         User currentUser = userService.getCurrentUser(request);
         // 仅管理员与本用户可删除
@@ -246,7 +231,7 @@ public class UserController {
     @Parameters({
             @Parameter(name = "id", description = "用户id", required = true),
     })
-    public BaseResponse<User> getUserById(long id) {
+    public BaseResponse<User> getUserById(@RequestParam long id) {
         if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数不合法");
         }
@@ -254,7 +239,7 @@ public class UserController {
         if (user == null) {
             return ResultUtils.success(null);
         }
-        return ResultUtils.success(user);
+        return ResultUtils.success(userService.getSafetyUser(user));
     }
 
 }
