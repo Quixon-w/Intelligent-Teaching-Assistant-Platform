@@ -3,7 +3,6 @@ package org.cancan.usercenter.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
@@ -13,9 +12,7 @@ import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
-import org.cancan.usercenter.service.UserService;
 import org.cancan.usercenter.utils.SpecialCode;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,13 +30,11 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
 
     @Resource
     private UserMapper userMapper;
+    @Resource
+    private CoursesMapper coursesMapper;
 
     @Resource
-    private UserService userService;
-    @Resource
     private EnrollService enrollService;
-    @Autowired
-    private CoursesMapper coursesMapper;
 
     /**
      * @param courseName 课程名
@@ -72,13 +67,13 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
 
     /**
      * @param coursesId 课程id
-     * @param request   请求
+     * @param userId    老师id
      * @return 是否是老师
      */
     @Override
-    public Boolean isTeacher(Long coursesId, HttpServletRequest request) {
+    public Boolean isTeacher(Long coursesId, Long userId) {
         Courses courses = this.getValidCourseById(coursesId);
-        return courses.getTeacherId().equals(userService.getCurrentUser(request).getId());
+        return courses.getTeacherId().equals(userId);
     }
 
     /**

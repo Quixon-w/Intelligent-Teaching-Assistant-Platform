@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * 习题接口
  *
@@ -29,13 +31,22 @@ public class QuestionsController {
     @Resource
     private QuestionsService questionsService;
 
-    @GetMapping
-    @Operation(summary = "查看某题")
+    @GetMapping("/selectById")
+    @Operation(summary = "查找某题")
     @Parameters({
             @Parameter(name = "questionId", description = "题id", required = true)
     })
     public BaseResponse<Questions> getQuestion(@RequestParam Long questionId) {
         return ResultUtils.success(questionsService.getById(questionId));
+    }
+
+    @GetMapping("/selectByFather")
+    @Operation(summary = "根据knowledge获得问题集")
+    @Parameters({
+            @Parameter(name = "father", description = "知识点", required = true)
+    })
+    public BaseResponse<List<Questions>> selectByFather(@RequestParam String father) {
+        return ResultUtils.success(questionsService.selectByFather(father));
     }
 
 }

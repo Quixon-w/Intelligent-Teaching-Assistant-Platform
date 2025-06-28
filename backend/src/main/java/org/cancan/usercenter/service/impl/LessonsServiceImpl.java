@@ -7,16 +7,12 @@ import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.mapper.CoursesMapper;
 import org.cancan.usercenter.mapper.LessonsMapper;
-import org.cancan.usercenter.mapper.QuestionRecordsMapper;
 import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Lessons;
-import org.cancan.usercenter.model.domain.QuestionRecords;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.LessonsService;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * @author 洪
@@ -28,8 +24,6 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
 
     @Resource
     private CoursesMapper coursesMapper;
-    @Resource
-    private QuestionRecordsMapper questionRecordsMapper;
 
     /**
      * 创建课时
@@ -83,29 +77,6 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "课时不存在");
         }
         return lessons;
-    }
-
-    /**
-     * @param lessonId  课时ID
-     * @param studentId 学生ID
-     * @return 学生的分数
-     */
-    @Override
-    public Float getLessonScore(Long lessonId, Long studentId) {
-        // ! 前置条件：已确认该 lesson 存在习题
-        // 筛选该学生答题记录
-        QueryWrapper<QuestionRecords> queryWrapperR = new QueryWrapper<>();
-        queryWrapperR.eq("student_id", studentId);
-        queryWrapperR.eq("lesson_id", lessonId);
-        List<QuestionRecords> questionRecords = questionRecordsMapper.selectList(queryWrapperR);
-        // 该学生该课程无答题记录
-        if (questionRecords.isEmpty()) {
-            return (float) 0;
-        }
-        // 计算分数
-        long rightNum = questionRecords.stream()
-                .filter(questionRecord -> questionRecord.getIsCorrect() == 1).count();
-        return (float) (rightNum * 100 / questionRecords.size());
     }
 
 }

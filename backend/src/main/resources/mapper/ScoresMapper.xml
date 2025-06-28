@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.cancan.usercenter.mapper.ScoresMapper">
+
+    <resultMap id="BaseResultMap" type="org.cancan.usercenter.model.domain.Scores">
+        <id property="studentId" column="student_id"/>
+        <result property="lessonId" column="lesson_id"/>
+        <result property="score" column="score"/>
+        <result property="commenErrors" column="commen_errors"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!--    <sql id="Base_Column_List">-->
+    <!--        student_id,lesson_id,score,commen_errors,update_time-->
+    <!--    </sql>-->
+</mapper>
