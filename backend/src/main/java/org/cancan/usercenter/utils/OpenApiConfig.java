@@ -10,7 +10,7 @@ public class OpenApiConfig {
     public GroupedOpenApi publicApi() {
         return GroupedOpenApi.builder()
                 .group("user-center")
-                .pathsToMatch("/user/**")  // 你的控制器路径
+                .pathsToMatch("/**")  // 控制器路径
                 .build();
     }
 }

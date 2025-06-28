@@ -13,11 +13,11 @@ import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.mapper.EnrollMapper;
 import org.cancan.usercenter.mapper.LessonsMapper;
 import org.cancan.usercenter.mapper.ScoresMapper;
 import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.service.CoursesService;
-import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,20 +33,20 @@ import static org.cancan.usercenter.constant.UserConstant.TEACHER_ROLE;
  * @author 洪
  */
 @RestController
-@RequestMapping("/api/course")
+@RequestMapping("/course")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "课程信息")
 public class CoursesController {
 
     @Resource
     private ScoresMapper scoresMapper;
     @Resource
     private LessonsMapper lessonsMapper;
+    @Resource
+    private EnrollMapper enrollMapper;
 
     @Resource
     private CoursesService coursesService;
-    @Resource
-    private EnrollService enrollService;
     @Resource
     private UserService userService;
 
@@ -168,7 +168,7 @@ public class CoursesController {
         // 查询成绩
         QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("courses_id", courseId).eq("student_id", studentId);
-        Enroll enroll = enrollService.getOne(queryWrapper);
+        Enroll enroll = enrollMapper.selectOne(queryWrapper);
         return ResultUtils.success(enroll.getFinalScore());
     }
 
@@ -184,7 +184,7 @@ public class CoursesController {
         if (!coursesService.isTeacher(courseId, currentUser.getId())
                 && !Objects.equals(currentUser.getId(), studentId)
                 && currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可获取学生分数");
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有老师和该学生可查看分数");
         }
         // 获得课程下所有课时
         QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();

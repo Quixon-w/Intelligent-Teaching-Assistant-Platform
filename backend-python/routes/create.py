@@ -20,23 +20,23 @@ create_lock = Lock()
 
 
 class CreateOutlineBody(BaseModel):
-    userID: str = Field(..., description="用户ID，用于确定存储路径")
-    sessionId: str = Field(..., description="会话ID")
-    courseId: str = Field(..., description="课程ID")
-    lessonNum: str = Field(..., description="课时号，必填")
-    isTeacher: bool = Field(False, description="是否为教师用户")
+    user_id: str = Field(..., description="用户ID，用于确定存储路径")
+    session_id: str = Field(..., description="会话ID")
+    course_id: str = Field(..., description="课程ID")
+    lesson_num: str = Field(..., description="课时号，必填")
+    is_teacher: bool = Field(False, description="是否为教师用户")
     # 教学大纲字数控制：课时大纲控制在800-1200字
-    maxWords: int = Field(1000, description="最大字数限制，课时大纲建议1000字", ge=500, le=2000)
+    max_words: int = Field(1000, description="最大字数限制，课时大纲建议1000字", ge=500, le=2000)
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "userID": "teacher123",
-                "sessionId": "session456",
-                "courseId": "math101",
-                "lessonNum": "lesson01",
-                "isTeacher": True,
-                "maxWords": 1000
+                "user_id": "teacher123",
+                "session_id": "session456",
+                "course_id": "math101",
+                "lesson_num": "lesson01",
+                "is_teacher": True,
+                "max_words": 1000
             }
         }
     }
@@ -277,7 +277,7 @@ def generate_outline_prompt(content: str, max_words: int) -> str:
 
 def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_content: str, is_teacher: bool) -> dict:
     """
-    将生成的大纲保存到文件
+    将生成的大纲保存为PDF文件
     """
     try:
         # 获取用户路径
@@ -289,20 +289,73 @@ def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_
         
         # 生成文件名（包含时间戳）
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"outline_{timestamp}.txt"
+        filename = f"outline_{timestamp}.pdf"
         file_path = os.path.join(outline_dir, filename)
         
-        # 保存大纲内容
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(outline_content)
+        # 尝试生成PDF文件
+        pdf_success = False
+        try:
+            from fpdf import FPDF
+            
+            # 创建PDF对象
+            pdf = FPDF()
+            pdf.add_page()
+            
+            # 设置中文字体（使用默认字体，支持中文）
+            pdf.add_font('DejaVu', '', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', uni=True)
+            pdf.set_font('DejaVu', '', 12)
+            
+            # 添加标题
+            title = f"教学大纲 - {course_id} - {lesson_num}"
+            pdf.set_font('DejaVu', '', 16)
+            pdf.cell(0, 20, title, ln=True, align='C')
+            pdf.ln(10)
+            
+            # 设置正文字体
+            pdf.set_font('DejaVu', '', 12)
+            
+            # 添加大纲内容
+            lines = outline_content.split('\n')
+            for line in lines:
+                line = line.strip()
+                if line:
+                    # 处理标题行（以数字开头的行）
+                    if line[0].isdigit() and '.' in line[:3]:
+                        pdf.set_font('DejaVu', '', 14)
+                        pdf.cell(0, 8, line, ln=True)
+                        pdf.set_font('DejaVu', '', 12)
+                    else:
+                        pdf.cell(0, 6, line, ln=True)
+                else:
+                    pdf.ln(3)  # 空行
+            
+            # 保存PDF文件
+            pdf.output(file_path)
+            print(f"大纲PDF已保存到: {file_path}")
+            pdf_success = True
+            
+        except ImportError:
+            # 如果没有安装fpdf，使用简单的文本文件作为备用
+            print("fpdf未安装，使用文本文件作为备用")
+            pdf_success = False
+            
+        except Exception as e:
+            print(f"生成PDF失败: {e}，使用文本文件作为备用")
+            pdf_success = False
         
-        print(f"大纲已保存到: {file_path}")
+        # 如果PDF生成失败，使用文本文件
+        if not pdf_success:
+            filename = f"outline_{timestamp}.txt"
+            file_path = os.path.join(outline_dir, filename)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(outline_content)
+            print(f"大纲文本文件已保存到: {file_path}")
         
         return {
             "success": True,
-            "filePath": file_path,
+            "file_path": file_path,
             "filename": filename,
-            "downloadUrl": f"/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{filename}"
+            "download_url": f"/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{filename}"
         }
         
     except Exception as e:
@@ -324,17 +377,19 @@ async def generate_outline_with_rwkv(prompt: str, request: Request):
     try:
         # 设置生成参数
         generation_config = {
-            "maxTokens": 2000,
+            "max_tokens": 2000,
             "temperature": 0.7,
-            "topP": 0.9,
-            "presencePenalty": 0.1,
-            "frequencyPenalty": 0.1
+            "top_p": 0.9,
+            "stop": ["\n\n", "###", "---", "问题", "题目"]
         }
+        
+        # 设置生成参数
+        model.max_tokens_per_generation = generation_config["max_tokens"]
         
         # 生成大纲内容
         outline_content = ""
         token_count = 0
-        max_tokens = generation_config["maxTokens"]
+        max_tokens = generation_config["max_tokens"]
         
         print("开始生成教学大纲...")
         
@@ -383,36 +438,36 @@ async def create_outline(body: CreateOutlineBody, request: Request):
     
     try:
         with create_lock:
-            print(f"开始为课时 {body.lessonNum} 生成教学大纲")
+            print(f"开始为课时 {body.lesson_num} 生成教学大纲")
             
             # 获取课时内容
-            content = get_file_content(body.userID, body.courseId, body.lessonNum, body.isTeacher)
+            content = get_file_content(body.user_id, body.course_id, body.lesson_num, body.is_teacher)
             if not content:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"未找到课时 {body.lessonNum} 的内容，请先上传相关文件"
+                    detail=f"未找到课时 {body.lesson_num} 的内容，请先上传相关文件"
                 )
             
             # 生成大纲提示词
-            prompt = generate_outline_prompt(content, body.maxWords)
+            prompt = generate_outline_prompt(content, body.max_words)
             
             # 使用RWKV模型生成大纲
             outline_content = await generate_outline_with_rwkv(prompt, request)
             
             # 保存大纲到文件
-            save_result = save_outline_to_file(body.userID, body.courseId, body.lessonNum, outline_content, body.isTeacher)
+            save_result = save_outline_to_file(body.user_id, body.course_id, body.lesson_num, outline_content, body.is_teacher)
             
             if save_result["success"]:
                 return {
                     "success": True,
                     "message": "教学大纲生成成功",
-                    "userID": body.userID,
-                    "sessionId": body.sessionId,
-                    "courseId": body.courseId,
-                    "lessonNum": body.lessonNum,
-                    "isTeacher": body.isTeacher,
-                    "outlineContent": outline_content[:500] + "..." if len(outline_content) > 500 else outline_content,
-                    "downloadUrl": save_result["downloadUrl"],
+                    "user_id": body.user_id,
+                    "session_id": body.session_id,
+                    "course_id": body.course_id,
+                    "lesson_num": body.lesson_num,
+                    "is_teacher": body.is_teacher,
+                    "outline_content": outline_content[:500] + "..." if len(outline_content) > 500 else outline_content,
+                    "download_url": save_result["download_url"],
                     "filename": save_result["filename"]
                 }
             else:
@@ -445,12 +500,12 @@ async def get_outline_status(user_id: str, course_id: str, lesson_num: str, is_t
         
         if not os.path.exists(outline_dir):
             return {
-                "hasOutline": False,
+                "has_outline": False,
                 "message": "大纲目录不存在"
             }
         
-        # 检查是否有大纲文件
-        outline_files = [f for f in os.listdir(outline_dir) if f.startswith('outline_') and f.endswith('.txt')]
+        # 检查是否有大纲文件（支持PDF和文本文件）
+        outline_files = [f for f in os.listdir(outline_dir) if f.startswith('outline_') and (f.endswith('.pdf') or f.endswith('.txt'))]
         
         if outline_files:
             # 获取最新的大纲文件
@@ -458,19 +513,21 @@ async def get_outline_status(user_id: str, course_id: str, lesson_num: str, is_t
             file_path = os.path.join(outline_dir, latest_file)
             
             return {
-                "hasOutline": True,
-                "message": "大纲已存在",
-                "userID": user_id,
-                "courseId": course_id,
-                "lessonNum": lesson_num,
-                "isTeacher": is_teacher,
-                "latestFile": latest_file,
-                "downloadUrl": f"/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{latest_file}",
-                "createdTime": datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+                "success": True,
+                "message": "获取大纲状态成功",
+                "user_id": user_id,
+                "course_id": course_id,
+                "lesson_num": lesson_num,
+                "is_teacher": is_teacher,
+                "has_outline": True,
+                "latest_file": latest_file,
+                "file_type": "PDF" if latest_file.endswith('.pdf') else "TXT",
+                "download_url": f"/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{latest_file}",
+                "created_time": datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
             }
         else:
             return {
-                "hasOutline": False,
+                "has_outline": False,
                 "message": "大纲文件不存在"
             }
             

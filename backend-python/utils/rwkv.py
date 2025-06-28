@@ -36,11 +36,11 @@ class AbstractRWKV(ABC):
         self.tokenizer_len = len(model.w["emb.weight"])
 
         self.max_tokens_per_generation = 1000
-        self.temperature = 1
+        self.temperature = 0.8
         self.top_p = 0.3
         self.top_k = 0
         self.penalty_alpha_presence = 0
-        self.penalty_alpha_frequency = 1
+        self.penalty_alpha_frequency = 0.8
         self.penalty_decay = 0.996
         self.global_penalty = False
         self.state_path = ""
@@ -372,11 +372,11 @@ class TextRWKV(AbstractRWKV):
         self.CHUNK_LEN = 256
 
         self.max_tokens_per_generation = 500
-        self.temperature = 1
+        self.temperature = 0.7
         self.top_p = 0.3
         self.top_k = 0
         self.penalty_alpha_presence = 0
-        self.penalty_alpha_frequency = 1
+        self.penalty_alpha_frequency = 0.7
 
         self.interface = ":"
         if self.tokenizer_len < 65536:
@@ -597,10 +597,10 @@ class ModelConfigBody(BaseModel):
         "json_schema_extra": {
             "example": {
                 "max_tokens": 1000,
-                "temperature": 1,
+                "temperature": 0.7,
                 "top_p": 0.3,
                 "presence_penalty": 0,
-                "frequency_penalty": 1,
+                "frequency_penalty": 0.7,
                 "penalty_decay": 0.996,
                 "global_penalty": False,
                 "state": "",

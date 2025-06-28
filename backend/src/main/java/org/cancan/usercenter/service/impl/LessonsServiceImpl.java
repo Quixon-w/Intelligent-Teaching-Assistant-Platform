@@ -50,16 +50,14 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
      * @param currentUser 当前用户
      */
     @Override
-    public void isTeacher(Long lessonId, User currentUser) {
+    public Boolean isTeacher(Long lessonId, User currentUser) {
         // 确认有效性
         Lessons lessons = this.getValidLessonById(lessonId);
         // 判断是否是老师本人
         QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("course_id", lessons.getCourseId());
         queryWrapper.eq("teacher_id", currentUser.getId());
-        if (!coursesMapper.exists(queryWrapper)) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "非老师本人开设的课时");
-        }
+        return coursesMapper.exists(queryWrapper);
     }
 
     /**

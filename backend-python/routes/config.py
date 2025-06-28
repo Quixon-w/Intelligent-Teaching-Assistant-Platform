@@ -15,7 +15,7 @@ class SwitchModelBody(BaseModel):
     model: str
     strategy: str
     tokenizer: Union[str, None] = None
-    customCuda: bool = False
+    custom_cuda: bool = False
     deploy: bool = Field(
         False,
         description="Deploy mode. If success, will disable /switch-model, /exit and other dangerous APIs (state cache APIs, part of midi APIs)",
@@ -27,7 +27,7 @@ class SwitchModelBody(BaseModel):
                 "model": "models/RWKV-4-World-3B-v1-20230619-ctx4096.pth",
                 "strategy": "cuda fp16",
                 "tokenizer": "",
-                "customCuda": False,
+                "custom_cuda": False,
                 "deploy": False,
             }
         }
@@ -65,7 +65,7 @@ def switch_model(body: SwitchModelBody, response: Response, request: Request):
     except HTTPException:
         pass
 
-    os.environ["RWKV_CUDA_ON"] = "1" if body.customCuda else "0"
+    os.environ["RWKV_CUDA_ON"] = "1" if body.custom_cuda else "0"
 
     global_var.set(global_var.Model_Status, global_var.ModelStatus.Loading)
     try:

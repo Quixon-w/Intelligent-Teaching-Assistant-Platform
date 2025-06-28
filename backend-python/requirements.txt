@@ -22,6 +22,7 @@ tokenizers>=0.15.0
 PyMuPDF>=1.23.0  # fitz
 python-docx>=0.8.11
 unstructured>=0.10.0
+fpdf>=1.7.2
 
 # 数据库和存储
 mysql-connector-python>=8.0.0

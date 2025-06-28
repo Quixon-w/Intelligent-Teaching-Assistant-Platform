@@ -29,9 +29,9 @@ import static org.cancan.usercenter.constant.UserConstant.*;
  * @author 洪
  */
 @RestController
-@RequestMapping("/api/enroll")
+@RequestMapping("/enroll")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "选课")
 public class EnrollController {
 
     @Resource

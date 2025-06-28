@@ -32,10 +32,13 @@ public class LessonQuestionMapServiceImpl extends ServiceImpl<LessonQuestionMapM
      * @return 课时习题表
      */
     @Override
-    public List<Questions> getOrderedQuestions(Long lessonId) {
+    public List<Questions> getOrderedQuestions(Long lessonId, boolean committed) {
         // 获取课时问题列表
         QueryWrapper<LessonQuestionMap> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("lesson_id", lessonId);
+        if (committed) {
+            queryWrapper.eq("committed", 1);
+        }
         List<Long> questionIds = this.list(queryWrapper).stream()
                 .map(LessonQuestionMap::getQuestionId).toList();
         if (questionIds.isEmpty()) {
@@ -52,16 +55,6 @@ public class LessonQuestionMapServiceImpl extends ServiceImpl<LessonQuestionMapM
                 .toList();
     }
 
-//    /**
-//     * @param lessonId 课时id
-//     * @return 课时下是否有题目
-//     */
-//    @Override
-//    public Boolean hasQuestion(Long lessonId) {
-//        QueryWrapper<LessonQuestionMap> queryWrapperL = new QueryWrapper<>();
-//        queryWrapperL.eq("lesson_id", lessonId);
-//        return !this.exists(queryWrapperL);
-//    }
 }
 
 
