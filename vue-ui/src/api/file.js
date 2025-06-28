@@ -16,7 +16,7 @@ export function previewFile(courseId,lessonId) {
       return err;
   });
 }
-export function downloadFile(courseId,lessonId){
+export function downloadFile(courseId,lessonId,fileName){
     const link = document.createElement('a')
     link.href = '/ai/v1/download/outline/'+userId+'/'+courseId+'/'+lessonId+'/outline_20250628_162728.docx'
     link.download = 'filename.pdf' // 设置下载文件名
