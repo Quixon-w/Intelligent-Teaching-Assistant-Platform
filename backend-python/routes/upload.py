@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter, HTTPException, File, Form, UploadFile, status
 from typing import Optional
 from utils.knowledge import update_knowledge_db
+from config.settings import get_settings
 
 router = APIRouter()
 
@@ -53,10 +54,13 @@ async def upload_file(
             detail="教师模式下大纲参考文件时lesson_num不能为空"
         )
     
+    # 使用配置管理系统获取路径
+    settings = get_settings()
+    
     # 根据is_teacher和文件类型决定存储路径，使用user_id作为主目录
     if is_teacher:
         # 教师模式
-        base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers"
+        base_folder = str(settings.TEACHERS_DIR)
         if is_resource:
             # 学习资料：保存到course_id级别
             session_folder = f"{base_folder}/{user_id}/{course_id}"
@@ -68,7 +72,7 @@ async def upload_file(
             session_folder = f"{base_folder}/{user_id}/{course_id}/{lesson_num}"
     else:
         # 学生模式：存储在Students目录下的user_id文件夹中
-        base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students"
+        base_folder = str(settings.STUDENTS_DIR)
         if is_ask:
             # 学生上传的可提问文件：保存在ask文件夹
             session_folder = f"{base_folder}/{user_id}/ask"

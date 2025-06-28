@@ -3,14 +3,19 @@ import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from typing import Optional
+from config.settings import get_settings
 
 router = APIRouter()
 
 
 def get_user_path(user_id: str, is_teacher: bool) -> str:
     """根据userID和isTeacher确定用户路径"""
-    user_type = "Teachers" if is_teacher else "Students"
-    return os.path.join("/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge", user_type, user_id)
+    settings = get_settings()
+    if is_teacher:
+        base_dir = settings.TEACHERS_DIR
+    else:
+        base_dir = settings.STUDENTS_DIR
+    return os.path.join(str(base_dir), user_id)
 
 
 @router.get("/v1/download/resource/{user_id}/{course_id}/{filename}")
@@ -82,11 +87,20 @@ async def download_outline_file(user_id: str, course_id: str, lesson_num: str, f
             detail=f"路径不是文件: {filename}"
         )
     
+    # 根据文件扩展名设置正确的MIME类型
+    file_extension = os.path.splitext(filename)[1].lower()
+    if file_extension == '.docx':
+        media_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    elif file_extension == '.txt':
+        media_type = 'text/plain'
+    else:
+        media_type = 'application/octet-stream'
+    
     # 返回文件下载响应
     return FileResponse(
         path=file_path,
         filename=filename,
-        media_type='text/plain'
+        media_type=media_type
     )
 
 

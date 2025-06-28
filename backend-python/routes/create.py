@@ -5,13 +5,14 @@ import pickle
 import faiss
 from fastapi import APIRouter, HTTPException, status, Request
 from pydantic import BaseModel, Field
-from typing import Union, Optional
+from typing import Union, Optional, List, Dict, Any
 import asyncio
 from threading import Lock
 from datetime import datetime
 
 from utils.rwkv import *
 import global_var
+from config.settings import get_settings
 
 router = APIRouter()
 
@@ -26,7 +27,7 @@ class CreateOutlineBody(BaseModel):
     lesson_num: str = Field(..., description="课时号，必填")
     is_teacher: bool = Field(False, description="是否为教师用户")
     # 教学大纲字数控制：课时大纲控制在800-1200字
-    max_words: int = Field(1000, description="最大字数限制，课时大纲建议1000字", ge=500, le=2000)
+    max_words: int = Field(1000, description="最大字数限制，课时大纲建议1000字", ge=300, le=2000)
 
     model_config = {
         "json_schema_extra": {
@@ -44,8 +45,12 @@ class CreateOutlineBody(BaseModel):
 
 def get_user_path(user_id: str, is_teacher: bool) -> str:
     """根据userID和isTeacher确定用户路径"""
-    user_type = "Teachers" if is_teacher else "Students"
-    return os.path.join("/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge", user_type, user_id)
+    settings = get_settings()
+    if is_teacher:
+        base_dir = settings.TEACHERS_DIR
+    else:
+        base_dir = settings.STUDENTS_DIR
+    return os.path.join(str(base_dir), user_id)
 
 
 def extract_text_from_faiss_db(db_path: str) -> str:
@@ -260,24 +265,28 @@ def generate_outline_prompt(content: str, max_words: int) -> str:
     """
     根据内容生成大纲提示词
     """
-    prompt = f"""请根据以下教学内容，生成一个详细的教学大纲。大纲应该：
+    prompt = f"""请根据以下教学内容，生成一个详细的教学大纲。要求：
 
-1. 结构清晰，层次分明
+1. 结构清晰，层次分明，使用数字编号（如1.1、1.2、2.1等）
 2. 包含主要知识点和重点内容
-3. 适合教学使用
+3. 适合教学使用，内容完整
 4. 字数控制在{max_words}字左右
+5. 确保每个部分都有完整的描述
+6. 大纲应该包含：教学目标、重点难点、教学内容、教学方法等
+
+请生成完整的教学大纲，确保内容完整且结构清晰：
 
 教学内容：
 {content[:2000]}  # 限制内容长度，避免token过多
 
-请生成教学大纲："""
+教学大纲："""
 
     return prompt
 
 
 def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_content: str, is_teacher: bool) -> dict:
     """
-    将生成的大纲保存为PDF文件
+    将生成的大纲保存为DOCX文件
     """
     try:
         # 获取用户路径
@@ -289,30 +298,29 @@ def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_
         
         # 生成文件名（包含时间戳）
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"outline_{timestamp}.pdf"
+        filename = f"outline_{timestamp}.docx"
         file_path = os.path.join(outline_dir, filename)
         
-        # 尝试生成PDF文件
-        pdf_success = False
+        # 尝试生成DOCX文件
+        docx_success = False
         try:
-            from fpdf import FPDF
+            from docx import Document
+            from docx.shared import Inches
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
             
-            # 创建PDF对象
-            pdf = FPDF()
-            pdf.add_page()
-            
-            # 设置中文字体（使用默认字体，支持中文）
-            pdf.add_font('DejaVu', '', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', uni=True)
-            pdf.set_font('DejaVu', '', 12)
+            # 创建DOCX文档
+            doc = Document()
             
             # 添加标题
             title = f"教学大纲 - {course_id} - {lesson_num}"
-            pdf.set_font('DejaVu', '', 16)
-            pdf.cell(0, 20, title, ln=True, align='C')
-            pdf.ln(10)
+            title_paragraph = doc.add_paragraph()
+            title_run = title_paragraph.add_run(title)
+            title_run.font.size = Inches(0.2)  # 设置字体大小
+            title_run.font.bold = True  # 设置粗体
+            title_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER  # 居中对齐
             
-            # 设置正文字体
-            pdf.set_font('DejaVu', '', 12)
+            # 添加空行
+            doc.add_paragraph()
             
             # 添加大纲内容
             lines = outline_content.split('\n')
@@ -321,30 +329,36 @@ def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_
                 if line:
                     # 处理标题行（以数字开头的行）
                     if line[0].isdigit() and '.' in line[:3]:
-                        pdf.set_font('DejaVu', '', 14)
-                        pdf.cell(0, 8, line, ln=True)
-                        pdf.set_font('DejaVu', '', 12)
+                        # 标题行
+                        heading_paragraph = doc.add_paragraph()
+                        heading_run = heading_paragraph.add_run(line)
+                        heading_run.font.size = Inches(0.14)  # 标题字体大小
+                        heading_run.font.bold = True  # 标题粗体
                     else:
-                        pdf.cell(0, 6, line, ln=True)
+                        # 普通内容行
+                        content_paragraph = doc.add_paragraph()
+                        content_run = content_paragraph.add_run(line)
+                        content_run.font.size = Inches(0.12)  # 正文字体大小
                 else:
-                    pdf.ln(3)  # 空行
+                    # 空行
+                    doc.add_paragraph()
             
-            # 保存PDF文件
-            pdf.output(file_path)
-            print(f"大纲PDF已保存到: {file_path}")
-            pdf_success = True
+            # 保存DOCX文件
+            doc.save(file_path)
+            print(f"大纲DOCX已保存到: {file_path}")
+            docx_success = True
             
         except ImportError:
-            # 如果没有安装fpdf，使用简单的文本文件作为备用
-            print("fpdf未安装，使用文本文件作为备用")
-            pdf_success = False
+            # 如果没有安装python-docx，使用简单的文本文件作为备用
+            print("python-docx未安装，使用文本文件作为备用")
+            docx_success = False
             
         except Exception as e:
-            print(f"生成PDF失败: {e}，使用文本文件作为备用")
-            pdf_success = False
+            print(f"生成DOCX失败: {e}，使用文本文件作为备用")
+            docx_success = False
         
-        # 如果PDF生成失败，使用文本文件
-        if not pdf_success:
+        # 如果DOCX生成失败，使用文本文件
+        if not docx_success:
             filename = f"outline_{timestamp}.txt"
             file_path = os.path.join(outline_dir, filename)
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -366,7 +380,7 @@ def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_
         }
 
 
-async def generate_outline_with_rwkv(prompt: str, request: Request):
+async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: int = 1000):
     """
     使用RWKV模型生成大纲
     """
@@ -377,10 +391,10 @@ async def generate_outline_with_rwkv(prompt: str, request: Request):
     try:
         # 设置生成参数
         generation_config = {
-            "max_tokens": 2000,
+            "max_tokens": 3000,  # 增加最大token数
             "temperature": 0.7,
             "top_p": 0.9,
-            "stop": ["\n\n", "###", "---", "问题", "题目"]
+            "stop": ["###", "---", "问题", "题目", "结束", "完毕"]  # 移除\n\n，避免过早停止
         }
         
         # 设置生成参数
@@ -390,16 +404,25 @@ async def generate_outline_with_rwkv(prompt: str, request: Request):
         outline_content = ""
         token_count = 0
         max_tokens = generation_config["max_tokens"]
+        min_words = max(300, max_words * 0.3)  # 最小字数至少300字或目标字数的30%
         
-        print("开始生成教学大纲...")
+        print(f"开始生成教学大纲，目标字数：{max_words}，最小字数：{min_words}")
         
-        for response, delta, _, _ in model.generate(prompt, stop=["\n\n", "###", "---", "问题", "题目"]):
+        for response, delta, _, _ in model.generate(prompt, stop=generation_config["stop"]):
             outline_content += delta
             token_count += 1
+            
+            # 计算当前字数（中文字符）
+            current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
             
             # 检查token数量限制
             if token_count > max_tokens:
                 print(f"达到最大token限制 {max_tokens}")
+                break
+            
+            # 检查字数限制
+            if current_words >= max_words * 1.2:  # 允许超出20%的字数
+                print(f"达到字数限制 {current_words} >= {max_words * 1.2}")
                 break
             
             # 检查请求是否断开
@@ -407,13 +430,105 @@ async def generate_outline_with_rwkv(prompt: str, request: Request):
                 print("请求已断开")
                 break
         
-        print(f"大纲生成完成，生成长度: {len(outline_content)} 字符")
+        # 确保句子完整性
+        outline_content = ensure_sentence_completeness(outline_content)
+        
+        # 检查生成的内容是否达到最小字数要求
+        final_word_count = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+        
+        if final_word_count < min_words:
+            print(f"生成的内容字数不足（{final_word_count} < {min_words}），尝试重新生成...")
+            # 如果字数不足，尝试重新生成一次
+            retry_prompt = prompt + "\n\n请确保生成的内容详细完整，字数不少于300字。"
+            return await generate_outline_with_rwkv_retry(retry_prompt, request, max_words, model, generation_config)
+        
+        print(f"大纲生成完成，生成长度: {len(outline_content)} 字符，字数: {final_word_count}")
         
         return outline_content.strip()
         
     except Exception as e:
         print(f"生成大纲时出错: {e}")
         raise Exception(f"生成大纲失败: {str(e)}")
+
+
+async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_words: int, model, generation_config):
+    """
+    重试生成大纲（当第一次生成字数不足时）
+    """
+    try:
+        outline_content = ""
+        token_count = 0
+        max_tokens = generation_config["max_tokens"]
+        
+        print("开始重试生成教学大纲...")
+        
+        for response, delta, _, _ in model.generate(prompt, stop=generation_config["stop"]):
+            outline_content += delta
+            token_count += 1
+            
+            # 计算当前字数（中文字符）
+            current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+            
+            # 检查token数量限制
+            if token_count > max_tokens:
+                print(f"重试达到最大token限制 {max_tokens}")
+                break
+            
+            # 检查字数限制
+            if current_words >= max_words * 1.5:  # 重试时允许更多字数
+                print(f"重试达到字数限制 {current_words} >= {max_words * 1.5}")
+                break
+            
+            # 检查请求是否断开
+            if await request.is_disconnected():
+                print("请求已断开")
+                break
+        
+        # 确保句子完整性
+        outline_content = ensure_sentence_completeness(outline_content)
+        
+        final_word_count = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+        print(f"重试大纲生成完成，生成长度: {len(outline_content)} 字符，字数: {final_word_count}")
+        
+        return outline_content.strip()
+        
+    except Exception as e:
+        print(f"重试生成大纲时出错: {e}")
+        raise Exception(f"重试生成大纲失败: {str(e)}")
+
+
+def ensure_sentence_completeness(text: str) -> str:
+    """
+    确保句子完整性，避免句子被截断
+    """
+    if not text:
+        return text
+    
+    # 常见的句子结束标点
+    sentence_endings = ['。', '！', '？', '；', '：', '\n']
+    
+    # 如果文本以句子结束标点结尾，直接返回
+    if text[-1] in sentence_endings:
+        return text
+    
+    # 查找最后一个完整的句子
+    last_complete_sentence = ""
+    for i in range(len(text) - 1, -1, -1):
+        if text[i] in sentence_endings:
+            last_complete_sentence = text[:i + 1]
+            break
+    
+    # 如果找到了完整句子，返回完整句子部分
+    if last_complete_sentence:
+        return last_complete_sentence
+    
+    # 如果没有找到完整句子，尝试在最后一个逗号处截断
+    last_comma = text.rfind('，')
+    if last_comma > 0:
+        return text[:last_comma + 1]
+    
+    # 如果都没有，返回原文本
+    return text
 
 
 @router.post("/v1/create/outline", tags=["Create"])
@@ -452,7 +567,7 @@ async def create_outline(body: CreateOutlineBody, request: Request):
             prompt = generate_outline_prompt(content, body.max_words)
             
             # 使用RWKV模型生成大纲
-            outline_content = await generate_outline_with_rwkv(prompt, request)
+            outline_content = await generate_outline_with_rwkv(prompt, request, body.max_words)
             
             # 保存大纲到文件
             save_result = save_outline_to_file(body.user_id, body.course_id, body.lesson_num, outline_content, body.is_teacher)
@@ -504,8 +619,8 @@ async def get_outline_status(user_id: str, course_id: str, lesson_num: str, is_t
                 "message": "大纲目录不存在"
             }
         
-        # 检查是否有大纲文件（支持PDF和文本文件）
-        outline_files = [f for f in os.listdir(outline_dir) if f.startswith('outline_') and (f.endswith('.pdf') or f.endswith('.txt'))]
+        # 检查是否有大纲文件（支持DOCX和文本文件）
+        outline_files = [f for f in os.listdir(outline_dir) if f.startswith('outline_') and (f.endswith('.docx') or f.endswith('.txt'))]
         
         if outline_files:
             # 获取最新的大纲文件
@@ -521,7 +636,7 @@ async def get_outline_status(user_id: str, course_id: str, lesson_num: str, is_t
                 "is_teacher": is_teacher,
                 "has_outline": True,
                 "latest_file": latest_file,
-                "file_type": "PDF" if latest_file.endswith('.pdf') else "TXT",
+                "file_type": "DOCX" if latest_file.endswith('.docx') else "TXT",
                 "download_url": f"/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{latest_file}",
                 "created_time": datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
             }
