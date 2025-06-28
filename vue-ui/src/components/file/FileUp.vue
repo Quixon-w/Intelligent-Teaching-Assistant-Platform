@@ -56,7 +56,7 @@ const handleError: UploadProps['onError'] = (error, uploadFile, uploadFiles) => 
       :limit="3"
       :on-exceed="handleExceed"
   >
-    <el-button type="primary">Click to upload</el-button>
+    <el-button type="primary">点击上传</el-button>
     <template #tip>
       <div class="el-upload__tip">
         jpg/png files with a size less than 500KB.

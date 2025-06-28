@@ -34,6 +34,11 @@ const router = createRouter({
           redirect: 'dashboard/main',
         },
         {
+          path: 'findcourses',
+          name: 'findcourses',
+          component: () => import('../views/dashboard/FindCoursesView.vue'),
+        },
+        {
           path: 'user/central',
           name: 'user/central',
           component: () => import('../views/user/UserCentralView.vue'),

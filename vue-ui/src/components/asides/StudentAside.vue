@@ -6,6 +6,9 @@ const router = useRouter();
 const toDashboard = () => {
   router.push('/dashboard/main');
 }
+const toFindCourses=()=>{
+  router.push('/dashboard/findcourses');
+}
 const toClass = () => {
   router.push('/dashboard/student/class');
 }
@@ -37,7 +40,8 @@ onMounted(()=>{
       <el-sub-menu index="0">
         <template #title><el-text style="color: #B0C4DE">仪表盘</el-text></template>
         <el-menu-item index="0-1" style="background: #304156" @click="toDashboard"><el-text style="color: #B0C4DE">仪表盘界面</el-text></el-menu-item>
-        <el-menu-item index="0-2" style="background: #304156"><el-text style="color: #B0C4DE">数据分析</el-text></el-menu-item>
+        <el-menu-item index="0-2" style="background: #304156"><el-text style="color: #B0C4DE" @click="toFindCourses">查找课程</el-text></el-menu-item>
+        <el-menu-item index="0-3" style="background: #304156"><el-text style="color: #B0C4DE">数据分析</el-text></el-menu-item>
       </el-sub-menu>
       <el-sub-menu index="1">
         <template #title><el-text style="color: #B0C4DE">课程管理</el-text></template>
