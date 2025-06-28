@@ -29,9 +29,9 @@ import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
  * @author cancan
  */
 @RestController
-@RequestMapping("/api/records")
+@RequestMapping("/records")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "做题记录")
 public class QuestionRecordsController {
 
     @Resource
@@ -77,7 +77,7 @@ public class QuestionRecordsController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "已提交过该课时的习题");
         }
         // 获取习题列表
-        List<Questions> questionsList = lessonQuestionMapService.getOrderedQuestions(lessonId);
+        List<Questions> questionsList = lessonQuestionMapService.getOrderedQuestions(lessonId, true);
         // 校验答案数量
         if (answers == null || answers.size() != questionsList.size()) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "答案数量与题目数量不一致");

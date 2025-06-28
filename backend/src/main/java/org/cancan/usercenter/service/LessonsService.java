@@ -26,7 +26,7 @@ public interface LessonsService extends IService<Lessons> {
      * @param lessonId    课时ID
      * @param currentUser 当前用户
      */
-    void isTeacher(Long lessonId, User currentUser);
+    Boolean isTeacher(Long lessonId, User currentUser);
 
     /**
      * 获取有效的课时对象

@@ -32,4 +32,8 @@ public interface UserConstant {
      * 管理员权限
      */
     int ADMIN_ROLE = 2;
+    /**
+     * token 过期时间
+     */
+    long EXPIRE_TIME = 2 * 3600;
 }

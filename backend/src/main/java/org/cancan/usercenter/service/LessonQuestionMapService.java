@@ -24,9 +24,10 @@ public interface LessonQuestionMapService extends IService<LessonQuestionMap> {
     /**
      * 获取课时中的所有题
      *
-     * @param lessonId 课时id
+     * @param lessonId  课时id
+     * @param committed 是否已发布
      * @return 课时中的所有题
      */
-    List<Questions> getOrderedQuestions(Long lessonId);
+    List<Questions> getOrderedQuestions(Long lessonId, boolean committed);
 
 }

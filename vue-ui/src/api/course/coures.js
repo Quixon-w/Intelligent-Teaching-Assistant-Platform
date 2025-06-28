@@ -149,3 +149,14 @@ export const isMyCourse=(studentId,courseId)=>{
     return err;
   })
 }
+export const scoreTrend = (courseId,studentId) => {
+  return request.get('/api/course/scoreList', {
+    params: {
+      courseId:courseId,
+      studentId:studentId}
+  }).then(res=>{
+    return res.data;
+  }).catch(err=>{
+    return err;
+  })
+}

@@ -120,15 +120,15 @@ async def list_resource_files(user_id: str, course_id: str, is_teacher: bool = T
                 files.append({
                     "filename": filename,
                     "size": file_size,
-                    "downloadUrl": download_url
+                    "download_url": download_url
                 })
         
         return {
             "files": files,
-            "totalFiles": len(files),
-            "courseId": course_id,
-            "userID": user_id,
-            "isTeacher": is_teacher
+            "total_files": len(files),
+            "course_id": course_id,
+            "user_id": user_id,
+            "is_teacher": is_teacher
         }
     except Exception as e:
         raise HTTPException(
@@ -170,20 +170,20 @@ async def list_outline_files(user_id: str, course_id: str, lesson_num: str, is_t
                 files.append({
                     "filename": filename,
                     "size": file_size,
-                    "downloadUrl": download_url,
-                    "createdTime": datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+                    "download_url": download_url,
+                    "created_time": datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
                 })
         
         # 按创建时间倒序排列
-        files.sort(key=lambda x: x['createdTime'], reverse=True)
+        files.sort(key=lambda x: x['created_time'], reverse=True)
         
         return {
             "files": files,
-            "totalFiles": len(files),
-            "courseId": course_id,
-            "lessonNum": lesson_num,
-            "userID": user_id,
-            "isTeacher": is_teacher
+            "total_files": len(files),
+            "course_id": course_id,
+            "lesson_num": lesson_num,
+            "user_id": user_id,
+            "is_teacher": is_teacher
         }
     except Exception as e:
         raise HTTPException(

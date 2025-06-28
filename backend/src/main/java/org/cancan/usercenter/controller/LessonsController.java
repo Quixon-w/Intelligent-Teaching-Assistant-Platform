@@ -31,9 +31,9 @@ import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
  * @author 洪
  */
 @RestController
-@RequestMapping("/api/lesson")
+@RequestMapping("/lesson")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "课时信息")
 public class LessonsController {
 
     @Resource
@@ -71,17 +71,19 @@ public class LessonsController {
         lessonsService.getValidLessonById(lessonId);
         // 判断是否是老师本人
         User currentUser = userService.getCurrentUser(request);
-        lessonsService.isTeacher(lessonId, currentUser);
+        if (!lessonsService.isTeacher(lessonId, currentUser) && currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "非老师本人开设的课时");
+        }
         return ResultUtils.success(lessonsService.removeById(lessonId));
     }
 
     @GetMapping("/list")
-    @Operation(summary = "查看某课程的课时")
+    @Operation(summary = "查看某课程的所有课时")
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true)
     })
     public BaseResponse<List<Lessons>> listLessons(@RequestParam Long courseId) {
-        // 参数及权限校验
+        // 参数校验
         coursesService.getValidCourseById(courseId);
         // 查询
         QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();

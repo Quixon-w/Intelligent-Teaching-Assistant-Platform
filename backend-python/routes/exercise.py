@@ -24,22 +24,22 @@ def get_user_path(user_id: str, is_teacher: bool) -> str:
 
 
 class ExerciseBody(BaseModel):
-    userID: str = Field(..., description="用户ID，用于确定存储路径")
-    sessionId: str = Field(..., description="会话ID")
-    courseId: str = Field(..., description="课程ID")
-    lessonNum: str = Field(..., description="课时号")
-    isTeacher: bool = Field(False, description="是否为教师用户")
-    targetCount: int = Field(10, description="目标题目数量", ge=1, le=20)
+    user_id: str = Field(..., description="用户ID，用于确定存储路径")
+    session_id: str = Field(..., description="会话ID")
+    course_id: str = Field(..., description="课程ID")
+    lesson_num: str = Field(..., description="课时号")
+    is_teacher: bool = Field(False, description="是否为教师用户")
+    target_count: int = Field(10, description="目标题目数量", ge=1, le=20)
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "userID": "teacher001",
-                "sessionId": "session456",
-                "courseId": "MATH101",
-                "lessonNum": "lesson03",
-                "isTeacher": True,
-                "targetCount": 10
+                "user_id": "teacher001",
+                "session_id": "session456",
+                "course_id": "MATH101",
+                "lesson_num": "lesson03",
+                "is_teacher": True,
+                "target_count": 10
             }
         }
     }
@@ -343,12 +343,12 @@ async def get_exercises(body: ExerciseBody):
     """
     try:
         # 获取课时知识库内容
-        content = get_knowledge_content(body.userID, body.courseId, body.lessonNum, body.isTeacher)
+        content = get_knowledge_content(body.user_id, body.course_id, body.lesson_num, body.is_teacher)
         
         if not content:
             raise HTTPException(
                 status_code=404,
-                detail=f"未找到课时 {body.lessonNum} 的知识库内容，请先上传相关文件并更新知识库"
+                detail=f"未找到课时 {body.lesson_num} 的知识库内容，请先上传相关文件并更新知识库"
             )
         
         # 提取知识点
@@ -363,7 +363,7 @@ async def get_exercises(body: ExerciseBody):
         print(f"提取的知识点: {knowledge_points}")
         
         # 根据知识点搜索题目
-        questions = search_questions_by_knowledge(knowledge_points, body.targetCount)
+        questions = search_questions_by_knowledge(knowledge_points, body.target_count)
         
         if not questions:
             raise HTTPException(
@@ -372,7 +372,7 @@ async def get_exercises(body: ExerciseBody):
             )
         
         # 生成课时ID（这里需要根据实际情况调整）
-        lesson_id = hash(f"{body.userID}_{body.courseId}_{body.lessonNum}") % 1000000
+        lesson_id = hash(f"{body.user_id}_{body.course_id}_{body.lesson_num}") % 1000000
         
         # 调用映射API
         question_ids = [q['id'] for q in questions]
@@ -380,17 +380,17 @@ async def get_exercises(body: ExerciseBody):
         
         return {
             "success": True,
-            "userID": body.userID,
-            "sessionId": body.sessionId,
-            "courseId": body.courseId,
-            "lessonNum": body.lessonNum,
-            "isTeacher": body.isTeacher,
-            "targetCount": body.targetCount,
-            "actualCount": len(questions),
-            "knowledgePoints": knowledge_points,
+            "user_id": body.user_id,
+            "session_id": body.session_id,
+            "course_id": body.course_id,
+            "lesson_num": body.lesson_num,
+            "is_teacher": body.is_teacher,
+            "target_count": body.target_count,
+            "actual_count": len(questions),
+            "knowledge_points": knowledge_points,
             "questions": questions,
-            "lessonId": lesson_id,
-            "mapSuccess": map_success,
+            "lesson_id": lesson_id,
+            "map_success": map_success,
             "message": f"成功生成 {len(questions)} 道习题"
         }
         

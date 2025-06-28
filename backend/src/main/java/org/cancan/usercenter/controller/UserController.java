@@ -36,9 +36,9 @@ import static org.cancan.usercenter.constant.UserConstant.*;
  * @author cancan
  */
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/user")
 @Slf4j
-@Tag(name = "body参数")
+@Tag(name = "用户")
 public class UserController {
 
     @Resource
