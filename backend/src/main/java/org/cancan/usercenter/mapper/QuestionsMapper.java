@@ -13,10 +13,9 @@ import java.util.List;
  */
 public interface QuestionsMapper extends BaseMapper<Questions> {
 
-    List<Questions> selectMatchedQuestions(String father);
+    List<Questions> selectMatchedQuestions(String father, Long teacherId);
 
 }
-
 
 
 

@@ -11,16 +11,18 @@
         <result property="options" column="options"/>
         <result property="answer" column="answer"/>
         <result property="explanation" column="explanation"/>
+        <result property="teacherId" column="teacher_id"/>
     </resultMap>
 
     <!--    <sql id="Base_Column_List">-->
-    <!--        question_id,knowledge,question,options,answer,explanation-->
+    <!--        question_id,knowledge,question,options,answer,explanation,teacher_id-->
     <!--    </sql>-->
 
     <select id="selectMatchedQuestions" resultType="org.cancan.usercenter.model.domain.Questions">
         SELECT *
         FROM questions
-        WHERE questions.knowledge LIKE CONCAT(#{father}, '/%')
+        WHERE questions.teacher_id = #{teacherId}
+          AND questions.knowledge LIKE CONCAT(#{father}, '/%')
     </select>
 
 </mapper>

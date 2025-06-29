@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import org.cancan.usercenter.mapper.LessonQuestionMapMapper;
-import org.cancan.usercenter.mapper.QuestionsMapper;
 import org.cancan.usercenter.model.domain.LessonQuestionMap;
 import org.cancan.usercenter.model.domain.Questions;
 import org.cancan.usercenter.service.LessonQuestionMapService;
+import org.cancan.usercenter.service.QuestionsService;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class LessonQuestionMapServiceImpl extends ServiceImpl<LessonQuestionMapMapper, LessonQuestionMap> implements LessonQuestionMapService {
 
     @Resource
-    private QuestionsMapper questionsMapper;
+    private QuestionsService questionsService;
 
     /**
      * @param lessonId 课时id
@@ -44,7 +44,7 @@ public class LessonQuestionMapServiceImpl extends ServiceImpl<LessonQuestionMapM
         if (questionIds.isEmpty()) {
             return Collections.emptyList();
         }
-        List<Questions> questions = questionsMapper.selectByIds(questionIds);
+        List<Questions> questions = questionsService.listByIds(questionIds);
         // 将结果转为 Map，方便按 ID 查找
         Map<Long, Questions> map = questions.stream()
                 .collect(Collectors.toMap(Questions::getQuestionId, q -> q));

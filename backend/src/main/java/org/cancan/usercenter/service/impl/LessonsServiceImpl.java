@@ -55,7 +55,7 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
         Lessons lessons = this.getValidLessonById(lessonId);
         // 判断是否是老师本人
         QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("course_id", lessons.getCourseId());
+        queryWrapper.eq("id", lessons.getCourseId());
         queryWrapper.eq("teacher_id", currentUser.getId());
         return coursesMapper.exists(queryWrapper);
     }
