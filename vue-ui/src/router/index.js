@@ -85,6 +85,11 @@ const router = createRouter({
                 name: 'lessonScore',
                 component: () => import('../views/role/teacher/LessonScoreView.vue'),
             },
+            {
+                path: ':courseId/questions/:lessonId',
+                name: 'teacherQuestions',
+                component: () => import('../views/role/teacher/TeacherQuestionsView.vue'),
+            },
           ]
         },
         {
@@ -116,6 +121,11 @@ const router = createRouter({
               path: '/studentStatics',
               name: 'studentStatics',
               component: () => import('../views/role/student/StudentStaticsView.vue'),
+            },
+            {
+              path: ':courseId/questions/:lessonId',
+              name: 'studentQuestions',
+              component: () => import('../views/role/student/StudentQuestionsView.vue'),
             },
           ]
         },
