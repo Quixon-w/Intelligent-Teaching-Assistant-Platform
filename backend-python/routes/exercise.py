@@ -8,19 +8,24 @@ import mysql.connector
 import httpx
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
-from typing import Union, Optional, List, Dict
+from typing import Union, Optional, List, Dict, Any
 from sentence_transformers import SentenceTransformer
 import global_var
-from utils.rwkv import *
+from utils.rwkv import TextRWKV
 from config.database import DATABASE_CONFIG
+from config.settings import get_settings
 
 router = APIRouter()
 
 
 def get_user_path(user_id: str, is_teacher: bool) -> str:
     """根据userID和isTeacher确定用户路径"""
-    user_type = "Teachers" if is_teacher else "Students"
-    return os.path.join("/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge", user_type, user_id)
+    settings = get_settings()
+    if is_teacher:
+        base_dir = settings.TEACHERS_DIR
+    else:
+        base_dir = settings.STUDENTS_DIR
+    return os.path.join(str(base_dir), user_id)
 
 
 class ExerciseBody(BaseModel):
@@ -50,7 +55,8 @@ def load_embeddings_model():
     加载文本嵌入模型
     """
     try:
-        model = SentenceTransformer("/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base")
+        settings = get_settings()
+        model = SentenceTransformer(str(settings.EMBEDDING_MODEL_PATH))
         return model
     except Exception as e:
         print(f"加载嵌入模型失败: {e}")

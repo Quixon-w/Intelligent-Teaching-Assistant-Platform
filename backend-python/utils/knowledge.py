@@ -8,10 +8,11 @@ import os
 import fitz  # PyMuPDF 用于处理 PDF 文件
 import docx  # python-docx 用于处理 DOCX 文件
 import re
+from config.settings import get_settings
 
 # 智能文本分块器
 class SmartTextSplitter:
-    def __init__(self, chunk_size=800, chunk_overlap=200):
+    def __init__(self, chunk_size=768, chunk_overlap=256):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         
@@ -209,8 +210,12 @@ def load_documents(dir_path):
     docs = []
     print(f"正在加载目录: {dir_path}")  # 调试输出
     
-    # 初始化智能分块器 - 使用更大的分块大小和重叠
-    smart_splitter = SmartTextSplitter(chunk_size=768, chunk_overlap=256)
+    # 使用配置管理系统获取分块参数
+    settings = get_settings()
+    smart_splitter = SmartTextSplitter(
+        chunk_size=settings.VECTOR_DB_CHUNK_SIZE, 
+        chunk_overlap=settings.VECTOR_DB_CHUNK_OVERLAP
+    )
     
     for filename in os.listdir(dir_path):
         file_path = os.path.join(dir_path, filename)
@@ -263,9 +268,10 @@ def create_vector_db(documents, vector_kb_folder):
         return None
 
     try:
-        # 使用 m3e-base 模型（safetensors格式，避免PyTorch版本问题）
+        # 使用配置管理系统获取嵌入模型路径
+        settings = get_settings()
         embeddings = HuggingFaceEmbeddings(
-            model_name='/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base',
+            model_name=str(settings.EMBEDDING_MODEL_PATH),
             model_kwargs={'device': 'cpu'},  # 强制使用CPU避免CUDA问题
             encode_kwargs={'normalize_embeddings': True}
         )
@@ -276,7 +282,8 @@ def create_vector_db(documents, vector_kb_folder):
         # 备用方案：使用SentenceTransformer并手动处理
         try:
             from sentence_transformers import SentenceTransformer
-            model = SentenceTransformer('/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base')
+            settings = get_settings()
+            model = SentenceTransformer(str(settings.EMBEDDING_MODEL_PATH))
             
             # 手动创建嵌入
             texts = [doc.page_content for doc in documents]
@@ -327,10 +334,13 @@ def update_knowledge_db(userId, isTeacher=False, courseID=None, lessonNum=None, 
     :param isAsk: 是否为可提问文件
     """
     try:
+        # 使用配置管理系统获取路径
+        settings = get_settings()
+        
         # 根据isTeacher和文件类型决定存储路径，与upload.py保持一致
         if isTeacher:
             # 教师模式
-            base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers"
+            base_folder = str(settings.TEACHERS_DIR)
             if isResource:
                 # 学习资料：保存到courseId级别
                 session_folder = f"{base_folder}/{userId}/{courseID}"
@@ -342,7 +352,7 @@ def update_knowledge_db(userId, isTeacher=False, courseID=None, lessonNum=None, 
                 session_folder = f"{base_folder}/{userId}/{courseID}/{lessonNum}"
         else:
             # 学生模式：存储在Students目录下的userId文件夹中
-            base_folder = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students"
+            base_folder = str(settings.STUDENTS_DIR)
             if isAsk:
                 # 学生上传的可提问文件：保存在ask文件夹
                 session_folder = f"{base_folder}/{userId}/ask"
@@ -381,6 +391,9 @@ def load_vector_db(session_id, isTeacher=False, courseID=None, lessonNum=None):
     :param lessonNum: 课时号（教师模式下必填）
     """
     try:
+        # 使用配置管理系统获取路径
+        settings = get_settings()
+        
         # 根据isTeacher决定存储路径
         if isTeacher:
             # 教师模式：从Teachers目录下的session_id/courseID/lessonNum文件夹中加载
@@ -390,19 +403,19 @@ def load_vector_db(session_id, isTeacher=False, courseID=None, lessonNum=None):
             if not lessonNum:
                 print("教师模式下lessonNum不能为空")
                 return None
-            vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Teachers/{session_id}/{courseID}/{lessonNum}/vector_kb"
+            vector_kb_folder = f"{settings.TEACHERS_DIR}/{session_id}/{courseID}/{lessonNum}/vector_kb"
         else:
             # 学生模式：从Students目录下的session_id文件夹中加载
-            vector_kb_folder = f"/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge/Students/{session_id}/vector_kb"
+            vector_kb_folder = f"{settings.STUDENTS_DIR}/{session_id}/vector_kb"
         
         if not os.path.exists(vector_kb_folder):
             print(f"向量数据库不存在: {vector_kb_folder}")
             return None
         
         try:
-            # 使用 m3e-base 模型（safetensors格式，避免PyTorch版本问题）
+            # 使用配置管理系统获取嵌入模型路径
             embeddings = HuggingFaceEmbeddings(
-                model_name='/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base',
+                model_name=str(settings.EMBEDDING_MODEL_PATH),
                 model_kwargs={'device': 'cpu'},
                 encode_kwargs={'normalize_embeddings': True}
             )
@@ -415,7 +428,7 @@ def load_vector_db(session_id, isTeacher=False, courseID=None, lessonNum=None):
             try:
                 # 备用方案：使用SentenceTransformer
                 from sentence_transformers import SentenceTransformer
-                model = SentenceTransformer('/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base')
+                model = SentenceTransformer(str(settings.EMBEDDING_MODEL_PATH))
                 
                 class CustomEmbeddings:
                     def __init__(self, model):

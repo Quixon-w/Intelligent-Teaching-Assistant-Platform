@@ -96,6 +96,15 @@ const downloadUrls=(lessonId)=>{
   }
   dialogDownloadVisible.value=true;
 }
+
+const router=useRouter();
+const gotoStudentStatics = (courseId) => {
+  router.push({
+    path: '/studentStatics',
+    query: { courseId: courseId }
+  })
+}
+
 onMounted(()=>{
   isMyCourse(sessionStorage.getItem('userId'), route.params.id).then(res=>{isMine.value=res;});
   getLesson();

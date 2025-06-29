@@ -2,13 +2,18 @@ import os
 import pickle
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+from config.settings import get_settings
 
 
 class SessionManager:
     """会话管理器，负责存储和检索对话历史"""
     
-    def __init__(self, base_path: str = "/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge"):
-        self.base_path = base_path
+    def __init__(self, base_path: str = None):
+        if base_path is None:
+            settings = get_settings()
+            self.base_path = str(settings.KNOWLEDGE_BASE_DIR)
+        else:
+            self.base_path = base_path
         self.max_dialogues = 10
         self._session_cache: Dict[str, Dict[str, Any]] = {}
     
