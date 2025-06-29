@@ -3,7 +3,7 @@ import {useRoute, useRouter} from 'vue-router'
 import { onMounted, ref } from 'vue'
 import { addLesson, getLessons } from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
-import {dismissCourse, enrollCourse, findCourseByID, getLessonQuestions, isMyCourse,} from '@/api/course/coures.js'
+import {dismissCourse, enrollCourse, findCourseByID, isMyCourse,} from '@/api/course/coures.js'
 import {downloadFile, downloadUrl} from "@/api/file.js";
 const router=useRouter();
 const route=useRoute();
@@ -97,7 +97,6 @@ const downloadUrls=(lessonId)=>{
   dialogDownloadVisible.value=true;
 }
 
-const router=useRouter();
 const gotoStudentStatics = (courseId) => {
   router.push({
     path: '/studentStatics',

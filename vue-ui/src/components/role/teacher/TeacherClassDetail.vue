@@ -1,7 +1,7 @@
 <script setup>
 import {useRoute, useRouter} from 'vue-router'
 import { onMounted, ref } from 'vue'
-import {getLessonQuestions, addLesson, getLessons, createLessonQuestions} from '@/api/course/lesson.js'
+import {getLessonQuestions, addLesson, getLessons} from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
 import {deleteCourse, endCourses, findCourseByID, getAllStudents, updateCourse} from '@/api/course/coures.js'
 import FileUp from "@/components/file/FileUp.vue";
@@ -225,8 +225,8 @@ onMounted(()=>{
           <el-table-column label="操作">
             <template #default="scope">
               <el-button size="default" @click="fileupLessonId=scope.row.lessonId;dialogCourseOutlineVisible=true" v-if="isMine===true">上传文件</el-button>
-              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测试</el-button>
-              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="createLessonQuestion(scope.row.lessonId)">创建测试</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="getLessonQuestion(scope.row.lessonId)">创建测试</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="">查看测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="gotoLessonScore(scope.row.lessonId)">查看测试完成情况</el-button>
               <el-button type="success" @click="createLessonFile(scope.row.lessonId)" v-if="isMine===true&&scope.row.outlineStatus===false">创建课程大纲</el-button>
               <el-button type="warning" @click="previewFile(scope.row.lessonId)" v-if="scope.row.outlineStatus===true">查看课程大纲</el-button>
@@ -316,7 +316,7 @@ onMounted(()=>{
     </template>
   </el-dialog>
   <el-dialog v-model="dialogCourseOutlineVisible" title="上传文件">
-    <FileUp :courseId=parseInt(route.params.id) :lessonId=parseInt(fileupLessonId)></FileUp>
+    <FileUp :courseId=parseInt(route.params.id) :lessonId=parseInt(fileupLessonId) :sessionId=Date()+1></FileUp>
   </el-dialog>
   <el-dialog v-model="dialogPreviewVisible" title="文件预览" width="800" align-center fullscreen>
     <FilePreview :courseId=parseInt(route.params.id) :lessonId=parseInt(previewLessonId)></FilePreview>

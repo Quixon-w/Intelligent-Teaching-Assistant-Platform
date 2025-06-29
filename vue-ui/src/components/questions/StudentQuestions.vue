@@ -13,13 +13,14 @@ const getQuestions = (lessonId) => {
     console.log(err);
   }})
 }
+const commit = () => {
+}
 onMounted(() => {
   getQuestions(route.params.lessonId)
 })
 </script>
 
 <template>
-  <el-button type="primary">保存</el-button>
   <el-card v-for="question in questions">
     <template #header>
       <el-text>第{{ question.questionId }}题</el-text>
@@ -36,7 +37,7 @@ onMounted(() => {
       </el-radio-group>
     </template>
   </el-card>
-  <el-button type="primary">完成测试</el-button>
+  <el-button type="primary" @click="commit">完成测试</el-button>
 </template>
 
 <style scoped>
