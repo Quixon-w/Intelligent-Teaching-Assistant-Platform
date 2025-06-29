@@ -47,7 +47,7 @@ export function chat(sessionId,message){
     })
 }
 export function clearChat(sessionId){
-    return request.delete("/ai/v1/users/"+userId+"/sessions/"+sessionID+"/dialogues",{
+    return request.delete("/ai/v1/users/"+userId+"/sessions/"+sessionId+"/history",{
         user_id: userId,
         session_id: sessionId,
         is_teacher: isTeacher,
@@ -94,5 +94,20 @@ export function lessonOutlineDownload(courseId,lessonId){
         return urls;
     }).catch(err=>{
         return err;
+    })
+}
+export function askUploadFile(sessionId,query){
+    return fetch('/ai//v1/qa',{
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            "query": query,
+            "user_id": userId,
+            "session_id": sessionId,
+            "is_teacher": isTeacher,
+            "search_mode": "uploaded",
+        })
     })
 }

@@ -1,5 +1,6 @@
 import request from '@/utils/request.js'
 import {lessonOutlineDownload, lessonOutlineStatus} from "@/api/ai/ai.js";
+import qs from "qs";
 export function getLessons(courseId) {
   return request.get('/api/lesson/list',{
     params :{
@@ -53,7 +54,7 @@ export function getLessonQuestions(lessonId){
         questionKonwledge:adata.knowledge,
         questionContent:adata.question,
         questionExplanation:adata.explanation,
-        questionAnswer:[adata.answer,'A、  '+options.A,'B、  '+options.B,'C、  '+options.C,'D、  '+options.D],
+        questionAnswer:[adata.answer,options.A,options.B,options.C,options.D],
       }
       data.push(aadata);
     }
@@ -101,6 +102,60 @@ export function getLessonScores(lessonId) {
         return err;
       })
 }
-export function createLessonQuestions(lessonId){
-  return true;
+export function saveQuestions(questions,lessonID){
+  let tempQuestions=[];
+  for(let question of questions){
+    tempQuestions.push({
+      "teacherId": sessionStorage.getItem("userId"),
+      "knowledge": question.questionKonwledge,
+      "question": question.questionContent,
+      "options": {
+        "A":question.questionAnswer[1],
+        "B":question.questionAnswer[2],
+        "C":question.questionAnswer[3],
+        "D":question.questionAnswer[4]},
+      "answer": question.questionAnswer[0],
+      "explanation": question.questionExplanation,
+    })
+  }
+  return request.post('/api/map/addList', tempQuestions,{
+    params:{
+      lessonId:lessonID
+    }
+  }).then(res=>{
+    console.log(res);
+    return res;
+  }).catch(err=>{
+    return err;
+  })
+}
+export function commitQuestion(questions,lessonID){
+  let ids=[];
+  for(let question of questions){
+    ids.push(question.questionId);
+  }
+  console.log(ids)
+  return request.post('/api/map/commit',null,{
+    params:{
+      lessonId:lessonID,
+      questionIds:ids,
+    },
+    paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
+  }).then(res=>{
+      return res;
+  }).catch(err =>{
+      return err;
+  })
+}
+export function deleteQuestion(lessonId,questionId){
+  return request.post('/api/map/delete',null,{
+    params:{
+      lessonId:lessonId,
+      questionId:questionId
+    }
+  }).then(res=>{
+    return res;
+  }).catch(err=>{
+    return err;
+  })
 }

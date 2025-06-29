@@ -2,7 +2,8 @@
 import {onMounted, ref, watch} from "vue";
 import {ElMessage} from "element-plus";
 import {useRoute} from "vue-router";
-import {chat, clearChat, getSession} from "@/api/ai/ai.js";
+import {askUploadFile, chat, clearChat, getSession} from "@/api/ai/ai.js";
+import FileUp from "@/components/file/FileUp.vue";
 
 const route = useRoute();
 const messages = ref([]);
@@ -12,6 +13,7 @@ const messagesEndRef = ref(null);
 const userId=sessionStorage.getItem('userId');
 const sessionID = ref(route.params.sessionID);
 const role=sessionStorage.getItem('role');
+const dialogUploadFileVisible=ref(false);
 
 const scrollToBottom = () => {
   messagesEndRef.value?.scrollIntoView({ behavior: "smooth" });
@@ -103,7 +105,7 @@ const handleKeyDown = (e) => {
 };
 
 const clearChatHistory = () => {
-  clearChat(sessionID).then(res => {messages.value = [];ElMessage.success('清除成功')}).catch(err => {ElMessage.error('清除失败')});
+  clearChat(sessionID.value).then(res => {messages.value = [];ElMessage.success('清除成功')}).catch(err => {ElMessage.error('清除失败')});
 };
 const getSessionHistory=async (sessionId) => {
   let temp = await getSession(sessionId);
@@ -118,6 +120,67 @@ const getSessionHistory=async (sessionId) => {
   messages.value=amessages;
   console.log(messages.value);
   scrollToBottom();
+}
+const uploadFile=()=>{
+  dialogUploadFileVisible.value=true;
+}
+const askFile=async () => {
+  if (!input.value.trim()) return;
+
+  const userMessage = {
+    id: Date.now(),
+    content: input.value.trim(),
+    isAI: false,
+  };
+
+  messages.value.push(userMessage);
+  const userInput = input.value.trim();
+  input.value = '';
+  isLoading.value = true;
+
+  try {
+    const response = await askUploadFile(sessionID.value, userInput);
+
+    console.log(response);
+    if (!response.ok) {
+      console.log(new Error(`HTTP error! status: ${response.status}`));
+    }
+    // 获取响应文本
+    const responseText = await response.text();
+    console.log("+++++++++++++++++++++++")
+
+    console.log(responseText);
+
+    /*// 解析JSON字符串
+    let aiResponse;
+    try {
+      aiResponse = JSON.parse(responseText);
+    } catch (e) {
+      console.error('解析响应失败:', e);
+    }*/
+
+    // 提取AI回复内容
+    const aiContent = responseText.answer;
+    console.log(aiContent)
+
+    const aiMessage = {
+      id: Date.now() + 1,
+      content: aiContent,
+      isAI: true,
+    };
+
+    messages.value.push(aiMessage);
+
+  } catch (error) {
+    console.error("API请求失败:", error);
+    messages.value.push({
+      id: Date.now() + 1,
+      content: "请求失败，请稍后重试",
+      isAI: true,
+    });
+  } finally {
+    isLoading.value = false;
+  }
 }
 onMounted(()=>{
   sessionID.value=route.params.sessionId;
@@ -170,9 +233,8 @@ onMounted(()=>{
     <div style="position: relative;right: 0;bottom: 0;left: 0;border-top-width: 1px;border-color: #E5E7EB;">
       <div style="width: 100%;height: 17%;gap: 5px">
         <el-button type="danger" @click="clearChatHistory" style="width: 6%;height: 100%">清空会话</el-button>
-        <el-button type="primary" @click="" style="width: 6%;height: 100%">上传文件</el-button>
-        <el-button type="primary" @click="" style="width: 6%;height: 100%">下载文件</el-button>
-        <el-text>已加载的文件</el-text>
+        <el-button type="primary" @click="uploadFile" style="width: 6%;height: 100%">上传文件</el-button>
+        <el-button type="primary" @click="askFile" style="width: 12%;height: 100%">对上传的文件提问</el-button>
       </div>
       <div style="padding: 1rem;">
         <div style="display: flex;gap: 0.5rem;align-items: center;width: 100%;height: 100%">
@@ -193,6 +255,10 @@ onMounted(()=>{
       </div>
     </div>
   </div>
+
+  <el-dialog title="上传文件" v-model="dialogUploadFileVisible" width="30%">
+    <FileUp :sessionId=sessionID.value :isResource=false :isAsk=true />
+  </el-dialog>
 </template>
 
 <style scoped>

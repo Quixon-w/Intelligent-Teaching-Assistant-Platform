@@ -1,6 +1,8 @@
 <script setup>
 import UserRoleMap from "@/utils/userrole.js";
-import {ref} from "vue";
+import {onMounted, ref} from "vue";
+import {getCourses} from "@/api/course/coures.js";
+import {ElMessage} from "element-plus";
 
 const tableSetting=ref({
   tableData:[],
@@ -8,41 +10,47 @@ const tableSetting=ref({
   currentPage:1,
   total:0,
   courseName:'',
+  teacherName:'',
 });
-
+const getData=()=>{
+  getCourses(tableSetting.value.currentPage,tableSetting.value.pageSize,tableSetting.value.courseName, tableSetting.value.teacherName).then(res=>{
+    tableSetting.value.tableData=res.data.data.records;
+    tableSetting.value.total=res.data.data.total;
+  }).catch(err=>{
+    ElMessage(err);
+  })
+}
 const handleSizeChange=(number)=>{
-  console.log(number);
+  getData();
 }
 const handleCurrentChange=(number)=>{
-  console.log(number);
+  getData();
 }
+onMounted(()=>{
+  getData();
+})
 </script>
 
 <template>
-  <div>
-    <el-form :model="tableSetting" label-width="auto" style="max-width: 600px">
+  <div style="display: flex;justify-content: space-between;">
+    <el-form :model="tableSetting" label-width="auto" style="max-width: 600px;display: flex;flex-direction: row">
       <el-form-item label="课程名">
         <el-input v-model="tableSetting.courseName"></el-input>
       </el-form-item>
-      <el-form-item label="每页大小">
-        <el-input v-model="tableSetting.pageSize"></el-input>
-      </el-form-item>
-      <el-form-item label="当前页">
-        <el-input v-model="tableSetting.currentPage"></el-input>
+      <el-form-item label="教师名">
+        <el-input v-model="tableSetting.teacherName"></el-input>
       </el-form-item>
     </el-form>
+    <el-button type="primary" @click="getData">查询</el-button>
   </div>
   <div>
     <el-table :data="tableSetting.tableData" border style="width: 100%">
       <el-table-column type="selection" width="55" />
       <el-table-column property="id" v-if="false" />
-      <el-table-column property="userAccount" label="用户账户" width="120" />
-      <el-table-column property="username" label="用户名称" width="120" />
-      <el-table-column property="userRole" :formatter="(row, column, cellValue) => UserRoleMap[cellValue]" label="用户身份" width="120" />
-      <el-table-column property="gender" label="用户性别" width="120" />
-      <el-table-column property="phone" label="用户电话" width="120" />
-      <el-table-column property="email" label="用户邮箱" width="120" />
-      <el-table-column property="userStatus" label="用户状态" width="120" />
+      <el-table-column property="name" label="课程名" width="120" />
+      <el-table-column property="teacherName" label="任课教师" width="120" />
+      <el-table-column property="comment" label="课程简介" width="120" />
+      <el-table-column property="createTime" label="课程创建时间" width="120" />
       <el-table-column label="操作">
         <template #default="scope">
           <el-button size="small" @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
