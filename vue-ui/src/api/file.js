@@ -25,3 +25,11 @@ export function downloadFile(courseId,lessonId,fileName){
     document.body.removeChild(link)
     // 发起 HTTP 请求到后端 API 端点
 }
+export function downloadUrl(url){
+    const link = document.createElement('a')
+    link.href = '/ai/'+url;
+    link.download = 'outline.docx' // 设置下载文件名
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+}

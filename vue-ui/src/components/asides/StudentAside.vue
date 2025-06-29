@@ -1,7 +1,7 @@
 <script setup>
 import {useRouter} from 'vue-router'
 import {onMounted, ref} from "vue";
-import {getAllSessions} from "@/api/ai/ai.js";
+import {getAllSessions, getSession} from "@/api/ai/ai.js";
 const router = useRouter();
 const toDashboard = () => {
   router.push('/dashboard/main');
@@ -19,8 +19,15 @@ const toChooseCourse = () => {
   router.push('/dashboard/student/choosecourse');
 }
 const AISessions=ref([]);
-const getAISessions=async () => {
-  AISessions.value = await getAllSessions();
+const getAISessions =async () => {
+  let sessions=await getAllSessions();
+  for(let session of sessions){
+    let sessionName=await getSession(session);
+    if(sessionName){
+      AISessions.value.push({sessionId:session,sessionName:sessionName[0].content});
+    }
+  }
+  console.log(AISessions);
 }
 const createAISession=()=>{
   router.push('/dashboard/aitalk/'+Date.now());
@@ -51,7 +58,7 @@ onMounted(()=>{
       </el-sub-menu>
       <el-sub-menu index="2">
         <template #title><el-text style="color: #B0C4DE">AI助手</el-text></template>
-        <el-menu-item @click="toAISession(session.id)" index="2-0-{{session.num}}" style="background: #304156" v-for="session in AISessions"><el-text style="color: #B0C4DE">{{session.name}}</el-text></el-menu-item>
+        <el-menu-item @click="toAISession(session.sessionId)" index="2-0-{{session}}" style="background: #304156" v-for="session in AISessions"><el-text style="color: #B0C4DE">{{session.sessionName}}</el-text></el-menu-item>
         <el-menu-item @click="createAISession" index="2-1" style="background: #304156"><el-text style="color: #B0C4DE">+创建新对话</el-text></el-menu-item>
       </el-sub-menu>
     </el-menu>

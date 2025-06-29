@@ -2,7 +2,7 @@
 import {onMounted, ref, watch} from "vue";
 import {ElMessage} from "element-plus";
 import {useRoute} from "vue-router";
-import {chat, clearChat} from "@/api/ai/ai.js";
+import {chat, clearChat, getSession} from "@/api/ai/ai.js";
 
 const route = useRoute();
 const messages = ref([]);
@@ -104,22 +104,24 @@ const handleKeyDown = (e) => {
 
 const clearChatHistory = () => {
   clearChat(sessionID).then(res => {messages.value = [];ElMessage.success('清除成功')}).catch(err => {ElMessage.error('清除失败')});
-  /*fetch('/ai/v1/users/'+userId+'/sessions/'+sessionID+'/dialogues', {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      userID: userId,
-      sessionID: sessionID,
-      isTeacher: role==='teacher',
-    })
-  }).then(res=>{ElMessage("已清空会话"+res)}).catch(err=>{ElMessage(err)});*/
 };
+const getSessionHistory=async (sessionId) => {
+  let temp = await getSession(sessionId);
+  let amessages=[];
+  for (let message of temp){
+    amessages.push({
+      id: Date.now() + 1,
+      content: message.content,
+      isAI: message.role!=='user',
+    })
+  }
+  messages.value=amessages;
+  console.log(messages.value);
+  scrollToBottom();
+}
 onMounted(()=>{
-  console.log(sessionID.value);
   sessionID.value=route.params.sessionId;
-  console.log(sessionID.value);
+  getSessionHistory(sessionID.value);
 })
 </script>
 

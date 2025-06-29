@@ -25,7 +25,7 @@ export function getSession(sessionId){
         if (res.data.context_messages.length===0){
             return null;
         }else{
-            return res.data.context_messages[0].content;
+            return res.data.context_messages;
         }
     }).catch(err=>{
         return err;
@@ -71,15 +71,15 @@ export function createLessonOutline(courseId,lessonId){
     })
 }
 export function lessonOutlineStatus(courseId,lessonId){
-    return request.get('/ai/v1/create/outline/status',null,{
+    return request.get('/ai/v1/create/outline/status',{
         params:{
             user_id: userId,
-            course_id:courseId,
-            lesson_num:lessonId,
-            is_teacher:isTeacher,
-        }
+            course_id: courseId,
+            lesson_num: lessonId,
+            is_teacher: isTeacher,
+        },
     }).then(res=>{
-        return res.data.status;
+        return res.data.has_outline;
     }).catch(err=>{
         return err;
     })

@@ -4,14 +4,14 @@ import { onMounted, ref } from 'vue'
 import { addLesson, getLessons } from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
 import {dismissCourse, enrollCourse, findCourseByID, getLessonQuestions, isMyCourse,} from '@/api/course/coures.js'
-import FilePreview from "@/components/file/FilePreview.vue";
-import {downloadFile} from "@/api/file.js";
+import {downloadFile, downloadUrl} from "@/api/file.js";
+const router=useRouter();
 const route=useRoute();
 const showView=ref(0);
 const dialogQuestionVisible=ref(false);
 const isMine=ref(false);
 const dialogPreviewVisible=ref(false);
-const previewLessonId=ref(null);
+const dialogDownloadVisible=ref(false);
 const courseDetail=ref({
   name:"",
   teacher:"",
@@ -30,13 +30,17 @@ const lessonDetail=ref({
 const getLesson=()=>{
   getLessons(route.params.id)
       .then(res=>{
-        if (res.data.code===0){
-          lessonDetail.value.lessons=res.data.data;
-        }else {
-          ElMessage(res.description);
-        }
+        lessonDetail.value.lessons=res;
       })
       .catch(err=>{ElMessage(err);})
+}
+const haveLessonQuestion=(lessonId)=>{
+  for(let lesson of lessonDetail.value.lessons){
+    if(lesson.lessonId===lessonId){
+      return lesson.hasQuestion;
+    }
+  }
+  return null;
 }
 const getCourseByID=()=>{
   findCourseByID(route.params.id)
@@ -52,13 +56,7 @@ const getCourseByID=()=>{
       })
 }
 const getLessonQuestion=(lessonId)=>{
-  getLessonQuestions(lessonId)
-      .then(res=>{
-        lessonDetail.value.lessonQuestions=res.data;
-        ElMessage(res.data);
-      }).catch(err=>{{
-    ElMessage(err);
-  }})
+  router.push('/dashboard/student/'+route.params.id+'/questions/'+lessonId);
 }
 const joinCourse=()=>{
   ElMessageBox.confirm('确定要加入该课程吗？', '提示', {
@@ -90,9 +88,13 @@ const exitCourse=()=>{
       })
   })
 }
-const previewFile=(lessonId)=>{
-  previewLessonId.value=lessonId
-  dialogPreviewVisible.value=true;
+const downloadUrls=(lessonId)=>{
+  for(let lesson of lessonDetail.value.lessons){
+    if(lesson.lessonId===lessonId){
+      lessonDetail.value.lessonDownloadUrls=lesson.outlineDownload;
+    }
+  }
+  dialogDownloadVisible.value=true;
 }
 
 const router=useRouter();
@@ -145,10 +147,8 @@ onMounted(()=>{
           <el-table-column property="isFinished" label="测验完成情况" width="120" />
           <el-table-column label="操作">
             <template #default="scope">
-              <el-button size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测验</el-button>
-              <el-button size="default" type="danger" @click="">完成测验</el-button>
-              <el-button size="default" type="success" @click="previewFile(scope.row.lessonId)">查看课件</el-button>
-              <el-button size="default" type="primary" @click="downloadFile(route.params.id,scope.row.lessonId)">下载课件</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测试</el-button>
+              <el-button type="danger" @click="downloadUrls(scope.row.lessonId)" v-if="scope.row.outlineStatus===true">下载课程大纲</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -176,8 +176,8 @@ onMounted(()=>{
     </el-card>
     <el-button type="success">完成测试</el-button>
   </el-dialog>
-  <el-dialog v-model="dialogPreviewVisible" title="文件预览" width="800" align-center fullscreen>
-    <FilePreview :courseId=parseInt(route.params.id) :lessonId=parseInt(previewLessonId)></FilePreview>
+  <el-dialog v-model="dialogDownloadVisible" title="文件下载">
+    <el-text v-for="url in lessonDetail.lessonDownloadUrls" @click="downloadUrl(url)" style=":hover{color: #409eff}">{{url}}<br></el-text>
   </el-dialog>
 </template>
 <style scoped>

@@ -18,7 +18,7 @@ const getAISessions =async () => {
   for(let session of sessions){
     let sessionName=await getSession(session);
     if(sessionName){
-      AISessions.value.push({sessionId:session,sessionName:sessionName});
+      AISessions.value.push({sessionId:session,sessionName:sessionName[0].content});
     }
   }
   console.log(AISessions);
