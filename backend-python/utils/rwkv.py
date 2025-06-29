@@ -11,6 +11,7 @@ from fastapi import HTTPException, status
 from pydantic import BaseModel, Field
 from routes import state_cache
 import global_var
+from config.settings import get_settings
 
 os.environ["TORCH_EXTENSIONS_DIR"] = f"{pathlib.Path(__file__).parent.parent.resolve()}"
 
@@ -26,7 +27,8 @@ class AbstractRWKV(ABC):
         self.EOS_ID = 0
 
         self.name = "rwkv"
-        self.model_path = "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth"
+        settings = get_settings()
+        self.model_path = str(settings.DEFAULT_MODEL_PATH)
         self.version = 4
         self.model = model
         self.pipeline = pipeline

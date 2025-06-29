@@ -16,23 +16,12 @@ const route = useRoute()
 const router = useRouter()
 
 const courseId = route.query.courseId
-const studentId = 4
 const trendChart = ref(null);
 const scoreList = ref([]);
 const lessonId = ref([]);
 
 const userInfo = ref({
   id: 0,
-  username: '',
-  userAccount: '',
-  avatarUrl: '',
-  gender: 0,
-  userPassword: '',
-  phone: '',
-  email: '',
-  userStatus: 0,
-  isDelete: 0,
-  userRole: 0
 });
 
 

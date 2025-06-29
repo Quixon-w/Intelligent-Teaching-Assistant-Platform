@@ -29,6 +29,20 @@ export function getCoursesOfStu(studentId){
     return err;
   })
 }
+export function addCourse(courseName,courseDescription){
+  return request.post('/api/course/add',null,{
+    params:{
+      courseName:courseName,
+      comment:courseDescription,
+    }
+  }).then(res=>{
+    console.log(res);
+    return res;
+  }).catch(err=>{
+    console.log(err);
+    return err;
+  })
+}
 export function deleteCourse(courseId){
   return request.post('/api/course/delete',null,{
     params:{

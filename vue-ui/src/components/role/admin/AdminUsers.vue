@@ -34,15 +34,15 @@ onMounted(()=>{
 
 <template>
   <div style="display: flex;flex-direction: column">
-    <div>
+    <div style="display: flex;justify-content: space-between;">
       <el-form :model="tableSetting" label-width="auto" style="max-width: 600px">
-        <el-form-item label="身份">
+        <el-form-item label="用户名称">
           <el-input v-model="tableSetting.username"></el-input>
         </el-form-item>
       </el-form>
+      <el-button type="primary" @click="getUserList">查询</el-button>
     </div>
     <div>
-      <el-button type="primary" @click="getUserList">查询</el-button>
       <el-table :data="tableData" border style="width: 100%">
         <el-table-column type="selection" width="55" />
         <el-table-column property="id" v-if="false" />

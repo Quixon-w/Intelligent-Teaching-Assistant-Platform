@@ -64,6 +64,7 @@ from utils.ngrok import *
 from utils.log import log_middleware
 from routes import completion, config, state_cache, upload, qa, create, exercise, download, session_routes
 import global_var
+from config.settings import get_settings
 
 
 @asynccontextmanager
@@ -95,7 +96,8 @@ app.include_router(session_routes.router)
 
 @app.post("/exit", tags=["Root"])
 def exit():
-    if global_var.get(global_var.Deploy_Mode) is True:
+    settings = get_settings()
+    if settings.DEPLOY_MODE:
         raise HTTPException(status.HTTP_403_FORBIDDEN)
 
     parent_pid = os.getpid()
@@ -139,16 +141,19 @@ def init():
 
 # Function to trigger the curl command after the server starts
 def load_model():
+    settings = get_settings()
+    model_config = settings.get_model_config()
+    
     curl_command = [
-        "curl", "-X", "POST", "http://127.0.0.1:8001/switch-model",
+        "curl", "-X", "POST", f"http://{settings.HOST}:{settings.PORT}/switch-model",
         "-H", "Content-Type: application/json",
-        "-d", '''{
-            "model": "/data-extend/wangqianxu/wqxspace/ITAP/model/RWKV-x060-World-7B-v3-20241112-ctx4096.pth", 
-            "strategy": "cuda fp16", 
-            "tokenizer": "", 
-            "customCuda": true, 
-            "deploy": false
-        }'''
+        "-d", f'''{{
+            "model": "{model_config['model']}", 
+            "strategy": "{model_config['strategy']}", 
+            "tokenizer": "{model_config['tokenizer']}", 
+            "customCuda": {str(model_config['customCuda']).lower()}, 
+            "deploy": {str(model_config['deploy']).lower()}
+        }}'''
     ]
     subprocess.run(curl_command)
 
@@ -157,10 +162,13 @@ if __name__ == "__main__":
     os.environ["RWKV_RUNNER_PARAMS"] = " ".join(sys.argv[1:])
     print("--- %s seconds ---" % (time.time() - start_time))
     
+    # 获取配置
+    settings = get_settings()
+    
     # Run the server in a background thread
     import threading
     def run_server():
-        uvicorn.run("main:app", port=args.port, host=args.host, workers=1)
+        uvicorn.run("main:app", port=settings.PORT, host=settings.HOST, workers=1)
     
     server_thread = threading.Thread(target=run_server)
     server_thread.start()

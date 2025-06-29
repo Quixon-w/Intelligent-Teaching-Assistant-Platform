@@ -13,6 +13,7 @@ from threading import Lock
 from utils.rwkv import *
 from utils.session_manager import session_manager
 import global_var
+from config.settings import get_settings
 
 router = APIRouter()
 
@@ -22,8 +23,13 @@ qa_lock = Lock()
 
 def get_user_path(user_id: str, is_teacher: bool) -> str:
     """根据userID和isTeacher确定用户路径"""
+    settings = get_settings()
     user_type = "Teachers" if is_teacher else "Students"
-    return os.path.join("/data-extend/wangqianxu/wqxspace/ITAP/base_knowledge", user_type, user_id)
+    if is_teacher:
+        base_dir = settings.TEACHERS_DIR
+    else:
+        base_dir = settings.STUDENTS_DIR
+    return os.path.join(str(base_dir), user_id)
 
 
 class QABody(BaseModel):
@@ -63,7 +69,8 @@ def load_embeddings_model():
     加载文本嵌入模型
     """
     try:
-        model = SentenceTransformer("/data-extend/wangqianxu/wqxspace/ITAP/model/m3e-base")
+        settings = get_settings()
+        model = SentenceTransformer(str(settings.EMBEDDING_MODEL_PATH))
         # 确保模型使用归一化
         model.encode("测试", normalize_embeddings=True)
         print("嵌入模型加载成功，已启用归一化")

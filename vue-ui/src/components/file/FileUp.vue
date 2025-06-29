@@ -2,6 +2,25 @@
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadProps, UploadUserFile } from 'element-plus'
+const userId = sessionStorage.getItem('userId');
+const role = sessionStorage.getItem('role');
+const isTeacher = sessionStorage.getItem('role')==='teacher';
+const props = defineProps({
+  courseId: {
+  },
+  lessonId: {
+  },
+  sessionId:{
+  },
+  isResource:{
+    type: Boolean,
+    default: false,
+  },
+  isAsk:{
+    type: Boolean,
+    default: false,
+  }
+})
 
 const fileList = ref<UploadUserFile[]>([
 ])
@@ -46,7 +65,7 @@ const handleError: UploadProps['onError'] = (error, uploadFile, uploadFiles) => 
       class="upload-demo"
       action="http://192.168.240.200:9001/v1/upload"
       method="post"
-      :data="{ sessionId: 'test', userId: 'test' }"
+      :data="{ session_id: props.sessionId, user_id: userId, role: role ,course_id: props.courseId, lesson_num: props.lessonId , is_teacher:isTeacher ,is_resource:props.isResource,is_ask:props.isAsk}"
       multiple
       :on-preview="handlePreview"
       :on-remove="handleRemove"
@@ -56,7 +75,7 @@ const handleError: UploadProps['onError'] = (error, uploadFile, uploadFiles) => 
       :limit="3"
       :on-exceed="handleExceed"
   >
-    <el-button type="primary">Click to upload</el-button>
+    <el-button type="primary">点击上传</el-button>
     <template #tip>
       <div class="el-upload__tip">
         jpg/png files with a size less than 500KB.

@@ -1,10 +1,15 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import {useRouter} from 'vue-router'
-import { getCourses } from '@/api/course/coures.js'
+import {addCourse, getCourses} from '@/api/course/coures.js'
 import { ElMessage } from 'element-plus'
 const router = useRouter();
 const teacherClass=ref([]);
+const createCourseVisible=ref(false)
+const createCourseData=ref({
+  courseName:'',
+  courseDescription:'',
+});
 const toClass=(id)=>{
   router.push('/dashboard/teacher/class/'+id);
 }
@@ -25,6 +30,15 @@ const tableSetting=ref({
   courseName:'',
   teacherName:'',
 })
+const createClass=()=>{
+  addCourse(createCourseData.value.courseName,createCourseData.value.courseDescription).then(res=>{
+    ElMessage("添加成功");
+    createCourseVisible.value=false;
+    getData();
+  }).catch(err=>{
+    ElMessage(err);
+  })
+}
 const handleSizeChange=(number)=>{
   console.log(number);
   getData()
@@ -47,7 +61,7 @@ onMounted(()=>{
     </el-form>
     <div>
       <el-button @click="getData">查询课程</el-button>
-      <el-button class="">创建课程</el-button>
+      <el-button @click="createCourseVisible=true">创建课程</el-button>
     </div>
   </div>
   <div class="classTable">
@@ -72,6 +86,21 @@ onMounted(()=>{
       @current-change="handleCurrentChange"
     />
   </div>
+
+  <el-dialog v-model="createCourseVisible" title="创建课程">
+    <el-form  :model="createCourseData" label-width="150px">
+      <el-form-item label="请输入课程名称">
+        <el-input v-model="createCourseData.courseName"></el-input>
+      </el-form-item>
+      <el-form-item label="请输入课程描述">
+        <el-input v-model="createCourseData.courseDescription"></el-input>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="createCourseVisible = false">取消</el-button>
+      <el-button type="primary" @click="createClass">创建</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>

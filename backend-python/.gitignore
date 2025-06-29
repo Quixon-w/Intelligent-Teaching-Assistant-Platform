@@ -72,14 +72,14 @@ celerybeat.pid
 # SageMath解析文件
 *.sage.py
 
-# 环境变量
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+# # 环境变量
+# .env
+# .venv
+# env/
+# venv/
+# ENV/
+# env.bak/
+# venv.bak/
 
 # Spyder项目设置
 .spyderproject
