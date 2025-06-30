@@ -29,6 +29,9 @@ const createAISession=()=>{
 const toAISession=(id)=>{
   router.push('/dashboard/aitalk/'+id);
 }
+const toQuestions=()=>{
+  router.push('/dashboard/teacher/questionodteacher');
+}
 onMounted(()=>{
   getAISessions();
 })
@@ -46,7 +49,8 @@ onMounted(()=>{
       </el-sub-menu>
       <el-sub-menu index="1">
         <template #title><el-text style="color: #B0C4DE">课程管理</el-text></template>
-        <el-menu-item @click="toClass" index="1" style="background: #304156"><el-text style="color: #B0C4DE">我的课程</el-text></el-menu-item>
+        <el-menu-item @click="toClass" index="1-0" style="background: #304156"><el-text style="color: #B0C4DE">我的课程</el-text></el-menu-item>
+        <el-menu-item @click="toQuestions" index="1-1" style="background: #304156"><el-text style="color: #B0C4DE">我的题库</el-text></el-menu-item>
       </el-sub-menu>
       <el-sub-menu index="2">
         <template #title><el-text style="color: #B0C4DE">AI助手</el-text></template>

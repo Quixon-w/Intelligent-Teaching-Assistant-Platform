@@ -1,109 +1,92 @@
 <script setup>
-import { onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import {onMounted, ref} from "vue";
 import {
-  commitQuestion,
-  deleteQuestion,
-  getLessonQuestions,
-  saveNewQuestion,
-  saveQuestions
+  addOneQuestion,
+  addTeachersQuestion,
+  getTeacherQuestions,
+  saveChangedQuestion,
+  searchFatherQuestion
 } from "@/api/course/lesson.js";
-import {ElMessage} from "element-plus";
-import QuestionsOfTeacher from "@/components/questions/QuestionsOfTeacher.vue";
-
-const route = useRoute();
+const props = defineProps({
+  action: {
+  },
+  lessonId: {
+  }
+})
 const questions = ref([]);
-const currentquestion = ref({});
-const dialogChangeQuestionVisible = ref(false);
-const dialogCreateQuestionVisible = ref(false);
-const dialogAddQuestionOfMine=ref(false);
-const getQuestions = (lessonId) => {
-  getLessonQuestions(lessonId).then(res => {
-    console.log(res);
-    questions.value = res;
-  }).catch(err => {{
+const questionKnowledge=ref("");
+const teacherId=sessionStorage.getItem("userId");
+const currentquestion=ref({
+  questionId:questions.value.length+1,
+  questionKonwledge:"",
+  questionContent:"",
+  questionExplanation:"",
+  questionAnswer:["","","","",""],
+});
+const dialogCreateVisible=ref(false);
+const dialogChangeVisible=ref(false);
+const getData=()=>{
+  getTeacherQuestions(teacherId).then(res=>{
+    questions.value=res;
+  }).catch(err=>{
     console.log(err);
-  }})
+  })
+}
+const addQuestion=(questionId)=>{
+  addOneQuestion(props.lessonId,questionId).then(res=>{
+    console.log(res);
+  }).catch(err=>{
+    console.log(err);
+  })
 }
 const createQuestion=()=>{
-  currentquestion.value={
-    questionId:questions.value.length+1,
-    questionKonwledge:"",
-    questionContent:"",
-    questionExplanation:"",
-    questionAnswer:["","","","",""],
-  };
-  dialogCreateQuestionVisible.value=true;
-}
-const saveQuestion=()=>{
-  saveNewQuestion(currentquestion.value,route.params.lessonId).then(res=>{
+  addTeachersQuestion(currentquestion.value).then(res=>{
     console.log(res);
   }).catch(err=>{
     console.log(err);
   })
-  //questions.value.push(currentquestion.value);
-  getQuestions(route.params.lessonId)
-  dialogCreateQuestionVisible.value=false;
+  getData();
+  dialogCreateVisible.value=false;
 }
-const removeQuestion=(questionId)=>{
-  deleteQuestion(route.params.lessonId,questionId).then(res=>{
-    getQuestions(route.params.lessonId)
-    console.log(res);
-  }).catch(err=>{
-    console.log(err);
-  })
-}
-const changeQuestion=(questionId)=>{
-  for(let i=0;i<questions.value.length;i++){
-    if(questions.value[i].questionId===questionId){
-      currentquestion.value = questions.value[i];
-    }
-  }
-  console.log(currentquestion.value);
-  dialogChangeQuestionVisible.value=true;
+const changeQuestion=(question)=>{
+  currentquestion.value=question;
+  dialogChangeVisible.value=true;
 }
 const saveChange=()=>{
-  for(let i=0;i<questions.value.length;i++){
-    if(questions.value[i].questionId===currentquestion.value.questionId){
-      questions.value[i] = currentquestion.value;
-    }
-  }
-  dialogChangeQuestionVisible.value=false;
-}
-const save=()=>{
-  saveQuestions(questions.value,route.params.lessonId).then(res=>{
+  saveChangedQuestion(currentquestion.value).then(res=>{
     console.log(res);
   }).catch(err=>{
     console.log(err);
-  })
+  });
+  getData();
+  dialogChangeVisible.value=false;
 }
-const commitQuestions=()=>{
-  commitQuestion(questions.value,route.params.lessonId).then(res=>{
+const searchQuestion=()=>{
+  searchFatherQuestion(questionKnowledge.value).then(res=>{
+    questions.value=res;
     console.log(res);
   }).catch(err=>{
     console.log(err);
-  })
+  });
 }
-const addQuestionOfMine=()=>{
-  dialogAddQuestionOfMine.value=true;
-}
-const aiCreateQuestions=()=>{
-}
-onMounted(() => {
-  getQuestions(route.params.lessonId)
+onMounted(()=>{
+  getData();
 })
 </script>
-
 <template>
-  <el-button type="success" @click="aiCreateQuestions">生成测试</el-button>
-  <el-button type="primary" @click="createQuestion">新建题目</el-button>
-  <el-button type="primary" @click="addQuestionOfMine">从题库添加</el-button>
+  <el-form v-if="props.action!=='add'" style="display: flex;justify-content: space-between;gap: 2px">
+    <el-form-item label="题目知识域">
+      <el-input v-model="questionKnowledge" style="max-width: 600px"></el-input>
+    </el-form-item>
+    <el-button type="success" @click="searchQuestion">搜索题库</el-button>
+    <el-button type="success" @click="dialogCreateVisible=true">新建题库</el-button>
+  </el-form>
   <el-card v-for="question in questions">
     <template #header>
       <el-text>第{{ question.questionId }}题</el-text>
       <el-text>{{ question.questionKonwledge }}</el-text>
-      <el-button type="primary" @click="changeQuestion(question.questionId)">修改</el-button>
-      <el-button type="danger" @click="removeQuestion(question.questionId)">删除</el-button>
+      <el-button type="primary" v-if="props.action==='add'" @click="addQuestion(question.questionId)">添加</el-button>
+      <el-button type="success" @click="changeQuestion(question)" v-if="props.action!=='add'">修改题库</el-button>
     </template>
     <el-text>{{ question.questionContent }}<</el-text>
     <el-text>{{ question.questionExplanation }}</el-text>
@@ -116,9 +99,59 @@ onMounted(() => {
       </el-radio-group>
     </template>
   </el-card>
-  <el-button type="primary" @click="commitQuestions">上传测试</el-button>
 
-  <el-dialog v-model="dialogChangeQuestionVisible" title="修改题目">
+  <el-dialog v-model="dialogCreateVisible" title="新建题库">
+    <el-form v-model="currentquestion">
+      <el-text>第{{ currentquestion.questionId }}题</el-text>
+      <el-form-item label="题目知识点">
+        <el-input v-model="currentquestion.questionKonwledge"></el-input>
+      </el-form-item>
+      <el-form-item label="题目内容">
+        <el-input v-model="currentquestion.questionContent"></el-input>
+      </el-form-item>
+      <el-form-item label="题目解析">
+        <el-input v-model="currentquestion.questionExplanation"></el-input>
+      </el-form-item>
+      <el-form-item label="题目选项">
+        <span>A、</span><el-input v-model="currentquestion.questionAnswer[1]"></el-input>
+        <span>B、</span><el-input v-model="currentquestion.questionAnswer[2]"></el-input>
+        <span>C、</span><el-input v-model="currentquestion.questionAnswer[3]"></el-input>
+        <span>D、</span><el-input v-model="currentquestion.questionAnswer[4]"></el-input>
+      </el-form-item>
+      <el-form-item label="题目答案">
+        <el-select
+            v-model="currentquestion.questionAnswer[0]"
+            placeholder="Select"
+            size="large"
+            style="width: 240px"
+        >
+          <el-option
+              key="A"
+              label="A"
+              value="A"
+          />
+          <el-option
+              key="B"
+              label="B"
+              value="B"
+          />
+          <el-option
+              key="C"
+              label="C"
+              value="C"
+          />
+          <el-option
+              key="D"
+              label="D"
+              value="D"
+          />
+        </el-select>
+      </el-form-item>
+      <el-button type="primary" @click="createQuestion">保存</el-button>
+    </el-form>
+  </el-dialog>
+
+  <el-dialog v-model="dialogChangeVisible" title="修改题库">
     <el-form v-model="currentquestion">
       <el-form-item label="题目知识点">
         <el-input v-model="currentquestion.questionKonwledge"></el-input>
@@ -166,60 +199,6 @@ onMounted(() => {
       </el-form-item>
       <el-button type="primary" @click="saveChange">保存</el-button>
     </el-form>
-  </el-dialog>
-
-  <el-dialog v-model="dialogCreateQuestionVisible" title="新建题目">
-    <el-form v-model="currentquestion">
-      <el-text>第{{ currentquestion.questionId }}题</el-text>
-      <el-form-item label="题目知识点">
-        <el-input v-model="currentquestion.questionKonwledge"></el-input>
-      </el-form-item>
-      <el-form-item label="题目内容">
-        <el-input v-model="currentquestion.questionContent"></el-input>
-      </el-form-item>
-      <el-form-item label="题目解析">
-        <el-input v-model="currentquestion.questionExplanation"></el-input>
-      </el-form-item>
-      <el-form-item label="题目选项">
-        <span>A、</span><el-input v-model="currentquestion.questionAnswer[1]"></el-input>
-        <span>B、</span><el-input v-model="currentquestion.questionAnswer[2]"></el-input>
-        <span>C、</span><el-input v-model="currentquestion.questionAnswer[3]"></el-input>
-        <span>D、</span><el-input v-model="currentquestion.questionAnswer[4]"></el-input>
-      </el-form-item>
-      <el-form-item label="题目答案">
-        <el-select
-            v-model="currentquestion.questionAnswer[0]"
-            placeholder="Select"
-            size="large"
-            style="width: 240px"
-        >
-          <el-option
-              key="A"
-              label="A"
-              value="A"
-          />
-          <el-option
-              key="B"
-              label="B"
-              value="B"
-          />
-          <el-option
-              key="C"
-              label="C"
-              value="C"
-          />
-          <el-option
-              key="D"
-              label="D"
-              value="D"
-          />
-        </el-select>
-      </el-form-item>
-      <el-button type="primary" @click="saveQuestion">保存</el-button>
-    </el-form>
-  </el-dialog>
-  <el-dialog v-model="dialogAddQuestionOfMine" title="从题库中添加">
-    <QuestionsOfTeacher :action="'add'" :lessonId=route.params.lessonId />
   </el-dialog>
 </template>
 

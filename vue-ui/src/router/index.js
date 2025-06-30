@@ -90,6 +90,16 @@ const router = createRouter({
                 name: 'teacherQuestions',
                 component: () => import('../views/role/teacher/TeacherQuestionsView.vue'),
             },
+            {
+              path: ':courseId/viewquestions/:lessonId',
+              name: 'teacherViewQuestions',
+              component: () => import('../views/role/teacher/TeacherViewQuestionsView.vue'),
+            },
+            {
+              path: 'questionodteacher',
+              name: 'questionsOfTeacher',
+              component: () => import('../views/role/teacher/QuestionsOfTeacherView.vue'),
+            }
           ]
         },
         {
