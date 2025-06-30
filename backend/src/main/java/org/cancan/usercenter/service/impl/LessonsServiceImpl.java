@@ -14,6 +14,8 @@ import org.cancan.usercenter.service.LessonsService;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * @author 洪
  * {@code @description} 针对表【lessons】的数据库操作Service实现
@@ -23,7 +25,21 @@ import org.springframework.stereotype.Service;
 public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> implements LessonsService {
 
     @Resource
+    private LessonsMapper lessonsMapper;
+    @Resource
     private CoursesMapper coursesMapper;
+
+    /**
+     * @param courseId 课程id
+     * @return 课时列表
+     */
+    @Override
+    public List<Lessons> listLessons(Long courseId) {
+        // 查询
+        QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("course_id", courseId);
+        return lessonsMapper.selectList(queryWrapper);
+    }
 
     /**
      * 创建课时

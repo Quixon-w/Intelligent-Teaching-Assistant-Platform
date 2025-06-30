@@ -6,8 +6,10 @@ import jakarta.annotation.Resource;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.mapper.EnrollMapper;
+import org.cancan.usercenter.mapper.LessonQuestionMapMapper;
 import org.cancan.usercenter.mapper.UserMapper;
 import org.cancan.usercenter.model.domain.Enroll;
+import org.cancan.usercenter.model.domain.LessonQuestionMap;
 import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.EnrollService;
@@ -29,6 +31,8 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     private EnrollMapper enrollMapper;
     @Resource
     private UserMapper userMapper;
+    @Resource
+    private LessonQuestionMapMapper lessonQuestionMapMapper;
 
     @Resource
     private LessonsService lessonsService;
@@ -42,6 +46,16 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
      */
     @Override
     public Boolean dismiss(Long courseId, Long studentId) {
+        // 删除学生做题记录
+        List<Lessons> lessons = lessonsService.listLessons(courseId);
+        if (lessons != null) {
+            List<Long> lessonIds = lessons.stream().map(Lessons::getLessonId).toList();
+            QueryWrapper<LessonQuestionMap> queryWrapperM = new QueryWrapper<>();
+            queryWrapperM.in("lesson_id", lessonIds);
+            queryWrapperM.eq("student_id", studentId);
+            lessonQuestionMapMapper.delete(queryWrapperM);
+        }
+        // 删除选课记录
         QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("courses_id", courseId);
         queryWrapper.eq("student_id", studentId);
