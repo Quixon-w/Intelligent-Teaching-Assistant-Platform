@@ -3,7 +3,14 @@ import {useRoute, useRouter} from 'vue-router'
 import { onMounted, ref } from 'vue'
 import {getLessonQuestions, addLesson, getLessons} from '@/api/course/lesson.js'
 import { ElMessage, ElMessageBox, } from 'element-plus'
-import {deleteCourse, endCourses, findCourseByID, getAllStudents, updateCourse} from '@/api/course/coures.js'
+import {
+  deleteCourse,
+  dismissCourse,
+  endCourses,
+  findCourseByID,
+  getAllStudents,
+  updateCourse
+} from '@/api/course/coures.js'
 import FileUp from "@/components/file/FileUp.vue";
 import FilePreview from "@/components/file/FilePreview.vue";
 import {downloadFile, downloadUrl} from "@/api/file.js";
@@ -139,11 +146,8 @@ const addLessonSubmit=()=>{
 const getStudents=()=>{
   getAllStudents(route.params.id)
     .then(res=>{
-      if (res.data.code===0){
-        courseDetail.value.students=res.data.data;
-      }else {
-        ElMessage(res.description);
-      }
+      courseDetail.value.students=res;
+      //ElMessage(res.description);
     })
     .catch(err=>{ElMessage(err);})
 }
@@ -245,11 +249,10 @@ onMounted(()=>{
           <el-table-column type="selection" width="55" />
           <el-table-column property="id" label="ID" v-if="false"></el-table-column>
           <el-table-column property="username" label="学生姓名" width="120"></el-table-column>
-          <el-table-column property="gender" label="学生性别" width="120"></el-table-column>
+          <el-table-column property="score" label="课程成绩" width="120"></el-table-column>
           <el-table-column label="操作">
             <template #default="scope">
-              <el-button size="small" @click="">编辑</el-button>
-              <el-button size="small" type="danger" @click="">删除</el-button>
+              <el-button size="small" type="danger" @click="dismissCourse(scope.row.id,route.params.id)">退课</el-button>
             </template>
           </el-table-column>
         </el-table>

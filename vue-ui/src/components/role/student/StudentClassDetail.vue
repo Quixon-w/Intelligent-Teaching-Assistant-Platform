@@ -103,7 +103,9 @@ const gotoStudentStatics = (courseId) => {
     query: { courseId: courseId }
   })
 }
-
+const getLessonQuestionFinished=(lessonId)=>{
+  router.push('/dashboard/student/questionfinished/'+lessonId);
+}
 onMounted(()=>{
   isMyCourse(sessionStorage.getItem('userId'), route.params.id).then(res=>{isMine.value=res;});
   getLesson();
@@ -146,7 +148,8 @@ onMounted(()=>{
           <el-table-column property="isFinished" label="测验完成情况" width="120" />
           <el-table-column label="操作">
             <template #default="scope">
-              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="getLessonQuestion(scope.row.lessonId)">查看测试</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1&&scope.row.isQuestionFinished===false" size="default" @click="getLessonQuestion(scope.row.lessonId)">完成测试</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1&&scope.row.isQuestionFinished===true" size="default" @click="getLessonQuestionFinished(scope.row.lessonId)">查看测试完成情况</el-button>
               <el-button type="danger" @click="downloadUrls(scope.row.lessonId)" v-if="scope.row.outlineStatus===true">下载课程大纲</el-button>
             </template>
           </el-table-column>

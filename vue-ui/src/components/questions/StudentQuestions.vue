@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
-import {getLessonCommittedQuestions, getLessonQuestions} from "@/api/course/lesson.js";
+import {commitQuestionHistory, getLessonCommittedQuestions, getLessonQuestions} from "@/api/course/lesson.js";
 
 const route = useRoute();
 const questions = ref([]);
@@ -14,6 +14,11 @@ const getQuestions = (lessonId) => {
   }})
 }
 const commit = () => {
+  commitQuestionHistory(questions.value,route.params.lessonId).then(res => {
+    console.log(res);
+  }).catch(err => {
+    console.log(err);
+  })
 }
 onMounted(() => {
   getQuestions(route.params.lessonId)
