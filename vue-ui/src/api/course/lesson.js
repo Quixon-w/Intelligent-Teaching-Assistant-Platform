@@ -118,7 +118,30 @@ export function saveQuestions(questions,lessonID){
       "explanation": question.questionExplanation,
     })
   }
-  return request.post('/api/map/addList', tempQuestions,{
+  return request.post('/api/map/addByEntity', tempQuestions,{
+    params:{
+      lessonId:lessonID
+    }
+  }).then(res=>{
+    console.log(res);
+    return res;
+  }).catch(err=>{
+    return err;
+  })
+}
+export function saveNewQuestion(question,lessonID){
+  return request.post('/api/map/addByEntity', [{
+    "teacherId": sessionStorage.getItem("userId"),
+    "knowledge": question.questionKonwledge,
+    "question": question.questionContent,
+    "options": {
+      "A":question.questionAnswer[1],
+      "B":question.questionAnswer[2],
+      "C":question.questionAnswer[3],
+      "D":question.questionAnswer[4]},
+    "answer": question.questionAnswer[0],
+    "explanation": question.questionExplanation,
+  }],{
     params:{
       lessonId:lessonID
     }
@@ -155,6 +178,102 @@ export function deleteQuestion(lessonId,questionId){
     }
   }).then(res=>{
     return res;
+  }).catch(err=>{
+    return err;
+  })
+}
+export function getTeacherQuestions(teaccherId){
+  return request.get('/api/question/listByTeacherId',{
+    params:{
+      teacherId:teaccherId
+    }
+  }).then(res=>{
+    let data=[];
+    for(let adata of res.data.data){
+      let options=JSON.parse(adata.options);
+      let aadata={
+        questionId:adata.questionId,
+        questionKonwledge:adata.knowledge,
+        questionContent:adata.question,
+        questionExplanation:adata.explanation,
+        questionAnswer:[adata.answer,options.A,options.B,options.C,options.D],
+      }
+      data.push(aadata);
+    }
+    return data;
+  }).catch(err=>{
+      return err;
+  })
+}
+export function addOneQuestion(lessonId,questionId){
+  return request.post('/api/map/addByIds',null,{
+    params:{
+      lessonId:lessonId,
+      questionIds:questionId
+    }
+  }).then(res=>{
+      return res;
+  }).catch(err=>{
+     return err;
+  })
+}
+export function saveChangedQuestion(question){
+  return request.post('/api/map/update',{
+    questionId:question.questionId,
+    teacherId:sessionStorage.getItem("userId"),
+    knowledge:question.questionKonwledge,
+    question:question.questionContent,
+    options:{
+      "A":question.questionAnswer[1],
+      "B":question.questionAnswer[2],
+      "C":question.questionAnswer[3],
+      "D":question.questionAnswer[4]},
+    answer:question.questionAnswer[0],
+    explanation:question.questionExplanation
+  }).then(res=>{
+    return res;
+  }).catch(err=>{
+    return err;
+  })
+}
+export function addTeachersQuestion(question){
+  return request.post('/api/question/addOne',{
+    teacherId:sessionStorage.getItem("userId"),
+    knowledge:question.questionKonwledge,
+    question:question.questionContent,
+    options:{
+      "A":question.questionAnswer[1],
+      "B":question.questionAnswer[2],
+      "C":question.questionAnswer[3],
+      "D":question.questionAnswer[4]},
+    answer:question.questionAnswer[0],
+    explanation:question.questionExplanation
+  }).then(res=>{
+      return res;
+  }).catch(err=>{
+      return err;
+  })
+}
+export function searchFatherQuestion(questionKnowledge){
+  return request.get('/api/question/selectByFather',{
+    params:{
+      father:questionKnowledge,
+      teacherId:sessionStorage.getItem("userId")
+    }
+   }).then(res=>{
+    let data=[];
+    for(let adata of res.data.data){
+      let options=JSON.parse(adata.options);
+      let aadata={
+        questionId:adata.questionId,
+        questionKonwledge:adata.knowledge,
+        questionContent:adata.question,
+        questionExplanation:adata.explanation,
+        questionAnswer:[adata.answer,options.A,options.B,options.C,options.D],
+      }
+      data.push(aadata);
+    }
+    return data;
   }).catch(err=>{
     return err;
   })

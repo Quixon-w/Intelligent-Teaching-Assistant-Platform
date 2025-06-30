@@ -150,8 +150,8 @@ const getStudents=()=>{
 const getLessonQuestion=(lessonId)=>{
   router.push('/dashboard/teacher/'+route.params.id+'/questions/'+lessonId);
 }
-const createLessonQuestion=(lessonId)=>{
-  dialogCreateQuestionVisible.value=true;
+const viewLessonQuestion=(lessonId)=>{
+  router.push('/dashboard/teacher/'+route.params.id+'/viewquestions/'+lessonId);
 }
 const router=useRouter();
 const gotoLessonScore = (lessonId) => {
@@ -226,7 +226,7 @@ onMounted(()=>{
             <template #default="scope">
               <el-button size="default" @click="fileupLessonId=scope.row.lessonId;dialogCourseOutlineVisible=true" v-if="isMine===true">上传文件</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="getLessonQuestion(scope.row.lessonId)">创建测试</el-button>
-              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="">查看测试</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="viewLessonQuestion(scope.row.lessonId)">查看测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="gotoLessonScore(scope.row.lessonId)">查看测试完成情况</el-button>
               <el-button type="success" @click="createLessonFile(scope.row.lessonId)" v-if="isMine===true&&scope.row.outlineStatus===false">创建课程大纲</el-button>
               <el-button type="warning" @click="previewFile(scope.row.lessonId)" v-if="scope.row.outlineStatus===true">查看课程大纲</el-button>
