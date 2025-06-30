@@ -38,12 +38,12 @@ const createQuestion=()=>{
 const saveQuestion=()=>{
   saveNewQuestion(currentquestion.value,route.params.lessonId).then(res=>{
     console.log(res);
+    getQuestions(route.params.lessonId)
+    dialogCreateQuestionVisible.value=false;
   }).catch(err=>{
     console.log(err);
   })
   //questions.value.push(currentquestion.value);
-  getQuestions(route.params.lessonId)
-  dialogCreateQuestionVisible.value=false;
 }
 const removeQuestion=(questionId)=>{
   deleteQuestion(route.params.lessonId,questionId).then(res=>{
