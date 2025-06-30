@@ -18,7 +18,14 @@ export function getLessons(courseId) {
         lesson.outlineDownload=res;
       }).catch(err=>{
         console.log(err);
-      })
+      });
+      if(sessionStorage.getItem('role')==='student'){
+        lessonQuestionIsFinished(lesson.lessonId,sessionStorage.getItem('userId')).then(res=>{
+          lesson.isQuestionFinished = res.data.data !== null;
+        }).catch(err=>{
+          console.log(err);
+        })
+      }
     }
     console.log(lessons);
     return lessons;
@@ -130,7 +137,7 @@ export function saveQuestions(questions,lessonID){
   })
 }
 export function saveNewQuestion(question,lessonID){
-  return request.post('/api/map/addByEntity', [{
+  return request.post('/api/map/addByEntities', [{
     "teacherId": sessionStorage.getItem("userId"),
     "knowledge": question.questionKonwledge,
     "question": question.questionContent,
@@ -150,7 +157,7 @@ export function saveNewQuestion(question,lessonID){
     return res;
   }).catch(err=>{
     return err;
-  })
+  });
 }
 export function commitQuestion(questions,lessonID){
   let ids=[];
@@ -274,6 +281,36 @@ export function searchFatherQuestion(questionKnowledge){
       data.push(aadata);
     }
     return data;
+  }).catch(err=>{
+    return err;
+  })
+}
+export function commitQuestionHistory(questions,lessonId){
+  let questionAnswers=[];
+  for(let question of questions){
+    questionAnswers.push(question.questionAnswer[0]);
+  }
+  console.log(questionAnswers);
+  return request.post('/api/records/add',null,{
+    params:{
+      lessonId:lessonId,
+      answers:questionAnswers,
+    },
+    paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
+  }).then(res=>{
+    return res;
+  }).catch(err=>{
+    return err;
+  })
+}
+export function lessonQuestionIsFinished(lessonId,studentId){
+  return request.get('/api/records/getRecords',{
+    params:{
+      lessonId:lessonId,
+      studentId:studentId
+    }
+  }).then(res=>{
+    return res;
   }).catch(err=>{
     return err;
   })

@@ -137,6 +137,11 @@ const router = createRouter({
               name: 'studentQuestions',
               component: () => import('../views/role/student/StudentQuestionsView.vue'),
             },
+            {
+              path: 'questionfinished/:lessonId',
+              name: 'studentQuestionsFinished',
+              component: () => import('../views/role/student/FinishedQuestionView.vue'),
+            }
           ]
         },
 

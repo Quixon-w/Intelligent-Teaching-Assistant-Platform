@@ -82,24 +82,22 @@ export function getAllStudents(courseId){
     params:{
       courseId:courseId
     }
-  }).then(res=>{
-    return res;
+  }).then( res => {
+    let data = [];
+    for (let student of res.data.data) {
+      getCourseScore(courseId,student.id).then(res=>{
+        student.score=res;
+      }).catch(err=>{
+        console.log(err);
+      });
+      data.push(student);
+    }
+    return data;
   }).catch(err=>{
     return err;
   })
 }
 
-export function getLessonQuestions(lessonId){
-  return request.get('/api/map/list',{
-    params:{
-      lessonId:lessonId
-    }
-  }).then(res=>{
-    return res;
-  }).catch(err=>{
-    return err;
-  })
-}
 export function endCourses(courseId){
   return request.post('/api/course/over',null,{
     params:{
@@ -156,6 +154,18 @@ export const scoreTrend = (courseId,studentId) => {
       studentId:studentId}
   }).then(res=>{
     return res.data;
+  }).catch(err=>{
+    return err;
+  })
+}
+export function getCourseScore(courseId,studentId){
+  return request.get('/api/course/score',{
+    params:{
+      courseId:courseId,
+      studentId:studentId
+    }
+  }).then(res=>{
+    return res.data.data;
   }).catch(err=>{
     return err;
   })
