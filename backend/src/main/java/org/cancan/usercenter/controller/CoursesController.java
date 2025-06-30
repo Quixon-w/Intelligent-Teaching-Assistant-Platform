@@ -119,7 +119,9 @@ public class CoursesController {
     })
     public BaseResponse<Boolean> deleteCourse(@RequestParam Long courseId, HttpServletRequest request) {
         User currentUser = userService.getCurrentUser(request);
-        coursesService.isTeacher(courseId, currentUser.getId());
+        if (currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是管理员不可删除课程");
+        }
         return ResultUtils.success(coursesService.removeById(courseId));
     }
 
