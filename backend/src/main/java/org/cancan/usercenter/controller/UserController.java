@@ -16,8 +16,10 @@ import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.mapper.CoursesMapper;
 import org.cancan.usercenter.mapper.EnrollMapper;
+import org.cancan.usercenter.mapper.QuestionsMapper;
 import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Enroll;
+import org.cancan.usercenter.model.domain.Questions;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.model.domain.request.PasswordChangeRequest;
 import org.cancan.usercenter.model.domain.request.UserLoginRequest;
@@ -48,6 +50,8 @@ public class UserController {
     private CoursesMapper coursesMapper;
     @Resource
     private EnrollMapper enrollMapper;
+    @Resource
+    private QuestionsMapper questionsMapper;
 
     @PostMapping("/register")
     @Operation(summary = "用户注册")
@@ -126,9 +130,11 @@ public class UserController {
             // 老师有课程时不可变为学生
             if (user.getUserRole() != null && currentUser.getUserRole() == TEACHER_ROLE && user.getUserRole() == STUDENT_ROLE) {
                 QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
+                QueryWrapper<Questions> queryWrapperQ = new QueryWrapper<>();
                 queryWrapper.eq("teacher_id", currentUser.getId());
-                if (coursesMapper.exists(queryWrapper)) {
-                    throw new BusinessException(ErrorCode.NO_AUTH, "老师有课程时不可变为学生");
+                queryWrapperQ.eq("teacher_id", currentUser.getId());
+                if (coursesMapper.exists(queryWrapper) || questionsMapper.exists(queryWrapperQ)) {
+                    throw new BusinessException(ErrorCode.NO_AUTH, "老师身份已确认，有课程或习题时不可变为学生");
                 }
             }
             // 学生有课程时不可变为老师

@@ -27,7 +27,7 @@ public interface QuestionsService extends IService<Questions> {
      * @param question 问题
      * @return 问题
      */
-    Questions addQuestion(Questions question);
+    Boolean addQuestion(Questions question);
 
     /**
      * 批量添加问题

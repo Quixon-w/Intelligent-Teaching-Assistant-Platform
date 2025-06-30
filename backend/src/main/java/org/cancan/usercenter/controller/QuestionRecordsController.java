@@ -125,6 +125,9 @@ public class QuestionRecordsController {
     public BaseResponse<List<QuestionRecords>> get(@RequestParam Long lessonId, @RequestParam Long studentId, HttpServletRequest request) {
         // 课时校验
         Lessons lessons = lessonsService.getValidLessonById(lessonId);
+        if (lessons.getHasQuestion() == 0) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "课时习题未发布");
+        }
         // 权限校验
         Courses courses = coursesService.getValidCourseById(lessons.getCourseId());
         User currentUser = userService.getCurrentUser(request);

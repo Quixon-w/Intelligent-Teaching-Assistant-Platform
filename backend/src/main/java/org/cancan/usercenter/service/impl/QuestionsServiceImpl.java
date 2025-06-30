@@ -49,7 +49,7 @@ public class QuestionsServiceImpl extends ServiceImpl<QuestionsMapper, Questions
      * @return 添加的习题
      */
     @Override
-    public Questions addQuestion(Questions question) {
+    public Boolean addQuestion(Questions question) {
         // 校验参数
         QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("teacher_id", question.getTeacherId());
@@ -65,7 +65,7 @@ public class QuestionsServiceImpl extends ServiceImpl<QuestionsMapper, Questions
         if (result <= 0) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "添加失败");
         } else {
-            return question;
+            return true;
         }
     }
 

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
@@ -15,10 +16,7 @@ import org.cancan.usercenter.model.domain.Questions;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.QuestionsService;
 import org.cancan.usercenter.service.UserService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Objects;
@@ -40,6 +38,25 @@ public class QuestionsController {
     private QuestionsService questionsService;
     @Resource
     private UserService userService;
+
+    @PostMapping("/addOne")
+    @Operation(summary = "添加教师个人习题集", description = "id不需要传入")
+    public BaseResponse<Questions> addOne(@RequestBody Questions question, HttpServletRequest request) {
+        User currentUser = userService.getCurrentUser(request);
+        if (!Objects.equals(question.getTeacherId(), currentUser.getId()) && currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "老师只能添加自己的习题集");
+        }
+        // 清空习题 id
+        question.setQuestionId(null);
+        if (StringUtils.isAnyBlank(question.getKnowledge(), question.getQuestion(), question.getAnswer(), question.getExplanation()) || question.getOptions() == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "存在参数为空");
+        }
+        boolean result = questionsService.addQuestion(question);
+        if (!result) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "添加失败");
+        }
+        return ResultUtils.success(question);
+    }
 
     @GetMapping("/selectById")
     @Operation(summary = "查找某题")
