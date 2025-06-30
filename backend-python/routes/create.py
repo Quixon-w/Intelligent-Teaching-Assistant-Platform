@@ -13,11 +13,15 @@ from datetime import datetime
 from utils.rwkv import *
 import global_var
 from config.settings import get_settings
+from core.rag.service import RAGService
 
 router = APIRouter()
 
 # 全局锁，用于控制并发请求
 create_lock = Lock()
+
+# 初始化RAG服务
+rag_service = RAGService()
 
 
 class CreateOutlineBody(BaseModel):
@@ -384,113 +388,68 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
     """
     使用RWKV模型生成大纲
     """
-    model: TextRWKV = global_var.get(global_var.Model)
-    if model is None:
-        raise Exception("模型未加载")
-    
     try:
-        # 设置生成参数
-        generation_config = {
-            "max_tokens": 3000,  # 增加最大token数
-            "temperature": 0.7,
-            "top_p": 0.9,
-            "stop": ["###", "---", "问题", "题目", "结束", "完毕"]  # 移除\n\n，避免过早停止
-        }
+        # 使用RAG服务生成
+        response = await rag_service.generate_response(
+            prompt=prompt,
+            max_tokens=3000,  # 增加最大token数
+            temperature=0.7,
+            task_type="outline_generation"
+        )
         
-        # 设置生成参数
-        model.max_tokens_per_generation = generation_config["max_tokens"]
-        
-        # 生成大纲内容
-        outline_content = ""
-        token_count = 0
-        max_tokens = generation_config["max_tokens"]
-        min_words = max(300, max_words * 0.3)  # 最小字数至少300字或目标字数的30%
-        
-        print(f"开始生成教学大纲，目标字数：{max_words}，最小字数：{min_words}")
-        
-        for response, delta, _, _ in model.generate(prompt, stop=generation_config["stop"]):
-            outline_content += delta
-            token_count += 1
+        if response and response.get("success"):
+            outline_content = response.get("content", "")
             
-            # 计算当前字数（中文字符）
-            current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+            # 确保句子完整性
+            outline_content = ensure_sentence_completeness(outline_content)
             
-            # 检查token数量限制
-            if token_count > max_tokens:
-                print(f"达到最大token限制 {max_tokens}")
-                break
+            # 检查生成的内容是否达到最小字数要求
+            final_word_count = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+            min_words = max(300, max_words * 0.3)  # 最小字数至少300字或目标字数的30%
             
-            # 检查字数限制
-            if current_words >= max_words * 1.2:  # 允许超出20%的字数
-                print(f"达到字数限制 {current_words} >= {max_words * 1.2}")
-                break
+            if final_word_count < min_words:
+                print(f"生成的内容字数不足（{final_word_count} < {min_words}），尝试重新生成...")
+                # 如果字数不足，尝试重新生成一次
+                retry_prompt = prompt + "\n\n请确保生成的内容详细完整，字数不少于300字。"
+                return await generate_outline_with_rwkv_retry(retry_prompt, request, max_words)
             
-            # 检查请求是否断开
-            if await request.is_disconnected():
-                print("请求已断开")
-                break
-        
-        # 确保句子完整性
-        outline_content = ensure_sentence_completeness(outline_content)
-        
-        # 检查生成的内容是否达到最小字数要求
-        final_word_count = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
-        
-        if final_word_count < min_words:
-            print(f"生成的内容字数不足（{final_word_count} < {min_words}），尝试重新生成...")
-            # 如果字数不足，尝试重新生成一次
-            retry_prompt = prompt + "\n\n请确保生成的内容详细完整，字数不少于300字。"
-            return await generate_outline_with_rwkv_retry(retry_prompt, request, max_words, model, generation_config)
-        
-        print(f"大纲生成完成，生成长度: {len(outline_content)} 字符，字数: {final_word_count}")
-        
-        return outline_content.strip()
-        
+            print(f"大纲生成完成，生成长度: {len(outline_content)} 字符，字数: {final_word_count}")
+            return outline_content.strip()
+        else:
+            print(f"RAG服务生成失败: {response}")
+            raise Exception("大纲生成失败")
+            
     except Exception as e:
         print(f"生成大纲时出错: {e}")
         raise Exception(f"生成大纲失败: {str(e)}")
 
 
-async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_words: int, model, generation_config):
+async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_words: int):
     """
     重试生成大纲（当第一次生成字数不足时）
     """
     try:
-        outline_content = ""
-        token_count = 0
-        max_tokens = generation_config["max_tokens"]
+        # 使用RAG服务生成
+        response = await rag_service.generate_response(
+            prompt=prompt,
+            max_tokens=3000,
+            temperature=0.7,
+            task_type="outline_generation"
+        )
         
-        print("开始重试生成教学大纲...")
-        
-        for response, delta, _, _ in model.generate(prompt, stop=generation_config["stop"]):
-            outline_content += delta
-            token_count += 1
+        if response and response.get("success"):
+            outline_content = response.get("content", "")
             
-            # 计算当前字数（中文字符）
-            current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+            # 确保句子完整性
+            outline_content = ensure_sentence_completeness(outline_content)
             
-            # 检查token数量限制
-            if token_count > max_tokens:
-                print(f"重试达到最大token限制 {max_tokens}")
-                break
+            final_word_count = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+            print(f"重试大纲生成完成，生成长度: {len(outline_content)} 字符，字数: {final_word_count}")
             
-            # 检查字数限制
-            if current_words >= max_words * 1.5:  # 重试时允许更多字数
-                print(f"重试达到字数限制 {current_words} >= {max_words * 1.5}")
-                break
-            
-            # 检查请求是否断开
-            if await request.is_disconnected():
-                print("请求已断开")
-                break
-        
-        # 确保句子完整性
-        outline_content = ensure_sentence_completeness(outline_content)
-        
-        final_word_count = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
-        print(f"重试大纲生成完成，生成长度: {len(outline_content)} 字符，字数: {final_word_count}")
-        
-        return outline_content.strip()
+            return outline_content.strip()
+        else:
+            print(f"RAG服务重试生成失败: {response}")
+            raise Exception("重试生成大纲失败")
         
     except Exception as e:
         print(f"重试生成大纲时出错: {e}")

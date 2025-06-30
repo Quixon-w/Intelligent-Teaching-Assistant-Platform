@@ -25,9 +25,7 @@ from utils.log import quick_log
 from utils.session_manager import session_manager
 import global_var
 
-
 router = APIRouter()
-
 
 # 创建全局会话管理器实例
 # session_manager = SessionManager()  # 已移动到utils/session_manager.py

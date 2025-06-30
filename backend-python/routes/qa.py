@@ -14,11 +14,15 @@ from utils.rwkv import *
 from utils.session_manager import session_manager
 import global_var
 from config.settings import get_settings
+from core.rag.service import RAGService
 
 router = APIRouter()
 
 # 全局锁，用于控制并发请求
 qa_lock = Lock()
+
+# 初始化RAG服务
+rag_service = RAGService()
 
 
 def get_user_path(user_id: str, is_teacher: bool) -> str:
@@ -199,22 +203,20 @@ def search_knowledge_db(user_id, session_id, query, is_teacher=False, course_id=
         print("=== 搜索结果结束 ===\n")
         
         if retrieved_contents:
-            print(f"最终返回 {len(retrieved_contents)} 段相关内容")
             return "\n\n".join(retrieved_contents)
         else:
-            print("没有找到相似度足够高的内容")
             return "未找到相关内容"
             
     except Exception as e:
-        print(f"搜索失败: {e}")
+        print(f"搜索知识库时出错: {e}")
         import traceback
         traceback.print_exc()
-        return f"搜索过程中出现错误: {str(e)}"
+        return f"搜索知识库时出错: {str(e)}"
 
 
 async def generate_answer_with_rwkv(prompt: str, request: Request, temperature: float):
     """
-    使用RWKV模型生成回答 - 改进的生成逻辑
+    使用RWKV模型生成回答
     """
     model: TextRWKV = global_var.get(global_var.Model)
     if model is None:
@@ -222,50 +224,35 @@ async def generate_answer_with_rwkv(prompt: str, request: Request, temperature: 
     
     try:
         # 设置生成参数
-        model.temperature = temperature
-        model.top_p = 0.9
+        generation_config = {
+            "max_tokens": 1000,
+            "temperature": temperature,
+            "top_p": 0.9,
+            "stop": ["###", "---", "问题", "题目", "结束", "完毕"]
+        }
         
-        # 生成回答内容
-        answer_content = ""
+        # 设置生成参数
+        model.max_tokens_per_generation = generation_config["max_tokens"]
+        
+        # 生成回答
+        answer = ""
         token_count = 0
-        last_complete_sentence = ""
+        max_tokens = generation_config["max_tokens"]
         
-        print("开始生成智能回答...")
-        
-        # 改进的停止条件，避免在句子中间截断
-        stop_sequences = [
-            "\n\n用户:", "\n\nUser:", "\n\n问题:", "\n\nQuestion:", 
-            "\n\nQ:", "\n\nHuman:", "\n\n---", "\n\n###"
-        ]
-        
-        for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
-            answer_content += delta
+        for response, delta, _, _ in model.generate(prompt, stop=generation_config["stop"]):
+            answer += delta
             token_count += 1
             
-            # 检查是否形成了完整的句子
-            if delta in ['。', '！', '？', '；', '.', '!', '?', ';']:
-                last_complete_sentence = answer_content
+            # 检查token数量限制
+            if token_count > max_tokens:
+                break
             
             # 检查请求是否断开
             if await request.is_disconnected():
                 print("请求已断开")
                 break
         
-        # 如果最后没有完整句子，尝试找到最后一个完整句子
-        if not last_complete_sentence and answer_content:
-            # 查找最后一个句号、感叹号或问号
-            for end_char in ['。', '！', '？', '；', '.', '!', '?', ';']:
-                last_pos = answer_content.rfind(end_char)
-                if last_pos != -1:
-                    last_complete_sentence = answer_content[:last_pos + 1]
-                    break
-        
-        # 使用最后一个完整句子，如果没有则使用全部内容
-        final_answer = last_complete_sentence if last_complete_sentence else answer_content
-        
-        print(f"回答生成完成，生成长度: {len(final_answer)} 字符")
-        
-        return final_answer.strip()
+        return answer.strip()
         
     except Exception as e:
         print(f"生成回答时出错: {e}")
@@ -329,7 +316,7 @@ def build_qa_prompt(query: str, context: str, qa_history: List[Dict[str, Any]] =
 @router.post("/v1/qa", tags=["QA"])
 async def intelligent_qa(body: QABody, request: Request):
     """
-    智能问答接口
+    智能问答接口 - 使用新的RAG服务
     
     支持两种问答模式：
     1. existing: 已有文件问答 - 根据课程和课时号查找对应的知识库
@@ -377,71 +364,30 @@ async def intelligent_qa(body: QABody, request: Request):
         with qa_lock:
             print(f"开始处理用户问题: {body.query}")
             
-            # 获取历史问答记录（如果启用上下文）
-            qa_history = []
-            if body.use_context:
-                # 从会话管理器获取历史消息
-                context_messages = session_manager.get_context_messages(
-                    body.user_id, body.session_id, max_messages=20, is_teacher=body.is_teacher
-                )
-                
-                # 将历史消息转换为问答对格式
-                qa_history = []
-                for i in range(0, len(context_messages) - 1, 2):
-                    if i + 1 < len(context_messages):
-                        qa_history.append({
-                            "query": context_messages[i]["content"],
-                            "answer": context_messages[i + 1]["content"]
-                        })
-                
-                print(f"获取到 {len(qa_history)} 条历史问答记录")
-            
-            # 1. 从知识库搜索相关内容
-            search_result = search_knowledge_db(
-                body.user_id,
-                body.session_id, 
-                body.query, 
-                body.is_teacher, 
-                body.course_id, 
-                body.lesson_num, 
-                body.top_k,
-                body.search_mode
+            # 使用新的RAG服务处理问答
+            result = await rag_service.process_qa(
+                query=body.query,
+                user_id=body.user_id,
+                session_id=body.session_id,
+                course_id=body.course_id,
+                lesson_num=body.lesson_num,
+                search_mode=body.search_mode,
+                top_k=body.top_k,
+                use_context=body.use_context,
+                max_tokens=body.max_tokens,
+                temperature=body.temperature
             )
             
-            if search_result is None:
+            if not result["success"]:
                 raise HTTPException(
-                    status_code=404,
-                    detail="知识库不存在或搜索失败"
+                    status_code=500,
+                    detail=result.get("error", "处理失败")
                 )
             
-            if search_result == "未找到相关内容":
-                # 如果没有找到相关内容，返回提示信息
-                return {
-                    "success": True,
-                    "query": body.query,
-                    "user_id": body.user_id,
-                    "session_id": body.session_id,
-                    "is_teacher": body.is_teacher,
-                    "course_id": body.course_id,
-                    "lesson_num": body.lesson_num,
-                    "search_mode": body.search_mode,
-                    "answer": "抱歉，我在当前知识库中没有找到与您问题相关的信息。请尝试重新表述您的问题，或者检查是否选择了正确的课程和课时。",
-                    "context": "未找到相关内容",
-                    "has_context": False,
-                    "use_context": body.use_context,
-                    "history_count": len(qa_history)
-                }
-            
-            # 2. 构建问答提示词（包含历史上下文）
-            prompt = build_qa_prompt(body.query, search_result, qa_history if body.use_context else None)
-            
-            # 3. 使用RWKV模型生成回答
-            answer = await generate_answer_with_rwkv(prompt, request, body.temperature)
-            
-            # 4. 保存问答历史记录到会话管理器
+            # 保存问答历史记录到会话管理器
             messages = [
                 {"role": "user", "content": body.query},
-                {"role": "assistant", "content": answer}
+                {"role": "assistant", "content": result["answer"]}
             ]
             
             # 保存当前对话
@@ -449,7 +395,7 @@ async def intelligent_qa(body: QABody, request: Request):
                 body.user_id,
                 body.session_id,
                 messages,
-                answer,
+                result["answer"],
                 body.is_teacher
             )
             
@@ -462,20 +408,21 @@ async def intelligent_qa(body: QABody, request: Request):
                 "course_id": body.course_id,
                 "lesson_num": body.lesson_num,
                 "search_mode": body.search_mode,
-                "answer": answer,
-                "context": search_result,
-                "has_context": True,
-                "use_context": body.use_context,
-                "history_count": len(qa_history)
+                "answer": result["answer"],
+                "context": result.get("context", ""),
+                "has_context": result.get("has_context", False),
+                "use_context": body.use_context
             }
                 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"智能问答时出错: {e}")
+        print(f"处理问答时出错: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"智能问答失败: {str(e)}"
+            detail=f"处理问答时出错: {str(e)}"
         )
 
 
@@ -484,86 +431,121 @@ async def get_qa_status():
     """
     获取问答服务状态
     """
-    model: TextRWKV = global_var.get(global_var.Model)
     return {
-        "service": "智能问答服务",
-        "status": "运行中" if model is not None else "模型未加载",
-        "model": model.name if model is not None else "无",
-        "lock_status": "忙碌中" if qa_lock.locked() else "空闲"
+        "status": "running",
+        "rag_service": "enhanced",
+        "model_loaded": rag_service.llm_service.is_model_loaded()
     }
 
 
-# 新增的会话管理API
 @router.get("/v1/qa/sessions/{user_id}/{session_id}/history", tags=["QA Session Management"])
 async def get_qa_history(user_id: str, session_id: str, limit: int = 10, is_teacher: bool = False):
-    """获取指定会话的问答历史记录"""
+    """
+    获取问答历史记录
+    """
     try:
-        dialogues = session_manager.get_session_dialogues(user_id, session_id, limit=limit, is_teacher=is_teacher)
+        # 从会话管理器获取历史消息
+        context_messages = session_manager.get_context_messages(
+            user_id, session_id, max_messages=limit * 2, is_teacher=is_teacher
+        )
+        
+        # 将历史消息转换为问答对格式
+        qa_history = []
+        for i in range(0, len(context_messages) - 1, 2):
+            if i + 1 < len(context_messages):
+                qa_history.append({
+                    "query": context_messages[i]["content"],
+                    "answer": context_messages[i + 1]["content"],
+                    "timestamp": context_messages[i].get("timestamp", "")
+                })
+        
         return {
+            "success": True,
             "user_id": user_id,
             "session_id": session_id,
-            "is_teacher": is_teacher,
-            "dialogues": dialogues,
-            "count": len(dialogues)
+            "history": qa_history[-limit:]  # 只返回最近的记录
         }
+        
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving QA history: {str(e)}"
+            detail=f"获取历史记录失败: {str(e)}"
         )
 
 
 @router.get("/v1/qa/sessions/{user_id}/{session_id}/context", tags=["QA Session Management"])
 async def get_qa_context(user_id: str, session_id: str, max_messages: int = 20, is_teacher: bool = False):
-    """获取指定会话的上下文消息"""
+    """
+    获取问答上下文
+    """
     try:
-        context_messages = session_manager.get_context_messages(user_id, session_id, max_messages=max_messages, is_teacher=is_teacher)
+        # 获取RAG服务的上下文
+        context = rag_service.context_manager.get_context(session_id)
+        
         return {
+            "success": True,
             "user_id": user_id,
             "session_id": session_id,
-            "is_teacher": is_teacher,
-            "context_messages": context_messages,
-            "count": len(context_messages)
+            "context": context
         }
+        
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving QA context: {str(e)}"
+            detail=f"获取上下文失败: {str(e)}"
         )
 
 
 @router.delete("/v1/qa/sessions/{user_id}/{session_id}/history", tags=["QA Session Management"])
 async def clear_qa_history(user_id: str, session_id: str, is_teacher: bool = False):
-    """清除指定会话的所有问答历史"""
+    """
+    清除问答历史记录
+    """
     try:
-        deleted_count = session_manager.clear_session_dialogues(user_id, session_id, is_teacher=is_teacher)
+        # 清除会话管理器的历史记录
+        session_manager.clear_session_history(user_id, session_id, is_teacher)
+        
+        # 清除RAG服务的上下文
+        rag_service.context_manager.clear_context(session_id)
+        
         return {
-            "user_id": user_id,
-            "session_id": session_id,
-            "is_teacher": is_teacher,
-            "deleted_count": deleted_count,
-            "message": f"Successfully deleted {deleted_count} dialogue files"
+            "success": True,
+            "message": "历史记录已清除"
         }
+        
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error clearing QA history: {str(e)}"
+            detail=f"清除历史记录失败: {str(e)}"
         )
 
 
 @router.get("/v1/qa/sessions/{user_id}", tags=["QA Session Management"])
 async def get_user_qa_sessions(user_id: str, is_teacher: bool = False):
-    """获取用户的所有问答会话ID"""
+    """
+    获取用户的问答会话列表
+    """
     try:
-        sessions = session_manager.get_user_sessions(user_id, is_teacher=is_teacher)
+        # 获取RAG服务的所有会话
+        rag_sessions = rag_service.context_manager.get_all_sessions()
+        
+        # 筛选属于该用户的会话
+        user_sessions = [session_id for session_id in rag_sessions if user_id in session_id]
+        
+        # 获取会话摘要
+        session_summaries = []
+        for session_id in user_sessions:
+            summary = rag_service.context_manager.get_context_summary(session_id)
+            session_summaries.append(summary)
+        
         return {
+            "success": True,
             "user_id": user_id,
-            "is_teacher": is_teacher,
-            "qa_sessions": sessions,
-            "session_count": len(sessions)
+            "sessions": session_summaries
         }
+        
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving user QA sessions: {str(e)}"
+            detail=f"获取会话列表失败: {str(e)}"
         ) 

@@ -10,15 +10,21 @@ import asyncio
 from threading import Lock
 from datetime import datetime
 import random
+import re
+import time
 
 from utils.rwkv import *
 import global_var
 from config.settings import get_settings
+from core.rag.service import RAGService
 
 router = APIRouter()
 
 # 全局锁，用于控制并发请求
 exercise_lock = Lock()
+
+# 初始化RAG服务
+rag_service = RAGService()
 
 
 class ExerciseBody(BaseModel):
@@ -194,15 +200,12 @@ def extract_text_blocks_from_faiss_db(db_path: str) -> List[str]:
             
     except Exception as e:
         print(f"从FAISS数据库提取文本时出错: {e}")
-        import traceback
-        traceback.print_exc()
         return None
 
 
 def get_lesson_content(user_id: str, course_id: str, lesson_num: str, is_teacher: bool):
     """
     获取课时内容，优先从FAISS向量数据库获取，如果失败则从文件获取
-    返回文本块列表而不是合并的文本
     """
     print(f"正在获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
     
@@ -220,274 +223,190 @@ def get_lesson_content(user_id: str, course_id: str, lesson_num: str, is_teacher
     
     # 如果向量数据库获取失败，回退到文件读取方式
     print("向量数据库获取失败，回退到文件读取方式")
+    lesson_folder = os.path.join(user_path, course_id, lesson_num)
     
-    # 构建文件路径
-    lesson_path = os.path.join(user_path, course_id, lesson_num)
-    if not os.path.exists(lesson_path):
-        print(f"课时路径不存在: {lesson_path}")
+    if not os.path.exists(lesson_folder):
+        print(f"课时文件夹不存在: {lesson_folder}")
         return None
     
-    # 读取课时文件夹中的所有文件
-    text_blocks = read_files_as_blocks(lesson_path)
-    if text_blocks:
-        print("成功从文件获取课时内容")
-        return text_blocks
-    
-    print("无法获取课时内容")
-    return None
+    return read_files_as_blocks(lesson_folder)
 
 
 def get_lesson_content_whole(user_id: str, course_id: str, lesson_num: str, is_teacher: bool) -> str:
     """
-    获取课时内容，返回合并的文本内容
+    获取课时完整内容（用于整体生成模式）
     """
-    print(f"正在获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
-    
-    # 获取用户路径
-    user_path = get_user_path(user_id, is_teacher)
-    
-    # 首先尝试从FAISS向量数据库获取内容
-    vector_db_path = os.path.join(user_path, course_id, lesson_num, "vector_kb")
-    print(f"尝试从向量数据库获取课时内容: {vector_db_path}")
-    
-    text_blocks = extract_text_blocks_from_faiss_db(vector_db_path)
+    text_blocks = get_lesson_content(user_id, course_id, lesson_num, is_teacher)
     if text_blocks:
-        print("成功从向量数据库获取课时内容")
-        # 合并文本块
-        combined_content = "\n\n".join(text_blocks)
-        return combined_content
-    
-    # 如果向量数据库获取失败，回退到文件读取方式
-    print("向量数据库获取失败，回退到文件读取方式")
-    
-    # 构建文件路径
-    lesson_path = os.path.join(user_path, course_id, lesson_num)
-    if not os.path.exists(lesson_path):
-        print(f"课时路径不存在: {lesson_path}")
-        return None
-    
-    # 读取课时文件夹中的所有文件
-    text_blocks = read_files_as_blocks(lesson_path)
-    if text_blocks:
-        print("成功从文件获取课时内容")
-        # 合并文本块
-        combined_content = "\n\n".join(text_blocks)
-        return combined_content
-    
-    print("无法获取课时内容")
+        return "\n\n".join(text_blocks)
     return None
 
 
 def read_files_as_blocks(folder_path: str) -> List[str]:
     """
-    读取文件夹中的所有文本文件内容，返回文本块列表
+    读取文件夹中的所有文件内容，按文件分割成块
     """
-    print(f"正在读取文件夹内容: {folder_path}")
+    text_blocks = []
     
     if not os.path.exists(folder_path):
         print(f"文件夹不存在: {folder_path}")
-        return None
+        return text_blocks
     
-    text_blocks = []
-    supported_extensions = ['.txt', '.md', '.docx', '.pdf']
-    
-    try:
-        for filename in os.listdir(folder_path):
-            file_path = os.path.join(folder_path, filename)
-            
-            # 跳过目录和隐藏文件
-            if os.path.isdir(file_path) or filename.startswith('.'):
-                continue
-            
-            # 检查文件扩展名
-            file_ext = os.path.splitext(filename)[1].lower()
-            if file_ext not in supported_extensions:
-                continue
-            
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        if os.path.isfile(file_path):
             try:
-                if file_ext == '.txt' or file_ext == '.md':
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                        if content.strip():
-                            # 按段落分割文本块
-                            paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
-                            text_blocks.extend(paragraphs)
-                            print(f"成功读取文件: {filename}，分割为 {len(paragraphs)} 个文本块")
-                # 对于其他格式的文件，可以添加相应的处理逻辑
-                
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read().strip()
+                    if content:
+                        text_blocks.append(content)
+                        print(f"读取文件 {filename}: {content[:100]}...")
             except Exception as e:
                 print(f"读取文件 {filename} 时出错: {e}")
                 continue
-        
-        if text_blocks:
-            print(f"成功读取 {len(text_blocks)} 个文本块")
-            return text_blocks
-        else:
-            print("未找到可读取的文本文件")
-            return None
-            
-    except Exception as e:
-        print(f"读取文件夹时出错: {e}")
-        return None
+    
+    return text_blocks
 
 
 def generate_exercise_prompt_for_block(content: str, block_index: int, difficulty: str) -> str:
     """
-    为单个文本块生成习题的提示词
+    为单个文本块生成习题提示词
     """
-    difficulty_map = {
-        "easy": "简单",
-        "medium": "中等", 
-        "hard": "困难"
-    }
-    
-    difficulty_text = difficulty_map.get(difficulty, "中等")
-    
-    prompt = f"""基于以下内容生成一道{difficulty_text}难度的单选题：
+    prompt = f"""基于以下教学内容，生成一道{difficulty}难度的选择题：
 
+教学内容：
 {content}
 
-严格按照以下格式生成，不要添加任何其他内容：
+请生成一道选择题，包含：
+1. 题干
+2. 4个选项（A、B、C、D）
+3. 正确答案
+4. 详细解析
+5. 涉及的知识点
 
-题目：
-题干：[题干内容]
+格式要求：
+题目：[题干内容]
 A. [选项A]
-B. [选项B] 
+B. [选项B]
 C. [选项C]
 D. [选项D]
 正确答案：[A/B/C/D]
-解析：[详细解析为什么选择正确答案]
-所属知识点：[所属知识点]"""
+解析：[详细解析]
+知识点：[涉及的知识点]
 
+请确保题目与教学内容紧密相关，难度适中，选项合理。"""
+    
     return prompt
 
 
 async def generate_exercises_for_blocks(text_blocks: List[str], request: Request, max_tokens: int, temperature: float, difficulty: str) -> List[str]:
     """
-    为每个文本块生成一道习题
+    为多个文本块生成习题
     """
-    print(f"开始为 {len(text_blocks)} 个文本块生成习题...")
-    
     exercises = []
     
     for i, block in enumerate(text_blocks):
-        print(f"正在为文本块 {i+1}/{len(text_blocks)} 生成习题...")
-        
+        if not block.strip():
+            continue
+            
+        prompt = generate_exercise_prompt_for_block(block, i, difficulty)
         try:
-            # 为当前文本块生成提示词
-            prompt = generate_exercise_prompt_for_block(block, i, difficulty)
-            
-            # 生成习题
-            exercise = await generate_exercises_with_rwkv(
-                prompt, 
-                request, 
-                max_tokens, 
-                temperature
-            )
-            
-            exercises.append(exercise)
-            print(f"文本块 {i+1} 习题生成完成")
-            
+            exercise = await generate_exercises_with_rwkv(prompt, request, max_tokens, temperature)
+            if exercise:
+                exercises.append(exercise)
         except Exception as e:
-            print(f"为文本块 {i+1} 生成习题时出错: {e}")
-            # 如果某个文本块生成失败，添加错误信息
-            exercises.append(f"题目{i+1}生成失败: {str(e)}")
+            print(f"生成第{i+1}个文本块的习题时出错: {e}")
+            continue
     
     return exercises
 
 
 def generate_exercise_prompt(content: str, question_count: int, difficulty: str) -> str:
     """
-    生成习题的提示词
+    生成习题提示词（整体内容模式）
     """
-    difficulty_map = {
-        "easy": "简单",
-        "medium": "中等", 
-        "hard": "困难"
-    }
-    
-    difficulty_text = difficulty_map.get(difficulty, "中等")
-    
-    prompt = f"""基于以下内容生成{question_count}道{difficulty_text}难度的单选题：
+    prompt = f"""基于以下教学内容，生成{question_count}道{difficulty}难度的选择题：
 
+教学内容：
 {content}
 
-严格按照以下格式生成，不要添加任何其他内容：
+请生成{question_count}道选择题，每道题包含：
+1. 题干
+2. 4个选项（A、B、C、D）
+3. 正确答案
+4. 详细解析
+5. 涉及的知识点
 
-题目1：
-题干：[题干内容]
-A. [选项A]
-B. [选项B] 
-C. [选项C]
-D. [选项D]
-正确答案：[A/B/C/D]
-解析：[详细解析为什么选择正确答案]
-所属知识点：[所属知识点]
-
-题目2：
-题干：[题干内容]
+格式要求：
+题目1：[题干内容]
 A. [选项A]
 B. [选项B]
 C. [选项C]
 D. [选项D]
 正确答案：[A/B/C/D]
-解析：[详细解析为什么选择正确答案]
-所属知识点：[所属知识点]
+解析：[详细解析]
+知识点：[涉及的知识点]
 
-[继续生成剩余题目，必须生成{question_count}道题目，每道题都要完整包含题干、选项、正确答案、解析和知识点]"""
+题目2：[题干内容]
+A. [选项A]
+B. [选项B]
+C. [选项C]
+D. [选项D]
+正确答案：[A/B/C/D]
+解析：[详细解析]
+知识点：[涉及的知识点]
 
+...（继续生成{question_count}道题）
+
+请确保：
+1. 题目与教学内容紧密相关
+2. 难度适中，符合{difficulty}级别
+3. 选项合理，避免明显错误选项
+4. 解析详细，帮助学生理解
+5. 知识点标注准确"""
+    
     return prompt
 
 
 def save_exercises_to_file(user_id: str, course_id: str, lesson_num: str, exercises: List[Dict], is_teacher: bool) -> dict:
     """
-    将生成的习题保存到文件
+    保存习题到文件
     """
-    print(f"正在保存习题到文件: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}")
-    
     # 获取用户路径
     user_path = get_user_path(user_id, is_teacher)
     
-    # 构建保存路径
-    lesson_path = os.path.join(user_path, course_id, lesson_num)
-    exercises_dir = os.path.join(lesson_path, "exercises")
-    
-    # 创建习题目录
-    os.makedirs(exercises_dir, exist_ok=True)
+    # 创建习题保存目录
+    exercise_dir = os.path.join(user_path, course_id, lesson_num, "exercise")
+    os.makedirs(exercise_dir, exist_ok=True)
     
     # 生成文件名
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"exercises_{timestamp}.json"
-    file_path = os.path.join(exercises_dir, filename)
+    filename = f"exercise_{timestamp}.json"
+    file_path = os.path.join(exercise_dir, filename)
+    
+    # 保存习题数据
+    exercise_data = {
+        "user_id": user_id,
+        "course_id": course_id,
+        "lesson_num": lesson_num,
+        "is_teacher": is_teacher,
+        "created_time": datetime.now().isoformat(),
+        "total_count": len(exercises),
+        "exercises": exercises
+    }
     
     try:
-        # 准备保存的数据
-        save_data = {
-            "metadata": {
-                "user_id": user_id,
-                "course_id": course_id,
-                "lesson_num": lesson_num,
-                "is_teacher": is_teacher,
-                "generated_at": datetime.now().isoformat(),
-                "total_questions": len(exercises),
-                "difficulty": exercises[0]["difficulty"] if exercises else "medium"
-            },
-            "exercises": exercises
-        }
-        
-        # 保存到文件
         with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(save_data, f, ensure_ascii=False, indent=2)
+            json.dump(exercise_data, f, ensure_ascii=False, indent=2)
         
-        print(f"习题已保存到: {file_path}")
+        print(f"习题已保存到文件: {file_path}")
         
         return {
             "success": True,
-            "file_path": file_path,
             "filename": filename,
-            "total_questions": len(exercises)
+            "file_path": file_path,
+            "total_count": len(exercises)
         }
-        
     except Exception as e:
         print(f"保存习题文件时出错: {e}")
         return {
@@ -500,138 +419,45 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
     """
     使用RWKV模型生成习题
     """
-    print("开始使用RWKV模型生成习题...")
-    
     try:
-        # 获取RWKV模型实例
-        model = global_var.get(global_var.Model)
-        if model is None:
-            raise Exception("RWKV模型未初始化")
+        # 使用RAG服务生成
+        response = await rag_service.generate_response(
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            task_type="exercise_generation"
+        )
         
-        # 设置生成参数
-        model.temperature = temperature
-        model.top_p = 0.9
-        
-        # 生成回答内容
-        answer_content = ""
-        token_count = 0
-        
-        print("开始生成习题...")
-        print(f"提示词长度: {len(prompt)} 字符")
-        print(f"最大token数: {max_tokens}")
-        print(f"温度参数: {temperature}")
-        
-        # 移除所有停止条件，让模型完整生成
-        stop_sequences = []
-        
-        print("开始生成循环...")
-        for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
-            answer_content += delta
-            token_count += 1
+        if response and response.get("success"):
+            return response.get("content", "")
+        else:
+            print(f"RAG服务生成失败: {response}")
+            return None
             
-            # 每100个token打印一次进度
-            if token_count % 100 == 0:
-                print(f"已生成 {token_count} tokens, 当前内容长度: {len(answer_content)} 字符")
-            
-            # 检查请求是否断开
-            if await request.is_disconnected():
-                print("请求已断开")
-                break
-            
-            # 检查是否达到最大token数
-            if token_count >= max_tokens:
-                print(f"达到最大token数: {max_tokens}")
-                break
-        
-        print(f"习题生成完成，生成长度: {len(answer_content)} 字符")
-        print(f"实际生成token数: {token_count}")
-        print(f"内容预览: {answer_content[:200]}...")
-        
-        # 清理生成的内容
-        cleaned_content = clean_generated_content(answer_content)
-        
-        # 如果生成的内容太短，给出警告
-        if len(cleaned_content) < 100:
-            print("⚠️ 警告：生成的内容过短，可能存在问题")
-        
-        return cleaned_content
-        
     except Exception as e:
-        print(f"RWKV生成习题时出错: {e}")
-        raise e
+        print(f"生成习题时出错: {e}")
+        return None
 
 
 def clean_generated_content(content: str) -> str:
     """
-    清理生成的内容，移除不相关的部分
+    清理生成的内容
     """
-    print("开始清理生成内容...")
+    if not content:
+        return ""
     
-    # 移除常见的无关前缀
-    prefixes_to_remove = [
-        "好的，我会根据题目要求继续生成",
-        "好的，我可以为您生成",
-        "好的，我会为您生成",
-        "Assistant:",
-        "好的，",
-        "我会",
-        "我将",
-        "请注意，",
-        "这些题目需要涵盖",
-        "基于以上内容，",
-    ]
+    # 移除多余的空白字符
+    content = re.sub(r'\n\s*\n', '\n\n', content)
+    content = content.strip()
     
-    cleaned = content.strip()
+    # 确保句子完整性
+    if content and not content.endswith(('.', '!', '?', '。', '！', '？')):
+        # 找到最后一个完整的句子
+        sentences = re.split(r'[.!?。！？]', content)
+        if len(sentences) > 1:
+            content = '.'.join(sentences[:-1]) + '.'
     
-    # 移除前缀
-    for prefix in prefixes_to_remove:
-        if cleaned.startswith(prefix):
-            cleaned = cleaned[len(prefix):].strip()
-    
-    # 查找第一个题目开始的位置
-    import re
-    
-    # 查找题目编号模式
-    question_patterns = [
-        r'题目\d*：',
-        r'\d+\.\s*\*\*',
-        r'\d+\.\s*',
-    ]
-    
-    start_pos = -1
-    for pattern in question_patterns:
-        match = re.search(pattern, cleaned)
-        if match:
-            start_pos = match.start()
-            break
-    
-    if start_pos > 0:
-        cleaned = cleaned[start_pos:]
-    
-    # 移除不相关的内容（如Question:, Answer:等）
-    lines = cleaned.split('\n')
-    filtered_lines = []
-    skip_mode = False
-    
-    for line in lines:
-        line = line.strip()
-        
-        # 跳过不相关的内容
-        if any(keyword in line for keyword in ['Question:', 'Answer:', '##', '###', 'FIFO', 'SJF', '轮询调度器']):
-            skip_mode = True
-            continue
-        
-        # 如果遇到新的题目，停止跳过模式
-        if re.match(r'题目\d*：', line) or re.match(r'\d+\.\s*\*\*', line):
-            skip_mode = False
-        
-        if not skip_mode:
-            filtered_lines.append(line)
-    
-    cleaned = '\n'.join(filtered_lines)
-    
-    print(f"清理后内容长度: {len(cleaned)} 字符")
-    return cleaned.strip()
+    return content
 
 
 async def generate_with_rwkv_retry(prompt: str, request: Request, max_tokens: int, model, generation_config):
@@ -639,170 +465,174 @@ async def generate_with_rwkv_retry(prompt: str, request: Request, max_tokens: in
     带重试机制的RWKV生成
     """
     max_retries = 3
-    retry_count = 0
-    
-    while retry_count < max_retries:
+    for attempt in range(max_retries):
         try:
-            print(f"RWKV生成尝试 {retry_count + 1}/{max_retries}")
+            # 使用RAG服务生成
+            response = await rag_service.generate_response(
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=generation_config.get("temperature", 0.7),
+                task_type="exercise_generation"
+            )
             
-            # 设置模型参数
-            model.temperature = generation_config.get("temperature", 0.7)
-            model.top_p = generation_config.get("top_p", 0.9)
-            
-            # 生成回答内容
-            answer_content = ""
-            token_count = 0
-            
-            # 停止条件
-            stop_sequences = generation_config.get("stop", ["\n\n", "```", "---"])
-            
-            for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
-                answer_content += delta
-                token_count += 1
-                
-                # 检查请求是否断开
-                if await request.is_disconnected():
-                    print("请求已断开")
-                    break
-                
-                # 检查是否达到最大token数
-                if token_count >= max_tokens:
-                    print(f"达到最大token数: {max_tokens}")
-                    break
-            
-            # 尝试解析JSON
-            try:
-                # 查找JSON内容
-                start_idx = answer_content.find('{')
-                end_idx = answer_content.rfind('}') + 1
-                
-                if start_idx != -1 and end_idx > start_idx:
-                    json_str = answer_content[start_idx:end_idx]
-                    json.loads(json_str)  # 验证JSON格式
-                    print("JSON格式验证成功")
-                    return {"content": answer_content}
-                else:
-                    print("未找到有效的JSON内容")
-                    raise Exception("JSON格式无效")
-                    
-            except json.JSONDecodeError as json_error:
-                print(f"JSON解析失败: {json_error}")
-                if retry_count < max_retries - 1:
-                    retry_count += 1
-                    continue
-                else:
-                    raise Exception(f"JSON格式错误: {json_error}")
-            
-        except Exception as e:
-            print(f"RWKV生成出错: {e}")
-            if retry_count < max_retries - 1:
-                retry_count += 1
-                await asyncio.sleep(1)  # 等待1秒后重试
-                continue
+            if response and response.get("success"):
+                return response.get("content", "")
             else:
-                raise e
+                print(f"RAG服务生成失败 (尝试 {attempt + 1}/{max_retries}): {response}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(1)
+                    continue
+                return None
+                
+        except Exception as e:
+            print(f"生成失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(1)
+                continue
+            return None
     
-    raise Exception("RWKV生成失败，已达到最大重试次数")
+    return None
 
 
 def parse_exercises_from_response(response_text: str) -> List[Dict]:
     """
-    从RWKV响应中解析习题数据
+    从响应文本中解析习题
     """
-    print("正在解析习题响应...")
-    print(f"原始响应内容: {response_text}")
+    if not response_text:
+        return []
     
-    try:
-        # 查找JSON内容
-        start_idx = response_text.find('{')
-        end_idx = response_text.rfind('}') + 1
+    exercises = []
+    current_exercise = {}
+    
+    # 按行分割
+    lines = response_text.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
         
-        if start_idx == -1 or end_idx <= start_idx:
-            raise Exception("未找到有效的JSON内容")
-        
-        json_str = response_text[start_idx:end_idx]
-        print(f"提取的JSON字符串: {json_str}")
-        
-        # 尝试清理JSON字符串
-        json_str = clean_json_string(json_str)
-        print(f"清理后的JSON字符串: {json_str}")
-        
-        data = json.loads(json_str)
-        
-        if "questions" not in data:
-            raise Exception("响应中缺少questions字段")
-        
-        questions = data["questions"]
-        if not isinstance(questions, list):
-            raise Exception("questions字段不是列表格式")
-        
-        # 验证每个题目的格式
-        parsed_questions = []
-        for i, question in enumerate(questions):
-            if not isinstance(question, dict):
-                print(f"跳过无效题目 {i}: 不是字典格式")
-                continue
-            
-            # 检查必需字段
-            required_fields = ["question_text", "options", "correct_answer", "explanation", "knowledge_point"]
-            missing_fields = [field for field in required_fields if field not in question]
-            
-            if missing_fields:
-                print(f"跳过题目 {i}: 缺少字段 {missing_fields}")
-                continue
-            
-            # 生成题目ID
-            question_id = question.get("question_id", f"q{i+1}")
-            
-            # 验证选项格式
-            options = question["options"]
-            if not isinstance(options, list) or len(options) != 4:
-                print(f"跳过题目 {i}: 选项格式不正确")
-                continue
-            
-            # 验证正确答案
-            correct_answer = question["correct_answer"]
-            if correct_answer not in ["A", "B", "C", "D"]:
-                print(f"跳过题目 {i}: 正确答案格式不正确")
-                continue
-            
-            # 构建标准化的题目对象
-            parsed_question = {
-                "question_id": question_id,
-                "question_text": question["question_text"],
-                "options": options,
-                "correct_answer": correct_answer,
-                "explanation": question["explanation"],
-                "knowledge_point": question["knowledge_point"],
-                "difficulty": question.get("difficulty", "medium")
+        # 检测新题目开始
+        if line.startswith('题目') or line.startswith('Question'):
+            if current_exercise:
+                exercises.append(current_exercise)
+            current_exercise = {
+                'question_text': '',
+                'options': [],
+                'correct_answer': '',
+                'explanation': '',
+                'knowledge_point': ''
             }
-            
-            parsed_questions.append(parsed_question)
-            print(f"成功解析题目 {i+1}: {question_id}")
+            # 提取题干
+            question_text = line.split('：', 1)[-1] if '：' in line else line.split(':', 1)[-1]
+            current_exercise['question_text'] = question_text.strip()
         
-        print(f"成功解析 {len(parsed_questions)} 道题目")
-        return parsed_questions
+        # 检测选项
+        elif line.startswith(('A.', 'B.', 'C.', 'D.')):
+            option_text = line.split('.', 1)[-1].strip()
+            current_exercise['options'].append(option_text)
         
-    except Exception as e:
-        print(f"解析习题响应时出错: {e}")
-        raise e
+        # 检测正确答案
+        elif line.startswith('正确答案') or line.startswith('Correct Answer'):
+            answer = line.split('：', 1)[-1] if '：' in line else line.split(':', 1)[-1]
+            current_exercise['correct_answer'] = answer.strip()
+        
+        # 检测解析
+        elif line.startswith('解析') or line.startswith('Explanation'):
+            explanation = line.split('：', 1)[-1] if '：' in line else line.split(':', 1)[-1]
+            current_exercise['explanation'] = explanation.strip()
+        
+        # 检测知识点
+        elif line.startswith('知识点') or line.startswith('Knowledge Point'):
+            knowledge = line.split('：', 1)[-1] if '：' in line else line.split(':', 1)[-1]
+            current_exercise['knowledge_point'] = knowledge.strip()
+    
+    # 添加最后一个习题
+    if current_exercise:
+        exercises.append(current_exercise)
+    
+    return exercises
+
+
+def parse_single_exercise(block: str, question_id: int) -> Optional[Dict]:
+    """
+    解析单个习题块
+    """
+    if not block:
+        return None
+    
+    exercise = {
+        'question_id': f"q{question_id}",
+        'question_text': '',
+        'options': [],
+        'correct_answer': '',
+        'explanation': '',
+        'knowledge_point': '',
+        'difficulty': 'medium'
+    }
+    
+    lines = block.split('\n')
+    current_field = None
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        if line.startswith('题目') or line.startswith('Question'):
+            question_text = line.split('：', 1)[-1] if '：' in line else line.split(':', 1)[-1]
+            exercise['question_text'] = question_text.strip()
+            current_field = 'question'
+        
+        elif line.startswith(('A.', 'B.', 'C.', 'D.')):
+            option_text = line.split('.', 1)[-1].strip()
+            exercise['options'].append(option_text)
+            current_field = 'options'
+        
+        elif line.startswith('正确答案') or line.startswith('Correct Answer'):
+            answer = line.split('：', 1)[-1] if '：' in line else line.split(':', 1)[-1]
+            exercise['correct_answer'] = answer.strip()
+            current_field = 'answer'
+        
+        elif line.startswith('解析') or line.startswith('Explanation'):
+            explanation = line.split('：', 1)[-1] if '：' in line else line.split(':', 1)[-1]
+            exercise['explanation'] = explanation.strip()
+            current_field = 'explanation'
+        
+        elif line.startswith('知识点') or line.startswith('Knowledge Point'):
+            knowledge = line.split('：', 1)[-1] if '：' in line else line.split(':', 1)[-1]
+            exercise['knowledge_point'] = knowledge.strip()
+            current_field = 'knowledge'
+        
+        else:
+            # 继续当前字段的内容
+            if current_field == 'question' and exercise['question_text']:
+                exercise['question_text'] += ' ' + line
+            elif current_field == 'explanation' and exercise['explanation']:
+                exercise['explanation'] += ' ' + line
+            elif current_field == 'knowledge' and exercise['knowledge_point']:
+                exercise['knowledge_point'] += ' ' + line
+    
+    # 验证习题完整性
+    if (exercise['question_text'] and 
+        len(exercise['options']) >= 2 and 
+        exercise['correct_answer'] and 
+        exercise['explanation']):
+        return exercise
+    
+    return None
 
 
 def clean_json_string(json_str: str) -> str:
     """
-    清理JSON字符串，修复常见的格式问题
+    清理JSON字符串
     """
-    # 移除可能的BOM标记和多余空白
+    # 移除可能的markdown代码块标记
+    json_str = re.sub(r'```json\s*', '', json_str)
+    json_str = re.sub(r'```\s*$', '', json_str)
+    
+    # 移除多余的空白字符
     json_str = json_str.strip()
-    
-    # 修复可能的换行符问题
-    json_str = json_str.replace('\n', '\\n').replace('\r', '\\r')
-    
-    # 修复可能的制表符问题
-    json_str = json_str.replace('\t', '\\t')
-    
-    # 修复多余的逗号（在数组或对象结束前）
-    json_str = json_str.replace(',}', '}').replace(',]', ']')
     
     return json_str
 
@@ -810,12 +640,9 @@ def clean_json_string(json_str: str) -> str:
 @router.post("/v1/exercise/generate", tags=["Exercise"], response_model=ExerciseResponse)
 async def generate_exercises(body: ExerciseBody, request: Request):
     """
-    根据课时知识库内容生成课后习题，支持两种生成模式
+    生成习题接口
     """
-    start_time = datetime.now()
-    
-    print(f"开始生成习题: userID={body.user_id}, courseId={body.course_id}, lessonNum={body.lesson_num}")
-    print(f"参数: questionCount={body.question_count}, difficulty={body.difficulty}, generationMode={body.generation_mode}")
+    start_time = time.time()
     
     # 检查并发锁
     if exercise_lock.locked():
@@ -826,111 +653,73 @@ async def generate_exercises(body: ExerciseBody, request: Request):
     
     try:
         with exercise_lock:
+            print(f"开始生成习题: {body}")
+            
+            # 获取课时内容
             if body.generation_mode == "whole":
-                # 整体内容生成模式
-                print("使用整体内容生成模式")
-                
-                # 1. 获取合并的课时内容
-                print("步骤1: 获取课时内容")
-                lesson_content = get_lesson_content_whole(
-                    body.user_id, 
-                    body.course_id, 
-                    body.lesson_num, 
-                    body.is_teacher
-                )
-                
-                if not lesson_content:
+                # 整体内容模式
+                content = get_lesson_content_whole(body.user_id, body.course_id, body.lesson_num, body.is_teacher)
+                if not content:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
-                        detail="无法获取课时内容，请确保课时已上传并处理完成"
+                        detail="未找到课时内容，请先上传相关文件"
                     )
                 
-                print(f"课时内容长度: {len(lesson_content)} 字符")
+                # 生成提示词
+                prompt = generate_exercise_prompt(content, body.question_count, body.difficulty)
                 
-                # 2. 生成提示词
-                print("步骤2: 生成提示词")
-                prompt = generate_exercise_prompt(
-                    lesson_content, 
-                    body.question_count, 
-                    body.difficulty
-                )
+                # 生成习题
+                response_text = await generate_exercises_with_rwkv(prompt, request, body.max_tokens, body.temperature)
                 
-                # 3. 使用RWKV生成习题
-                print("步骤3: 使用RWKV生成习题")
-                response_text = await generate_exercises_with_rwkv(
-                    prompt, 
-                    request, 
-                    body.max_tokens, 
-                    body.temperature
-                )
+                if not response_text:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="习题生成失败"
+                    )
                 
-                # 4. 返回结果
-                end_time = datetime.now()
-                generation_time = (end_time - start_time).total_seconds()
-                
-                response = ExerciseResponse(
-                    success=True,
-                    message=f"习题生成完成，共生成 {body.question_count} 道题目",
-                    data=response_text,
-                    total_count=body.question_count,
-                    generation_time=generation_time
-                )
-                print(f"习题生成完成，耗时: {generation_time:.2f}秒")
-                return response
+                # 解析习题
+                exercises = parse_exercises_from_response(response_text)
                 
             else:
-                # 文本块生成模式（默认）
-                print("使用文本块生成模式")
-                
-                # 1. 获取课时内容（文本块列表）
-                print("步骤1: 获取课时内容")
-                text_blocks = get_lesson_content(
-                    body.user_id, 
-                    body.course_id, 
-                    body.lesson_num, 
-                    body.is_teacher
-                )
-                
+                # 按文本块生成模式
+                text_blocks = get_lesson_content(body.user_id, body.course_id, body.lesson_num, body.is_teacher)
                 if not text_blocks:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
-                        detail="无法获取课时内容，请确保课时已上传并处理完成"
+                        detail="未找到课时内容，请先上传相关文件"
                     )
                 
-                print(f"获取到 {len(text_blocks)} 个文本块")
-                
-                # 2. 限制文本块数量，避免生成过多题目
-                max_blocks = min(body.question_count, len(text_blocks))
-                selected_blocks = text_blocks[:max_blocks]
-                
-                print(f"将使用前 {max_blocks} 个文本块生成习题")
-                
-                # 3. 为每个文本块生成一道习题
-                print("步骤2: 为每个文本块生成习题")
-                exercises = await generate_exercises_for_blocks(
-                    selected_blocks,
-                    request,
-                    body.max_tokens,
-                    body.temperature,
-                    body.difficulty
+                # 为每个文本块生成习题
+                exercise_responses = await generate_exercises_for_blocks(
+                    text_blocks, request, body.max_tokens, body.temperature, body.difficulty
                 )
                 
-                # 4. 合并所有习题
-                combined_exercises = "\n\n" + "="*50 + "\n\n".join(exercises)
-                
-                # 5. 返回结果
-                end_time = datetime.now()
-                generation_time = (end_time - start_time).total_seconds()
-                
-                response = ExerciseResponse(
-                    success=True,
-                    message=f"习题生成完成，共生成 {len(exercises)} 道题目",
-                    data=combined_exercises,
-                    total_count=len(exercises),
-                    generation_time=generation_time
+                # 解析所有习题
+                exercises = []
+                for i, response_text in enumerate(exercise_responses):
+                    if response_text:
+                        exercise = parse_single_exercise(response_text, i + 1)
+                        if exercise:
+                            exercises.append(exercise)
+            
+            # 保存习题到文件
+            if exercises:
+                save_result = save_exercises_to_file(
+                    body.user_id, body.course_id, body.lesson_num, exercises, body.is_teacher
                 )
-                print(f"习题生成完成，耗时: {generation_time:.2f}秒，生成 {len(exercises)} 道题目")
-                return response
+                
+                if not save_result.get("success"):
+                    print(f"保存习题文件失败: {save_result.get('error')}")
+            
+            generation_time = time.time() - start_time
+            
+            return ExerciseResponse(
+                success=True,
+                message=f"成功生成 {len(exercises)} 道习题",
+                data=response_text if body.generation_mode == "whole" else "\n\n".join(exercise_responses),
+                total_count=len(exercises),
+                generation_time=generation_time
+            )
             
     except HTTPException:
         raise
@@ -938,7 +727,6 @@ async def generate_exercises(body: ExerciseBody, request: Request):
         print(f"生成习题时出错: {e}")
         import traceback
         traceback.print_exc()
-        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"生成习题失败: {str(e)}"
@@ -948,54 +736,59 @@ async def generate_exercises(body: ExerciseBody, request: Request):
 @router.get("/v1/exercise/list/{user_id}/{course_id}/{lesson_num}", tags=["Exercise"])
 async def get_exercise_list(user_id: str, course_id: str, lesson_num: str, is_teacher: bool = False):
     """
-    获取指定课时的习题列表
+    获取习题列表
     """
     try:
         # 获取用户路径
         user_path = get_user_path(user_id, is_teacher)
         
         # 构建习题目录路径
-        lesson_path = os.path.join(user_path, course_id, lesson_num)
-        exercises_dir = os.path.join(lesson_path, "exercises")
+        exercise_dir = os.path.join(user_path, course_id, lesson_num, "exercise")
         
-        if not os.path.exists(exercises_dir):
+        if not os.path.exists(exercise_dir):
             return {
-                "success": True,
-                "data": [],
-                "total": 0,
-                "message": "该课时暂无习题"
+                "files": [],
+                "message": "习题目录不存在"
             }
         
-        # 读取所有习题文件
-        exercise_files = []
-        for filename in os.listdir(exercises_dir):
+        # 获取所有习题文件
+        files = []
+        for filename in os.listdir(exercise_dir):
             if filename.endswith('.json'):
-                file_path = os.path.join(exercises_dir, filename)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        exercise_files.append({
+                file_path = os.path.join(exercise_dir, filename)
+                if os.path.isfile(file_path):
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            exercise_data = json.load(f)
+                        
+                        file_size = os.path.getsize(file_path)
+                        created_time = exercise_data.get('created_time', '')
+                        total_count = exercise_data.get('total_count', 0)
+                        
+                        files.append({
                             "filename": filename,
-                            "file_path": file_path,
-                            "metadata": data.get("metadata", {}),
-                            "exercise_count": len(data.get("exercises", []))
+                            "size": file_size,
+                            "created_time": created_time,
+                            "total_count": total_count,
+                            "download_url": f"/v1/exercise/{user_id}/{course_id}/{lesson_num}/{filename}"
                         })
-                except Exception as e:
-                    print(f"读取习题文件 {filename} 时出错: {e}")
-                    continue
+                    except Exception as e:
+                        print(f"读取习题文件 {filename} 时出错: {e}")
+                        continue
         
-        # 按生成时间排序
-        exercise_files.sort(key=lambda x: x["metadata"].get("generated_at", ""), reverse=True)
+        # 按创建时间倒序排列
+        files.sort(key=lambda x: x['created_time'], reverse=True)
         
         return {
-            "success": True,
-            "data": exercise_files,
-            "total": len(exercise_files),
-            "message": f"找到 {len(exercise_files)} 个习题文件"
+            "files": files,
+            "total_files": len(files),
+            "course_id": course_id,
+            "lesson_num": lesson_num,
+            "user_id": user_id,
+            "is_teacher": is_teacher
         }
         
     except Exception as e:
-        print(f"获取习题列表时出错: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取习题列表失败: {str(e)}"
@@ -1005,61 +798,52 @@ async def get_exercise_list(user_id: str, course_id: str, lesson_num: str, is_te
 @router.get("/v1/exercise/{user_id}/{course_id}/{lesson_num}/{filename}", tags=["Exercise"])
 async def get_exercise_detail(user_id: str, course_id: str, lesson_num: str, filename: str, is_teacher: bool = False):
     """
-    获取指定习题文件的详细内容
+    获取习题详情
     """
     try:
         # 获取用户路径
         user_path = get_user_path(user_id, is_teacher)
         
         # 构建文件路径
-        lesson_path = os.path.join(user_path, course_id, lesson_num)
-        exercises_dir = os.path.join(lesson_path, "exercises")
-        file_path = os.path.join(exercises_dir, filename)
+        file_path = os.path.join(user_path, course_id, lesson_num, "exercise", filename)
         
         if not os.path.exists(file_path):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="习题文件不存在"
+                detail=f"习题文件不存在: {filename}"
             )
         
         # 读取习题文件
         with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+            exercise_data = json.load(f)
         
-        return {
-            "success": True,
-            "data": data,
-            "message": "获取习题详情成功"
-        }
+        return exercise_data
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"获取习题详情时出错: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取习题详情失败: {str(e)}"
+            detail=f"读取习题文件失败: {str(e)}"
         )
 
 
 @router.delete("/v1/exercise/{user_id}/{course_id}/{lesson_num}/{filename}", tags=["Exercise"])
 async def delete_exercise_file(user_id: str, course_id: str, lesson_num: str, filename: str, is_teacher: bool = False):
     """
-    删除指定的习题文件
+    删除习题文件
     """
     try:
         # 获取用户路径
         user_path = get_user_path(user_id, is_teacher)
         
         # 构建文件路径
-        lesson_path = os.path.join(user_path, course_id, lesson_num)
-        exercises_dir = os.path.join(lesson_path, "exercises")
-        file_path = os.path.join(exercises_dir, filename)
+        file_path = os.path.join(user_path, course_id, lesson_num, "exercise", filename)
         
         if not os.path.exists(file_path):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="习题文件不存在"
+                detail=f"习题文件不存在: {filename}"
             )
         
         # 删除文件
@@ -1067,13 +851,12 @@ async def delete_exercise_file(user_id: str, course_id: str, lesson_num: str, fi
         
         return {
             "success": True,
-            "message": "习题文件删除成功"
+            "message": f"习题文件 {filename} 已删除"
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"删除习题文件时出错: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"删除习题文件失败: {str(e)}"
@@ -1085,31 +868,8 @@ async def get_exercise_status():
     """
     获取习题生成服务状态
     """
-    try:
-        # 检查RWKV模型状态
-        model = global_var.get(global_var.Model)
-        model_status = "ready" if model is not None else "not_ready"
-        
-        return {
-            "success": True,
-            "data": {
-                "service": "exercise_generation",
-                "status": "running",
-                "model_status": model_status,
-                "timestamp": datetime.now().isoformat()
-            },
-            "message": "习题生成服务运行正常"
-        }
-        
-    except Exception as e:
-        print(f"获取服务状态时出错: {e}")
-        return {
-            "success": False,
-            "data": {
-                "service": "exercise_generation",
-                "status": "error",
-                "error": str(e),
-                "timestamp": datetime.now().isoformat()
-            },
-            "message": "习题生成服务异常"
-        }
+    return {
+        "status": "running",
+        "service": "exercise_generation",
+        "timestamp": datetime.now().isoformat()
+    }

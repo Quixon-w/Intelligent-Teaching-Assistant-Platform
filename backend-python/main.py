@@ -124,6 +124,28 @@ def read_root():
     return {"Hello": "World!"}
 
 
+@app.get("/v1/status", tags=["Root"])
+def get_system_status():
+    """
+    获取系统状态
+    """
+    return {
+        "status": "running",
+        "rag_service": "integrated",
+        "model_loaded": global_var.get(global_var.Model) is not None,
+        "version": "2.0.0",
+        "features": [
+            "enhanced_qa",
+            "enhanced_exercise", 
+            "enhanced_outline",
+            "context_management",
+            "hybrid_retrieval",
+            "reranking",
+            "prompt_templates"
+        ]
+    }
+
+
 def init():
     global_var.init()
     cmd_params = os.environ["RWKV_RUNNER_PARAMS"]

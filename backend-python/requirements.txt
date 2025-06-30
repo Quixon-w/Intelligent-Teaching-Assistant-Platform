@@ -18,6 +18,11 @@ faiss-cpu>=1.7.0
 tiktoken>=0.5.0
 tokenizers>=0.15.0
 
+# 向量数据库和嵌入模型
+chromadb>=0.4.0
+FlagEmbedding>=1.2.0
+transformers>=4.35.0
+
 # 文档处理
 PyMuPDF>=1.23.0  # fitz
 python-docx>=0.8.11
@@ -46,6 +51,10 @@ python-multipart>=0.0.6
 
 # 高性能数据结构
 cyac>=2.0.0
+
+# 缓存和性能优化
+redis>=4.5.0
+cachetools>=5.3.0
 
 # 开发工具
 setuptools>=70.0.0 
