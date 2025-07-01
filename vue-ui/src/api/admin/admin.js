@@ -13,3 +13,21 @@ export function getUsersList(pageNum,pageSize,username){
       return err;
     })
 }
+export function getDeletedUsers(){
+    return request.get('/api/user/listDeleted').then(res=>{
+      return res.data.data;
+    }).catch(err=>{
+      return err;
+    })
+}
+export function recoverUser(id){
+    return request.post('/api/user/recover',null,{
+      params:{
+        id:id
+      }
+    }).then(res=>{
+      return res;
+    }).catch(err=>{
+      return err;
+    })
+}

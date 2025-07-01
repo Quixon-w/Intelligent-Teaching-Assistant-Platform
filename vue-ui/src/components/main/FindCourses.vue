@@ -94,7 +94,7 @@ onMounted(()=>{
   display: flex;
   flex-wrap: wrap; /* 允许换行 */
   //justify-content: space-between; /* 子元素平均分布 */
-  align-items: center; /* 垂直居中 */
+  align-items: flex-start; /* 垂直居中 */
   gap: 2%; /* 每个子项之间的间距为 2% */
   width: 100%;
   height: 100%;

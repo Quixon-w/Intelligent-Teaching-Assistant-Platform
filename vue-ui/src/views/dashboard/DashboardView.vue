@@ -6,9 +6,13 @@ import CommonAside from '@/components/asides/AdminAside.vue'
 import TeacherAside from '@/components/asides/TeacherAside.vue'
 import { onExit } from '@/api/dashboard.js'
 import StudentAside from '@/components/asides/StudentAside.vue'
+import {ref, watch} from "vue";
+import PathNameMap from "@/utils/pathname.js";
 const router = useRouter();
 const route = useRoute();
 const role=sessionStorage.getItem('role');
+const currentWeb=ref(PathNameMap[route.name]);
+watch(() => router.currentRoute.value.path, (toPath) => {currentWeb.value=PathNameMap[toPath];},{immediate: true,deep: true});
 const handleCommand = (command) => {
   if (command === 'onExit') {
     onExit().then(res=>{
@@ -35,6 +39,7 @@ const handleCommand = (command) => {
     </el-aside>
     <el-container>
       <el-header class="header">
+        <el-text style="color: #B0C4DE;font-size: 30px">{{currentWeb}}</el-text>
         <div>
           <el-text style="color: #B0C4DE;font-size: 30px">{{role}}</el-text>
           <el-dropdown @command="handleCommand">
