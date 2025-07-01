@@ -35,7 +35,6 @@ const handleCommand = (command) => {
     </el-aside>
     <el-container>
       <el-header class="header">
-        <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="50" height="50"/>
         <div>
           <el-text style="color: #B0C4DE;font-size: 30px">{{role}}</el-text>
           <el-dropdown @command="handleCommand">

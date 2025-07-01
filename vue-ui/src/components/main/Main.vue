@@ -14,6 +14,8 @@
         </el-card>
         <el-card>
           <template #header>技术栈</template>
+          前端:Vue3 + Element Plus + TypeScript<br>
+          后端:SpringBoot + MyBatis + MySQL<br>
         </el-card>
       </el-tab-pane>
 
