@@ -55,12 +55,12 @@ const router = createRouter({
           children: [
             {
               path: 'class',
-              name: 'adminClass',
+              name: 'class',
               component: () => import('../views/role/admin/AdminClassView.vue'),
             },
             {
               path: 'users',
-              name: 'adminUsers',
+              name: 'users',
               component: () => import('../views/role/admin/AdminUsersView.vue'),
             },
           ],
@@ -87,17 +87,17 @@ const router = createRouter({
             },
             {
                 path: ':courseId/questions/:lessonId',
-                name: 'teacherQuestions',
+                name: 'courseId/questions/lessonId',
                 component: () => import('../views/role/teacher/TeacherQuestionsView.vue'),
             },
             {
               path: ':courseId/viewquestions/:lessonId',
-              name: 'teacherViewQuestions',
+              name: 'courseId/viewquestions/lessonId',
               component: () => import('../views/role/teacher/TeacherViewQuestionsView.vue'),
             },
             {
               path: 'questionodteacher',
-              name: 'questionsOfTeacher',
+              name: 'questionodteacher',
               component: () => import('../views/role/teacher/QuestionsOfTeacherView.vue'),
             }
           ]

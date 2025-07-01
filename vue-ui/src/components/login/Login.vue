@@ -44,6 +44,7 @@ const onLogin = () => {
         sessionStorage.setItem('token', res.data.data.userAccount);
         sessionStorage.setItem('role', UserRoleMap[res.data.data.userRole]);
         sessionStorage.setItem('userId',res.data.data.id);
+        sessionStorage.setItem('currentWeb','主页');
         router.push('/dashboard');
       })
       .catch(err => {

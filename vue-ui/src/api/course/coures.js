@@ -170,3 +170,11 @@ export function getCourseScore(courseId,studentId){
     return err;
   })
 }
+export function getHotCourses(){
+  return request.get('/api/enroll/list/hot',null).then(res=>{
+    console.log(res);
+    return res.data.data;
+  }).catch(err=>{
+      return err;
+  })
+}
