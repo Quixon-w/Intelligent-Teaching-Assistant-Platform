@@ -4,7 +4,7 @@
     position: relative;
 }
 .sidebar{
-    width: 10%;
+    width: 13%;
     background-color: #304156;
     height: 100%;
     position: fixed;
@@ -17,17 +17,17 @@
 .header{
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    width: 90%;
-    height: 7%;
-    margin-left: 10%;
+    justify-content: right;
+    width: 87%;
+    height: 9%;
+    margin-left: 13%;
     font-size: 0;
     background: #304156;
 }
 .main{
-    width: 90%;
-    height: 93%;
-    margin-left: 10%;
+    width: 87%;
+    height: 91%;
+    margin-left: 13%;
 }
 .menu{
     background-color: #304156;

@@ -33,3 +33,6 @@ export function downloadUrl(url){
     link.click()
     document.body.removeChild(link)
 }
+export function getPicture(){
+
+}
