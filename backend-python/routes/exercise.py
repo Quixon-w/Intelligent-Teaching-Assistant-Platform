@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
 import json
-import pickle
-import faiss
 from fastapi import APIRouter, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from typing import Union, Optional, List, Dict, Any
@@ -10,8 +8,11 @@ import asyncio
 from threading import Lock
 from datetime import datetime
 import random
+from docx import Document
+from docx.shared import Inches
 
 from utils.rwkv import *
+from utils.knowledge import load_vector_db, search_knowledge_db, ChromaDBManager
 import global_var
 from config.settings import get_settings
 
@@ -79,147 +80,80 @@ def get_user_path(user_id: str, is_teacher: bool) -> str:
     return os.path.join(str(base_dir), user_id)
 
 
-def extract_text_blocks_from_faiss_db(db_path: str) -> List[str]:
+def get_lesson_content_from_chromadb(user_id: str, course_id: str, lesson_num: str, is_teacher: bool) -> List[str]:
     """
-    从FAISS向量数据库中提取文本块列表
+    从ChromaDB知识库获取课时内容，返回文本块列表
     """
-    print(f"正在从FAISS数据库提取文本块: {db_path}")
-    
-    # 检查数据库文件是否存在
-    index_faiss_path = os.path.join(db_path, "index.faiss")
-    index_pkl_path = os.path.join(db_path, "index.pkl")
-    
-    if not os.path.exists(index_faiss_path) or not os.path.exists(index_pkl_path):
-        print(f"FAISS数据库文件不存在: {db_path}")
-        return None
+    print(f"正在从ChromaDB获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
     
     try:
-        # 读取FAISS索引
-        index = faiss.read_index(index_faiss_path)
-        print(f"FAISS索引信息: 向量数量={index.ntotal}, 维度={index.d}")
+        # 加载向量数据库
+        chroma_manager = load_vector_db(
+            userId=user_id,
+            isTeacher=is_teacher,
+            courseID=course_id,
+            lessonNum=lesson_num
+        )
         
-        # 读取元数据
-        with open(index_pkl_path, 'rb') as f:
-            metadata = pickle.load(f)
+        if not chroma_manager:
+            print("ChromaDB知识库不存在")
+            return None
         
-        print(f"元数据类型: {type(metadata)}")
+        # 生成collection名称
+        collection_name = f"kb_{user_id}_{course_id}_{lesson_num}"
         
-        # 提取文本块
-        text_blocks = []
-        
-        if isinstance(metadata, tuple) and len(metadata) >= 2:
-            docstore = metadata[0]
-            id_to_uuid = metadata[1]
+        # 获取collection中的所有文档
+        try:
+            collection = chroma_manager.client.get_collection(collection_name)
             
-            print(f"文档存储类型: {type(docstore)}")
-            print(f"ID映射: {id_to_uuid}")
+            # 获取所有文档（这里我们需要获取所有文档，所以使用一个通用的查询）
+            # 由于ChromaDB没有直接获取所有文档的API，我们使用一个技巧
+            # 先获取一个文档的embedding，然后用它来查询所有文档
+            results = collection.get(include=['documents'])
             
-            # 尝试提取文档存储中的内容
-            try:
-                # 检查文档存储的属性
-                if hasattr(docstore, '_dict'):
-                    print(f"文档存储中的文档数量: {len(docstore._dict)}")
-                    for doc_id, doc in docstore._dict.items():
-                        if hasattr(doc, 'page_content'):
-                            try:
-                                content = doc.page_content
-                                if isinstance(content, bytes):
-                                    content = content.decode('utf-8', errors='ignore')
-                                if content.strip():
-                                    text_blocks.append(content)
-                                    print(f"提取文档 {doc_id}: {content[:100]}...")
-                            except Exception as decode_error:
-                                print(f"跳过文档 {doc_id} (解码错误): {decode_error}")
-                                continue
-                        
-                        if hasattr(doc, 'metadata'):
-                            print(f"文档 {doc_id} 元数据: {doc.metadata}")
-                
-                elif hasattr(docstore, 'docstore'):
-                    print(f"文档存储中的文档数量: {len(docstore.docstore)}")
-                    for doc_id, doc in docstore.docstore.items():
-                        if hasattr(doc, 'page_content'):
-                            try:
-                                content = doc.page_content
-                                if isinstance(content, bytes):
-                                    content = content.decode('utf-8', errors='ignore')
-                                if content.strip():
-                                    text_blocks.append(content)
-                                    print(f"提取文档 {doc_id}: {content[:100]}...")
-                            except Exception as decode_error:
-                                print(f"跳过文档 {doc_id} (解码错误): {decode_error}")
-                                continue
-                        
-                        if hasattr(doc, 'metadata'):
-                            print(f"文档 {doc_id} 元数据: {doc.metadata}")
-                
-                else:
-                    # 尝试其他可能的属性
-                    for attr in dir(docstore):
-                        if not attr.startswith('_') and not callable(getattr(docstore, attr)):
-                            try:
-                                value = getattr(docstore, attr)
-                                if isinstance(value, dict) and len(value) > 0:
-                                    print(f"找到文档存储属性: {attr}")
-                                    print(f"文档数量: {len(value)}")
-                                    for doc_id, doc in value.items():
-                                        if hasattr(doc, 'page_content'):
-                                            try:
-                                                content = doc.page_content
-                                                if isinstance(content, bytes):
-                                                    content = content.decode('utf-8', errors='ignore')
-                                                if content.strip():
-                                                    text_blocks.append(content)
-                                                    print(f"提取文档 {doc_id}: {content[:100]}...")
-                                            except Exception as decode_error:
-                                                print(f"跳过文档 {doc_id} (解码错误): {decode_error}")
-                                                continue
-                                        
-                                        if hasattr(doc, 'metadata'):
-                                            print(f"文档 {doc_id} 元数据: {doc.metadata}")
-                                    break
-                            except:
-                                continue
-                                
-            except Exception as e:
-                print(f"提取文档内容时出错: {e}")
+            if results and results['documents']:
+                text_blocks = results['documents']
+                print(f"成功从ChromaDB获取 {len(text_blocks)} 个文本块")
+                return text_blocks
+            else:
+                print("ChromaDB中没有找到文档")
                 return None
-        
-        if text_blocks:
-            print(f"成功提取 {len(text_blocks)} 个文本块")
-            return text_blocks
-        else:
-            print("未找到可提取的文本内容")
+                
+        except Exception as e:
+            print(f"从ChromaDB获取文档失败: {e}")
             return None
             
     except Exception as e:
-        print(f"从FAISS数据库提取文本时出错: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"加载ChromaDB知识库失败: {e}")
         return None
 
 
-def get_lesson_content(user_id: str, course_id: str, lesson_num: str, is_teacher: bool):
+def get_lesson_content_whole_from_chromadb(user_id: str, course_id: str, lesson_num: str, is_teacher: bool) -> str:
     """
-    获取课时内容，优先从FAISS向量数据库获取，如果失败则从文件获取
-    返回文本块列表而不是合并的文本
+    从ChromaDB知识库获取课时内容，返回合并的文本内容
     """
-    print(f"正在获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
+    print(f"正在从ChromaDB获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
+    
+    text_blocks = get_lesson_content_from_chromadb(user_id, course_id, lesson_num, is_teacher)
+    
+    if text_blocks:
+        # 合并文本块
+        combined_content = "\n\n".join(text_blocks)
+        print(f"成功从ChromaDB获取课时内容，总长度: {len(combined_content)} 字符")
+        return combined_content
+    
+    print("无法从ChromaDB获取课时内容")
+    return None
+
+
+def get_lesson_content_fallback(user_id: str, course_id: str, lesson_num: str, is_teacher: bool) -> List[str]:
+    """
+    备用方案：从文件系统获取课时内容
+    """
+    print(f"使用备用方案从文件系统获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
     
     # 获取用户路径
     user_path = get_user_path(user_id, is_teacher)
-    
-    # 首先尝试从FAISS向量数据库获取内容
-    vector_db_path = os.path.join(user_path, course_id, lesson_num, "vector_kb")
-    print(f"尝试从向量数据库获取课时内容: {vector_db_path}")
-    
-    text_blocks = extract_text_blocks_from_faiss_db(vector_db_path)
-    if text_blocks:
-        print("成功从向量数据库获取课时内容")
-        return text_blocks
-    
-    # 如果向量数据库获取失败，回退到文件读取方式
-    print("向量数据库获取失败，回退到文件读取方式")
     
     # 构建文件路径
     lesson_path = os.path.join(user_path, course_id, lesson_num)
@@ -230,52 +164,54 @@ def get_lesson_content(user_id: str, course_id: str, lesson_num: str, is_teacher
     # 读取课时文件夹中的所有文件
     text_blocks = read_files_as_blocks(lesson_path)
     if text_blocks:
-        print("成功从文件获取课时内容")
+        print("成功从文件系统获取课时内容")
         return text_blocks
     
-    print("无法获取课时内容")
+    print("无法从文件系统获取课时内容")
     return None
+
+
+def get_lesson_content_whole_fallback(user_id: str, course_id: str, lesson_num: str, is_teacher: bool) -> str:
+    """
+    备用方案：从文件系统获取课时内容，返回合并的文本
+    """
+    text_blocks = get_lesson_content_fallback(user_id, course_id, lesson_num, is_teacher)
+    
+    if text_blocks:
+        # 合并文本块
+        combined_content = "\n\n".join(text_blocks)
+        print(f"成功从文件系统获取课时内容，总长度: {len(combined_content)} 字符")
+        return combined_content
+    
+    return None
+
+
+def get_lesson_content(user_id: str, course_id: str, lesson_num: str, is_teacher: bool) -> List[str]:
+    """
+    获取课时内容，优先从ChromaDB获取，失败则从文件系统获取
+    返回文本块列表
+    """
+    # 首先尝试从ChromaDB获取
+    text_blocks = get_lesson_content_from_chromadb(user_id, course_id, lesson_num, is_teacher)
+    if text_blocks:
+        return text_blocks
+    
+    # 如果ChromaDB获取失败，使用备用方案
+    return get_lesson_content_fallback(user_id, course_id, lesson_num, is_teacher)
 
 
 def get_lesson_content_whole(user_id: str, course_id: str, lesson_num: str, is_teacher: bool) -> str:
     """
-    获取课时内容，返回合并的文本内容
+    获取课时内容，优先从ChromaDB获取，失败则从文件系统获取
+    返回合并的文本内容
     """
-    print(f"正在获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
-    
-    # 获取用户路径
-    user_path = get_user_path(user_id, is_teacher)
-    
-    # 首先尝试从FAISS向量数据库获取内容
-    vector_db_path = os.path.join(user_path, course_id, lesson_num, "vector_kb")
-    print(f"尝试从向量数据库获取课时内容: {vector_db_path}")
-    
-    text_blocks = extract_text_blocks_from_faiss_db(vector_db_path)
-    if text_blocks:
-        print("成功从向量数据库获取课时内容")
-        # 合并文本块
-        combined_content = "\n\n".join(text_blocks)
+    # 首先尝试从ChromaDB获取
+    combined_content = get_lesson_content_whole_from_chromadb(user_id, course_id, lesson_num, is_teacher)
+    if combined_content:
         return combined_content
     
-    # 如果向量数据库获取失败，回退到文件读取方式
-    print("向量数据库获取失败，回退到文件读取方式")
-    
-    # 构建文件路径
-    lesson_path = os.path.join(user_path, course_id, lesson_num)
-    if not os.path.exists(lesson_path):
-        print(f"课时路径不存在: {lesson_path}")
-        return None
-    
-    # 读取课时文件夹中的所有文件
-    text_blocks = read_files_as_blocks(lesson_path)
-    if text_blocks:
-        print("成功从文件获取课时内容")
-        # 合并文本块
-        combined_content = "\n\n".join(text_blocks)
-        return combined_content
-    
-    print("无法获取课时内容")
-    return None
+    # 如果ChromaDB获取失败，使用备用方案
+    return get_lesson_content_whole_fallback(user_id, course_id, lesson_num, is_teacher)
 
 
 def read_files_as_blocks(folder_path: str) -> List[str]:
@@ -458,7 +394,7 @@ def save_exercises_to_file(user_id: str, course_id: str, lesson_num: str, exerci
     # 生成文件名
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"exercises_{timestamp}.json"
-    file_path = os.path.join(exercises_dir, filename)
+    file_path = os.path.join(lesson_path, filename)
     
     try:
         # 准备保存的数据
@@ -496,6 +432,85 @@ def save_exercises_to_file(user_id: str, course_id: str, lesson_num: str, exerci
         }
 
 
+def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exercise_content: str, is_teacher: bool) -> dict:
+    """
+    将生成的习题保存为docx文件
+    """
+    print(f"正在保存习题到docx文件: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}")
+    
+    try:
+        # 获取用户路径
+        user_path = get_user_path(user_id, is_teacher)
+        
+        # 构建保存路径
+        lesson_path = os.path.join(user_path, course_id, lesson_num)
+        
+        # 确保目录存在
+        os.makedirs(lesson_path, exist_ok=True)
+        
+        # 生成文件名：课程号_课时号.docx
+        filename = f"{course_id}_{lesson_num}.docx"
+        file_path = os.path.join(lesson_path, filename)
+        
+        # 创建Word文档
+        doc = Document()
+        
+        # 添加标题
+        title = doc.add_heading(f'课程{course_id} 课时{lesson_num} 习题', 0)
+        title.alignment = 1  # 居中对齐
+        
+        # 添加生成时间
+        time_paragraph = doc.add_paragraph(f'生成时间：{datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}')
+        time_paragraph.alignment = 1  # 居中对齐
+        
+        # 添加分隔线
+        doc.add_paragraph('=' * 50)
+        
+        # 将习题内容按行分割并添加到文档
+        lines = exercise_content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line:
+                # 检查是否是题目标题
+                if line.startswith('题目'):
+                    doc.add_heading(line, level=1)
+                elif line.startswith('题干：'):
+                    doc.add_paragraph(line, style='Heading 2')
+                elif line.startswith(('A.', 'B.', 'C.', 'D.')):
+                    doc.add_paragraph(line)
+                elif line.startswith('正确答案：'):
+                    p = doc.add_paragraph(line)
+                    p.runs[0].bold = True  # 加粗
+                elif line.startswith('解析：'):
+                    p = doc.add_paragraph(line)
+                    p.runs[0].bold = True  # 加粗
+                elif line.startswith('所属知识点：'):
+                    p = doc.add_paragraph(line)
+                    p.runs[0].bold = True  # 加粗
+                else:
+                    doc.add_paragraph(line)
+        
+        # 保存文档
+        doc.save(file_path)
+        
+        print(f"习题已保存到docx文件: {file_path}")
+        
+        return {
+            "success": True,
+            "file_path": file_path,
+            "filename": filename,
+            "message": f"习题已保存为 {filename}"
+        }
+        
+    except Exception as e:
+        print(f"保存docx文件时出错: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": f"保存docx文件失败: {str(e)}"
+        }
+
+
 async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens: int, temperature: float):
     """
     使用RWKV模型生成习题
@@ -512,6 +527,10 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
         model.temperature = temperature
         model.top_p = 0.9
         
+        # 重要：临时增加max_tokens_per_generation以支持更长的生成
+        original_max_tokens = model.max_tokens_per_generation
+        model.max_tokens_per_generation = max_tokens
+        
         # 生成回答内容
         answer_content = ""
         token_count = 0
@@ -520,6 +539,8 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
         print(f"提示词长度: {len(prompt)} 字符")
         print(f"最大token数: {max_tokens}")
         print(f"温度参数: {temperature}")
+        print(f"模型原始max_tokens_per_generation: {original_max_tokens}")
+        print(f"临时设置为: {model.max_tokens_per_generation}")
         
         # 移除所有停止条件，让模型完整生成
         stop_sequences = []
@@ -543,6 +564,9 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
                 print(f"达到最大token数: {max_tokens}")
                 break
         
+        # 恢复原始设置
+        model.max_tokens_per_generation = original_max_tokens
+        
         print(f"习题生成完成，生成长度: {len(answer_content)} 字符")
         print(f"实际生成token数: {token_count}")
         print(f"内容预览: {answer_content[:200]}...")
@@ -558,6 +582,13 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
         
     except Exception as e:
         print(f"RWKV生成习题时出错: {e}")
+        # 确保在出错时也恢复原始设置
+        try:
+            model = global_var.get(global_var.Model)
+            if model:
+                model.max_tokens_per_generation = original_max_tokens
+        except:
+            pass
         raise e
 
 
@@ -649,6 +680,10 @@ async def generate_with_rwkv_retry(prompt: str, request: Request, max_tokens: in
             model.temperature = generation_config.get("temperature", 0.7)
             model.top_p = generation_config.get("top_p", 0.9)
             
+            # 重要：临时增加max_tokens_per_generation以支持更长的生成
+            original_max_tokens = model.max_tokens_per_generation
+            model.max_tokens_per_generation = max_tokens
+            
             # 生成回答内容
             answer_content = ""
             token_count = 0
@@ -669,6 +704,9 @@ async def generate_with_rwkv_retry(prompt: str, request: Request, max_tokens: in
                 if token_count >= max_tokens:
                     print(f"达到最大token数: {max_tokens}")
                     break
+            
+            # 恢复原始设置
+            model.max_tokens_per_generation = original_max_tokens
             
             # 尝试解析JSON
             try:
@@ -864,7 +902,22 @@ async def generate_exercises(body: ExerciseBody, request: Request):
                     body.temperature
                 )
                 
-                # 4. 返回结果
+                # 4. 保存习题到docx文件
+                print("步骤4: 保存习题到docx文件")
+                save_result = save_exercises_to_docx(
+                    body.user_id,
+                    body.course_id,
+                    body.lesson_num,
+                    response_text,
+                    body.is_teacher
+                )
+                
+                if save_result["success"]:
+                    print(f"✅ {save_result['message']}")
+                else:
+                    print(f"⚠️ 保存docx文件失败: {save_result['error']}")
+                
+                # 5. 返回结果
                 end_time = datetime.now()
                 generation_time = (end_time - start_time).total_seconds()
                 
@@ -918,7 +971,22 @@ async def generate_exercises(body: ExerciseBody, request: Request):
                 # 4. 合并所有习题
                 combined_exercises = "\n\n" + "="*50 + "\n\n".join(exercises)
                 
-                # 5. 返回结果
+                # 5. 保存习题到docx文件
+                print("步骤3: 保存习题到docx文件")
+                save_result = save_exercises_to_docx(
+                    body.user_id,
+                    body.course_id,
+                    body.lesson_num,
+                    combined_exercises,
+                    body.is_teacher
+                )
+                
+                if save_result["success"]:
+                    print(f"✅ {save_result['message']}")
+                else:
+                    print(f"⚠️ 保存docx文件失败: {save_result['error']}")
+                
+                # 6. 返回结果
                 end_time = datetime.now()
                 generation_time = (end_time - start_time).total_seconds()
                 

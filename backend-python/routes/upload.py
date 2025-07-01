@@ -19,7 +19,7 @@ async def upload_file(
     is_ask: bool = Form(False)
 ):
     """
-    上传文件并保存至服务器指定的路径
+    上传文件并保存至服务器指定的路径，同时构建知识库
     :param file: 上传的文件
     :param session_id: 会话 ID，用于会话标识
     :param user_id: 用户ID，用于确定存储路径
@@ -29,7 +29,7 @@ async def upload_file(
     :param file_encoding: 可选，指定文件编码，默认 utf-8
     :param is_resource: 是否为学习资料
     :param is_ask: 是否为自己上传的可提问文件
-    :return: 返回上传结果消息
+    :return: 返回上传结果消息和知识库构建状态
     """
     # 检查文件类型，只允许pdf、docx、md和txt
     allowed_extensions = ['.pdf', '.docx', '.md', '.txt']
@@ -94,11 +94,35 @@ async def upload_file(
             # 更新知识库
             knowledge_status = "知识库更新成功"
             knowledge_error = None
+            chroma_manager = None
+            collection_name = None
+            
             try:
-                update_knowledge_db(user_id, is_teacher, course_id, lesson_num, is_resource, is_ask)
+                # 调用重构后的知识库更新函数
+                chroma_manager = update_knowledge_db(
+                    userId=user_id, 
+                    isTeacher=is_teacher, 
+                    courseID=course_id, 
+                    lessonNum=lesson_num, 
+                    isResource=is_resource, 
+                    isAsk=is_ask
+                )
+                
+                if chroma_manager:
+                    # 生成collection名称
+                    collection_name = f"kb_{user_id}_{course_id or 'student'}_{lesson_num or 'default'}"
+                    if is_ask:
+                        collection_name += "_ask"
+                    
+                    knowledge_status = f"知识库更新成功，Collection: {collection_name}"
+                else:
+                    knowledge_status = "知识库更新失败：没有找到可处理的文档"
+                    knowledge_error = "文档加载或处理失败"
+                    
             except Exception as e:
                 knowledge_status = "知识库更新失败"
                 knowledge_error = str(e)
+                print(f"知识库更新错误: {e}")
             
             # 生成下载URL（仅对学习资料生成）
             download_url = None
@@ -116,7 +140,10 @@ async def upload_file(
                 "is_ask": is_ask,
                 "file_path": file_location,
                 "download_url": download_url,
-                "knowledge_status": knowledge_status
+                "knowledge_status": knowledge_status,
+                "collection_name": collection_name,
+                "chromadb_host": settings.CHROMADB_HOST,
+                "chromadb_port": settings.CHROMADB_PORT
             }
             
             # 如果知识库更新失败，添加错误信息

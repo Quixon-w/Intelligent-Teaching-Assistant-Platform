@@ -8,7 +8,7 @@ class Settings:
     
     def __init__(self):
         # 基础路径配置
-        self.BASE_PATH = os.environ.get('ITAP_BASE_PATH', '/root/autodl-tmp')
+        self.BASE_PATH = os.environ.get('ITAP_BASE_PATH', '/data-extend/wangqianxu/wqxspace/ITAP')
         
         # 服务器配置
         self.HOST = os.environ.get('ITAP_HOST', '127.0.0.1')
@@ -18,6 +18,14 @@ class Settings:
         self.DEFAULT_MODEL = os.environ.get('ITAP_DEFAULT_MODEL', 'RWKV-x060-World-7B-v3-20241112-ctx4096.pth')
         self.DEFAULT_STRATEGY = os.environ.get('ITAP_DEFAULT_STRATEGY', 'cuda fp16')
         self.EMBEDDING_MODEL = os.environ.get('ITAP_EMBEDDING_MODEL', 'm3e-base')
+        
+        # BGEM3和Reranker模型配置
+        self.BGEM3_MODEL = os.environ.get('ITAP_BGEM3_MODEL', 'bge-m3')
+        self.BGE_RERANKER_MODEL = os.environ.get('ITAP_BGE_RERANKER_MODEL', 'bge-reranker-v2-m3')
+        
+        # ChromaDB配置
+        self.CHROMADB_HOST = os.environ.get('ITAP_CHROMADB_HOST', 'localhost')
+        self.CHROMADB_PORT = int(os.environ.get('ITAP_CHROMADB_PORT', '8000'))
         
         # 数据库配置
         self.DATABASE_CONFIG = {
@@ -59,6 +67,10 @@ class Settings:
         self.MODEL_DIR = base_path / "model"
         self.DEFAULT_MODEL_PATH = self.MODEL_DIR / self.DEFAULT_MODEL
         self.EMBEDDING_MODEL_PATH = self.MODEL_DIR / self.EMBEDDING_MODEL
+        
+        # BGEM3和Reranker模型路径
+        self.BGEM3_MODEL_PATH = self.MODEL_DIR / self.BGEM3_MODEL
+        self.BGE_RERANKER_MODEL_PATH = self.MODEL_DIR / self.BGE_RERANKER_MODEL
         
         # 知识库路径
         self.KNOWLEDGE_BASE_DIR = base_path / "base-knowledge"
@@ -121,6 +133,10 @@ class Settings:
             "DEFAULT_MODEL": self.DEFAULT_MODEL,
             "DEFAULT_STRATEGY": self.DEFAULT_STRATEGY,
             "EMBEDDING_MODEL": self.EMBEDDING_MODEL,
+            "BGEM3_MODEL": self.BGEM3_MODEL,
+            "BGE_RERANKER_MODEL": self.BGE_RERANKER_MODEL,
+            "CHROMADB_HOST": self.CHROMADB_HOST,
+            "CHROMADB_PORT": self.CHROMADB_PORT,
             "DATABASE_CONFIG": self.DATABASE_CONFIG,
             "MAX_FILE_SIZE": self.MAX_FILE_SIZE,
             "ALLOWED_EXTENSIONS": self.ALLOWED_EXTENSIONS,
@@ -137,7 +153,9 @@ class Settings:
             "STUDENTS_DIR": str(self.STUDENTS_DIR),
             "LOGS_DIR": str(self.LOGS_DIR),
             "TEMP_DIR": str(self.TEMP_DIR),
-            "UPLOADS_DIR": str(self.UPLOADS_DIR)
+            "UPLOADS_DIR": str(self.UPLOADS_DIR),
+            "BGEM3_MODEL_PATH": str(self.BGEM3_MODEL_PATH),
+            "BGE_RERANKER_MODEL_PATH": str(self.BGE_RERANKER_MODEL_PATH)
         }
 
 

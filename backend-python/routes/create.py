@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 import os
 import json
-import pickle
-import faiss
 from fastapi import APIRouter, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from typing import Union, Optional, List, Dict, Any
 import asyncio
 from threading import Lock
 from datetime import datetime
+from docx import Document
+from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from utils.rwkv import *
+from utils.knowledge import load_vector_db, search_knowledge_db, ChromaDBManager
 import global_var
 from config.settings import get_settings
 
@@ -53,151 +55,71 @@ def get_user_path(user_id: str, is_teacher: bool) -> str:
     return os.path.join(str(base_dir), user_id)
 
 
-def extract_text_from_faiss_db(db_path: str) -> str:
+def get_lesson_content_from_chromadb(user_id: str, course_id: str, lesson_num: str, is_teacher: bool) -> str:
     """
-    从FAISS向量数据库中提取文本内容
+    从ChromaDB知识库获取课时内容，返回合并的文本内容
     """
-    print(f"正在从FAISS数据库提取文本: {db_path}")
-    
-    # 检查数据库文件是否存在
-    index_faiss_path = os.path.join(db_path, "index.faiss")
-    index_pkl_path = os.path.join(db_path, "index.pkl")
-    
-    if not os.path.exists(index_faiss_path) or not os.path.exists(index_pkl_path):
-        print(f"FAISS数据库文件不存在: {db_path}")
-        return None
+    print(f"正在从ChromaDB获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
     
     try:
-        # 读取FAISS索引
-        index = faiss.read_index(index_faiss_path)
-        print(f"FAISS索引信息: 向量数量={index.ntotal}, 维度={index.d}")
+        # 加载向量数据库
+        chroma_manager = load_vector_db(
+            userId=user_id,
+            isTeacher=is_teacher,
+            courseID=course_id,
+            lessonNum=lesson_num
+        )
         
-        # 读取元数据
-        with open(index_pkl_path, 'rb') as f:
-            metadata = pickle.load(f)
+        if not chroma_manager:
+            print("ChromaDB知识库不存在")
+            return None
         
-        print(f"元数据类型: {type(metadata)}")
+        # 生成collection名称
+        collection_name = f"kb_{user_id}_{course_id}_{lesson_num}"
         
-        # 提取文本内容
-        extracted_texts = []
-        
-        if isinstance(metadata, tuple) and len(metadata) >= 2:
-            docstore = metadata[0]
-            id_to_uuid = metadata[1]
+        # 获取collection中的所有文档
+        try:
+            collection = chroma_manager.client.get_collection(collection_name)
             
-            print(f"文档存储类型: {type(docstore)}")
-            print(f"ID映射: {id_to_uuid}")
+            # 获取所有文档
+            results = collection.get(include=['documents'])
             
-            # 尝试提取文档存储中的内容
-            try:
-                # 检查文档存储的属性
-                if hasattr(docstore, '_dict'):
-                    print(f"文档存储中的文档数量: {len(docstore._dict)}")
-                    for doc_id, doc in docstore._dict.items():
-                        if hasattr(doc, 'page_content'):
-                            # UTF-8解码处理标记注释
-                            # 如果遇到utf-8无法解码的情况，请直接跳过当前字节
-                            try:
-                                content = doc.page_content
-                                if isinstance(content, bytes):
-                                    content = content.decode('utf-8', errors='ignore')
-                                extracted_texts.append(content)
-                                print(f"提取文档 {doc_id}: {content[:100]}...")
-                            except Exception as decode_error:
-                                print(f"跳过文档 {doc_id} (解码错误): {decode_error}")
-                                continue
-                        
-                        if hasattr(doc, 'metadata'):
-                            print(f"文档 {doc_id} 元数据: {doc.metadata}")
-                
-                elif hasattr(docstore, 'docstore'):
-                    print(f"文档存储中的文档数量: {len(docstore.docstore)}")
-                    for doc_id, doc in docstore.docstore.items():
-                        if hasattr(doc, 'page_content'):
-                            try:
-                                content = doc.page_content
-                                if isinstance(content, bytes):
-                                    content = content.decode('utf-8', errors='ignore')
-                                extracted_texts.append(content)
-                                print(f"提取文档 {doc_id}: {content[:100]}...")
-                            except Exception as decode_error:
-                                print(f"跳过文档 {doc_id} (解码错误): {decode_error}")
-                                continue
-                        
-                        if hasattr(doc, 'metadata'):
-                            print(f"文档 {doc_id} 元数据: {doc.metadata}")
-                
-                else:
-                    # 尝试其他可能的属性
-                    for attr in dir(docstore):
-                        if not attr.startswith('_') and not callable(getattr(docstore, attr)):
-                            try:
-                                value = getattr(docstore, attr)
-                                if isinstance(value, dict) and len(value) > 0:
-                                    print(f"找到文档存储属性: {attr}")
-                                    print(f"文档数量: {len(value)}")
-                                    for doc_id, doc in value.items():
-                                        if hasattr(doc, 'page_content'):
-                                            try:
-                                                content = doc.page_content
-                                                if isinstance(content, bytes):
-                                                    content = content.decode('utf-8', errors='ignore')
-                                                extracted_texts.append(content)
-                                                print(f"提取文档 {doc_id}: {content[:100]}...")
-                                            except Exception as decode_error:
-                                                print(f"跳过文档 {doc_id} (解码错误): {decode_error}")
-                                                continue
-                                        
-                                        if hasattr(doc, 'metadata'):
-                                            print(f"文档 {doc_id} 元数据: {doc.metadata}")
-                                    break
-                            except:
-                                continue
-                                
-            except Exception as e:
-                print(f"提取文档内容时出错: {e}")
+            if results and results['documents']:
+                text_blocks = results['documents']
+                # 合并文本块
+                combined_content = "\n\n".join(text_blocks)
+                print(f"成功从ChromaDB获取课时内容，总长度: {len(combined_content)} 字符")
+                return combined_content
+            else:
+                print("ChromaDB中没有找到文档")
                 return None
-        
-        if extracted_texts:
-            combined_text = "\n\n".join(extracted_texts)
-            print(f"成功提取文本内容，总长度: {len(combined_text)} 字符")
-            print("=" * 50)
-            print("提取的文本内容:")
-            print("=" * 50)
-            print(combined_text[:500] + "..." if len(combined_text) > 500 else combined_text)
-            print("=" * 50)
-            return combined_text
-        else:
-            print("未找到可提取的文本内容")
+                
+        except Exception as e:
+            print(f"从ChromaDB获取文档失败: {e}")
             return None
             
     except Exception as e:
-        print(f"从FAISS数据库提取文本时出错: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"加载ChromaDB知识库失败: {e}")
         return None
 
 
 def get_file_content(user_id: str, course_id: str, lesson_num: str, is_teacher: bool):
     """
-    获取课时内容，优先从FAISS向量数据库获取，如果失败则从文件获取
+    获取课时内容，优先从ChromaDB知识库获取，如果失败则从文件获取
     """
     print(f"正在获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
     
-    # 获取用户路径
-    user_path = get_user_path(user_id, is_teacher)
-    
-    # 首先尝试从FAISS向量数据库获取内容
-    vector_db_path = os.path.join(user_path, course_id, lesson_num, "vector_kb")
-    print(f"尝试从向量数据库获取课时内容: {vector_db_path}")
-    
-    content = extract_text_from_faiss_db(vector_db_path)
+    # 首先尝试从ChromaDB知识库获取内容
+    content = get_lesson_content_from_chromadb(user_id, course_id, lesson_num, is_teacher)
     if content:
-        print("成功从向量数据库获取课时内容")
+        print("成功从ChromaDB知识库获取课时内容")
         return content
     
-    # 如果向量数据库获取失败，回退到文件读取方式
-    print("向量数据库获取失败，回退到文件读取方式")
+    # 如果ChromaDB获取失败，回退到文件读取方式
+    print("ChromaDB知识库获取失败，回退到文件读取方式")
+    
+    # 获取用户路径
+    user_path = get_user_path(user_id, is_teacher)
     
     # 搜索特定课时的内容
     lesson_folder = os.path.join(user_path, course_id, lesson_num)
@@ -301,69 +223,44 @@ def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_
         filename = f"outline_{timestamp}.docx"
         file_path = os.path.join(outline_dir, filename)
         
-        # 尝试生成DOCX文件
-        docx_success = False
-        try:
-            from docx import Document
-            from docx.shared import Inches
-            from docx.enum.text import WD_ALIGN_PARAGRAPH
-            
-            # 创建DOCX文档
-            doc = Document()
-            
-            # 添加标题
-            title = f"教学大纲 - {course_id} - {lesson_num}"
-            title_paragraph = doc.add_paragraph()
-            title_run = title_paragraph.add_run(title)
-            title_run.font.size = Inches(0.2)  # 设置字体大小
-            title_run.font.bold = True  # 设置粗体
-            title_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER  # 居中对齐
-            
-            # 添加空行
-            doc.add_paragraph()
-            
-            # 添加大纲内容
-            lines = outline_content.split('\n')
-            for line in lines:
-                line = line.strip()
-                if line:
-                    # 处理标题行（以数字开头的行）
-                    if line[0].isdigit() and '.' in line[:3]:
-                        # 标题行
-                        heading_paragraph = doc.add_paragraph()
-                        heading_run = heading_paragraph.add_run(line)
-                        heading_run.font.size = Inches(0.14)  # 标题字体大小
-                        heading_run.font.bold = True  # 标题粗体
-                    else:
-                        # 普通内容行
-                        content_paragraph = doc.add_paragraph()
-                        content_run = content_paragraph.add_run(line)
-                        content_run.font.size = Inches(0.12)  # 正文字体大小
-                else:
-                    # 空行
-                    doc.add_paragraph()
-            
-            # 保存DOCX文件
-            doc.save(file_path)
-            print(f"大纲DOCX已保存到: {file_path}")
-            docx_success = True
-            
-        except ImportError:
-            # 如果没有安装python-docx，使用简单的文本文件作为备用
-            print("python-docx未安装，使用文本文件作为备用")
-            docx_success = False
-            
-        except Exception as e:
-            print(f"生成DOCX失败: {e}，使用文本文件作为备用")
-            docx_success = False
+        # 创建DOCX文档
+        doc = Document()
         
-        # 如果DOCX生成失败，使用文本文件
-        if not docx_success:
-            filename = f"outline_{timestamp}.txt"
-            file_path = os.path.join(outline_dir, filename)
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(outline_content)
-            print(f"大纲文本文件已保存到: {file_path}")
+        # 添加标题
+        title = f"教学大纲 - {course_id} - {lesson_num}"
+        title_paragraph = doc.add_paragraph()
+        title_run = title_paragraph.add_run(title)
+        title_run.font.size = Inches(0.2)  # 设置字体大小
+        title_run.font.bold = True  # 设置粗体
+        title_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER  # 居中对齐
+        
+        # 添加空行
+        doc.add_paragraph()
+        
+        # 添加大纲内容
+        lines = outline_content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line:
+                # 处理标题行（以数字开头的行）
+                if line[0].isdigit() and '.' in line[:3]:
+                    # 标题行
+                    heading_paragraph = doc.add_paragraph()
+                    heading_run = heading_paragraph.add_run(line)
+                    heading_run.font.size = Inches(0.14)  # 标题字体大小
+                    heading_run.font.bold = True  # 标题粗体
+                else:
+                    # 普通内容行
+                    content_paragraph = doc.add_paragraph()
+                    content_run = content_paragraph.add_run(line)
+                    content_run.font.size = Inches(0.12)  # 正文字体大小
+            else:
+                # 空行
+                doc.add_paragraph()
+        
+        # 保存DOCX文件
+        doc.save(file_path)
+        print(f"大纲DOCX已保存到: {file_path}")
         
         return {
             "success": True,
@@ -384,51 +281,67 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
     """
     使用RWKV模型生成大纲
     """
-    model: TextRWKV = global_var.get(global_var.Model)
-    if model is None:
-        raise Exception("模型未加载")
+    print("开始使用RWKV模型生成大纲...")
     
     try:
-        # 设置生成参数
-        generation_config = {
-            "max_tokens": 3000,  # 增加最大token数
-            "temperature": 0.7,
-            "top_p": 0.9,
-            "stop": ["###", "---", "问题", "题目", "结束", "完毕"]  # 移除\n\n，避免过早停止
-        }
+        # 获取RWKV模型实例
+        model = global_var.get(global_var.Model)
+        if model is None:
+            raise Exception("RWKV模型未初始化")
         
         # 设置生成参数
-        model.max_tokens_per_generation = generation_config["max_tokens"]
+        model.temperature = 0.7
+        model.top_p = 0.9
+        
+        # 重要：临时增加max_tokens_per_generation以支持更长的生成
+        original_max_tokens = model.max_tokens_per_generation
+        max_tokens = 3000  # 设置最大token数
+        model.max_tokens_per_generation = max_tokens
         
         # 生成大纲内容
         outline_content = ""
         token_count = 0
-        max_tokens = generation_config["max_tokens"]
         min_words = max(300, max_words * 0.3)  # 最小字数至少300字或目标字数的30%
         
-        print(f"开始生成教学大纲，目标字数：{max_words}，最小字数：{min_words}")
+        print("开始生成大纲...")
+        print(f"提示词长度: {len(prompt)} 字符")
+        print(f"最大token数: {max_tokens}")
+        print(f"目标字数: {max_words}")
+        print(f"最小字数: {min_words}")
+        print(f"模型原始max_tokens_per_generation: {original_max_tokens}")
+        print(f"临时设置为: {model.max_tokens_per_generation}")
         
-        for response, delta, _, _ in model.generate(prompt, stop=generation_config["stop"]):
+        # 设置停止条件
+        stop_sequences = ["###", "---", "问题", "题目", "结束", "完毕"]
+        
+        print("开始生成循环...")
+        for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
             outline_content += delta
             token_count += 1
             
-            # 计算当前字数（中文字符）
-            current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
-            
-            # 检查token数量限制
-            if token_count > max_tokens:
-                print(f"达到最大token限制 {max_tokens}")
-                break
-            
-            # 检查字数限制
-            if current_words >= max_words * 1.2:  # 允许超出20%的字数
-                print(f"达到字数限制 {current_words} >= {max_words * 1.2}")
-                break
+            # 每100个token打印一次进度
+            if token_count % 100 == 0:
+                current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+                print(f"已生成 {token_count} tokens, 当前内容长度: {len(outline_content)} 字符, 字数: {current_words}")
             
             # 检查请求是否断开
             if await request.is_disconnected():
                 print("请求已断开")
                 break
+            
+            # 检查是否达到最大token数
+            if token_count >= max_tokens:
+                print(f"达到最大token数: {max_tokens}")
+                break
+            
+            # 检查字数限制
+            current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+            if current_words >= max_words * 1.2:  # 允许超出20%的字数
+                print(f"达到字数限制 {current_words} >= {max_words * 1.2}")
+                break
+        
+        # 恢复原始设置
+        model.max_tokens_per_generation = original_max_tokens
         
         # 确保句子完整性
         outline_content = ensure_sentence_completeness(outline_content)
@@ -440,29 +353,43 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
             print(f"生成的内容字数不足（{final_word_count} < {min_words}），尝试重新生成...")
             # 如果字数不足，尝试重新生成一次
             retry_prompt = prompt + "\n\n请确保生成的内容详细完整，字数不少于300字。"
-            return await generate_outline_with_rwkv_retry(retry_prompt, request, max_words, model, generation_config)
+            return await generate_outline_with_rwkv_retry(retry_prompt, request, max_words, model, max_tokens)
         
         print(f"大纲生成完成，生成长度: {len(outline_content)} 字符，字数: {final_word_count}")
+        print(f"内容预览: {outline_content[:200]}...")
         
         return outline_content.strip()
         
     except Exception as e:
-        print(f"生成大纲时出错: {e}")
-        raise Exception(f"生成大纲失败: {str(e)}")
+        print(f"RWKV生成大纲时出错: {e}")
+        # 确保在出错时也恢复原始设置
+        try:
+            model = global_var.get(global_var.Model)
+            if model:
+                model.max_tokens_per_generation = original_max_tokens
+        except:
+            pass
+        raise e
 
 
-async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_words: int, model, generation_config):
+async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_words: int, model, max_tokens):
     """
     重试生成大纲（当第一次生成字数不足时）
     """
     try:
-        outline_content = ""
-        token_count = 0
-        max_tokens = generation_config["max_tokens"]
-        
         print("开始重试生成教学大纲...")
         
-        for response, delta, _, _ in model.generate(prompt, stop=generation_config["stop"]):
+        # 临时设置max_tokens_per_generation
+        original_max_tokens = model.max_tokens_per_generation
+        model.max_tokens_per_generation = max_tokens
+        
+        outline_content = ""
+        token_count = 0
+        
+        # 设置停止条件
+        stop_sequences = ["###", "---", "问题", "题目", "结束", "完毕"]
+        
+        for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
             outline_content += delta
             token_count += 1
             
@@ -470,7 +397,7 @@ async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_wo
             current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
             
             # 检查token数量限制
-            if token_count > max_tokens:
+            if token_count >= max_tokens:
                 print(f"重试达到最大token限制 {max_tokens}")
                 break
             
@@ -484,6 +411,9 @@ async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_wo
                 print("请求已断开")
                 break
         
+        # 恢复原始设置
+        model.max_tokens_per_generation = original_max_tokens
+        
         # 确保句子完整性
         outline_content = ensure_sentence_completeness(outline_content)
         
@@ -494,7 +424,12 @@ async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_wo
         
     except Exception as e:
         print(f"重试生成大纲时出错: {e}")
-        raise Exception(f"重试生成大纲失败: {str(e)}")
+        # 确保在出错时也恢复原始设置
+        try:
+            model.max_tokens_per_generation = original_max_tokens
+        except:
+            pass
+        raise e
 
 
 def ensure_sentence_completeness(text: str) -> str:

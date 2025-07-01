@@ -1,5 +1,6 @@
 import time
 import subprocess
+import threading
 
 start_time = time.time()
 
@@ -62,7 +63,7 @@ from utils.rwkv import *
 from utils.torch import *
 from utils.ngrok import *
 from utils.log import log_middleware
-from routes import completion, config, state_cache, upload, qa, create, exercise, download, session_routes
+from routes import completion, config, state_cache, upload, qa, create, exercise, download, session_routes, knowledge
 import global_var
 from config.settings import get_settings
 
@@ -92,6 +93,7 @@ app.include_router(create.router)
 app.include_router(exercise.router)
 app.include_router(download.router)
 app.include_router(session_routes.router)
+app.include_router(knowledge.router)
 
 
 @app.post("/exit", tags=["Root"])
@@ -138,6 +140,51 @@ def init():
     if os.environ.get("ngrok_token") is not None:
         ngrok_connect()
 
+def start_chromadb_server():
+    """启动ChromaDB服务器"""
+    settings = get_settings()
+    
+    print(f"🚀 正在启动ChromaDB服务器...")
+    print(f"   主机: {settings.CHROMADB_HOST}")
+    print(f"   端口: {settings.CHROMADB_PORT}")
+    
+    try:
+        # 启动ChromaDB服务器
+        cmd = [
+            "chroma", "run", 
+            "--host", settings.CHROMADB_HOST,
+            "--port", str(settings.CHROMADB_PORT),
+            "--path", "/tmp/chromadb"  # 数据存储路径
+        ]
+        
+        print(f"执行命令: {' '.join(cmd)}")
+        
+        # 启动ChromaDB服务器
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        # 等待服务器启动
+        time.sleep(3)
+        
+        # 检查进程是否还在运行
+        if process.poll() is None:
+            print("✅ ChromaDB服务器启动成功！")
+            return process
+        else:
+            stdout, stderr = process.communicate()
+            print(f"❌ ChromaDB服务器启动失败:")
+            print(f"stdout: {stdout}")
+            print(f"stderr: {stderr}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ 启动ChromaDB服务器时出错: {e}")
+        return None
+
 
 # Function to trigger the curl command after the server starts
 def load_model():
@@ -165,8 +212,12 @@ if __name__ == "__main__":
     # 获取配置
     settings = get_settings()
     
+    # 启动ChromaDB服务器
+    chromadb_process = start_chromadb_server()
+    if not chromadb_process:
+        print("❌ ChromaDB服务器启动失败，但继续启动主服务器...")
+    
     # Run the server in a background thread
-    import threading
     def run_server():
         uvicorn.run("main:app", port=settings.PORT, host=settings.HOST, workers=1)
     
