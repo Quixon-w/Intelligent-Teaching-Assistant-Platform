@@ -58,4 +58,14 @@ export function changePassword(userId, oldPassword, newPassword, checkPassword) 
     });
 }
 
-
+export function deleteUser(userId){
+    return request.post('/api/user/delete',null,{
+        params:{
+            userId:userId
+        }
+    }).then(res=>{
+        return res;
+    }).catch(err=>{
+        return err;
+    })
+}
