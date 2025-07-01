@@ -282,7 +282,7 @@ public class UserController {
     }
 
     @PostMapping("/setAvatar")
-    @Operation(summary = "上传头像")
+    @Operation(summary = "上传头像", description = "头像url为‘后端ip:8080+用户avatarUrl字符串’")
     @Parameters({
             @Parameter(name = "file", description = "文件", required = true),
     })
