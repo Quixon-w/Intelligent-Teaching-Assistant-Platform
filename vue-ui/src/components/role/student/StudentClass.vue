@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import {useRouter} from 'vue-router'
-import {getCourses} from '@/api/course/coures.js'
+import {getCourses, getHotCourses} from '@/api/course/coures.js'
 import { ElMessage } from 'element-plus'
 const router = useRouter();
 const studentClass=ref([]);
@@ -33,8 +33,12 @@ const handleCurrentChange=(number)=>{
   console.log(number);
   getData()
 }
+const getHotCourse=()=>{
+  getHotCourses().then(res=>{studentClass.value=res;}).catch(err=>{ElMessage(err);})
+}
 onMounted(()=>{
-  getData()
+  //getData()
+  getHotCourse()
 })
 </script>
 
@@ -46,7 +50,7 @@ onMounted(()=>{
       </el-form-item>
     </el-form>
     <div>
-      <el-button>查询课程</el-button>
+      <el-button type="primary" @click="getData()">查询课程</el-button>
     </div>
   </div>
   <div class="classTable">
@@ -78,7 +82,7 @@ onMounted(()=>{
   display: flex;
   flex-wrap: wrap; /* 允许换行 */
   //justify-content: space-between; /* 子元素平均分布 */
-  align-items: center; /* 垂直居中 */
+  align-items: flex-start;
   gap: 2%; /* 每个子项之间的间距为 2% */
   width: 100%;
   height: 100%;

@@ -1,6 +1,6 @@
 <script setup>
 import {onMounted, ref} from 'vue'
-import {getUsersList} from "@/api/admin/admin.js";
+import {getDeletedUsers, getUsersList, recoverUser} from "@/api/admin/admin.js";
 import UserRoleMap from "@/utils/userrole.js";
 import { deleteUser } from "@/api/user/userinfo.js";
 import {ElMessage, ElMessageBox} from "element-plus";
@@ -12,6 +12,28 @@ const tableSetting=ref({
   pageSize:10,
   currentPage:1,
 })
+const deletedUserList=ref([]);
+const dialogDeletedUserVisible=ref(false);
+const getDeletedUser=()=>{
+  getDeletedUsers().then(res=>{
+    deletedUserList.value=res;
+  }).catch(err=>{
+    ElMessage(err);
+  })
+  dialogDeletedUserVisible.value=true;
+}
+const wakeUp=(id)=>{
+  recoverUser(id).then(res=>{
+    if (res.data.code === 0) {
+      ElMessage.success('恢复成功');
+      getUserList();
+    } else {
+      ElMessage.error(res.message);
+    }
+  }).catch(err => {
+    ElMessage.error('恢复请求失败'+err);
+  });
+}
 const getUserList=()=>{
   getUsersList(tableSetting.value.currentPage,tableSetting.value.pageSize,tableSetting.value.username).then(res=>{
     tableData.value=res.data.data.records;
@@ -64,6 +86,7 @@ onMounted(()=>{
         </el-form-item>
       </el-form>
       <el-button type="primary" @click="getUserList">查询</el-button>
+      <el-button type="primary" @click="getDeletedUser">查看已删除的用户</el-button>
     </div>
     <div>
       <el-table :data="tableData" border style="width: 100%">
@@ -71,11 +94,8 @@ onMounted(()=>{
         <el-table-column property="id" v-if="false" />
         <el-table-column property="userAccount" label="用户账户" width="120" />
         <el-table-column property="username" label="用户名称" width="120" />
-        <el-table-column property="userRole" :formatter="(row, column, cellValue) => UserRoleMap[cellValue]" label="用户身份" width="120" />
-        <el-table-column property="gender" label="用户性别" width="120" />
         <el-table-column property="phone" label="用户电话" width="120" />
         <el-table-column property="email" label="用户邮箱" width="120" />
-        <el-table-column property="userStatus" label="用户状态" width="120" />
         <el-table-column label="操作">
           <template #default="scope">
             <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
@@ -98,6 +118,24 @@ onMounted(()=>{
       />
     </div>
   </div>
+  <el-dialog v-model="dialogDeletedUserVisible" title="已删除的用户">
+    <el-table :data="deletedUserList" border style="width: 100%">
+      <el-table-column type="selection" width="55" />
+      <el-table-column property="id" v-if="false" />
+      <el-table-column property="userAccount" label="用户账户" width="120" />
+      <el-table-column property="username" label="用户名称" width="120" />
+      <el-table-column property="userRole" :formatter="(row, column, cellValue) => UserRoleMap[cellValue]" label="用户身份" width="120" />
+      <el-table-column property="gender" label="用户性别" width="120" />
+      <el-table-column property="phone" label="用户电话" width="120" />
+      <el-table-column property="email" label="用户邮箱" width="120" />
+      <el-table-column property="userStatus" label="用户状态" width="120" />
+      <el-table-column label="操作">
+        <template #default="scope">
+          <el-button size="small" type="danger" @click="wakeUp(scope.row.id)">恢复</el-button>>
+        </template>
+      </el-table-column>
+    </el-table>
+  </el-dialog>
 </template>
 
 <style scoped>

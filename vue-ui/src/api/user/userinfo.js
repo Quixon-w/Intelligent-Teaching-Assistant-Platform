@@ -61,7 +61,7 @@ export function changePassword(userId, oldPassword, newPassword, checkPassword) 
 export function deleteUser(userId){
     return request.post('/api/user/delete',null,{
         params:{
-            userId:userId
+            id:userId
         }
     }).then(res=>{
         return res;

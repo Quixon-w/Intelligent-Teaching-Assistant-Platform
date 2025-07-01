@@ -66,7 +66,7 @@ onMounted(()=>{
   </div>
   <div class="classTable">
     <div class="classOfTeacher" v-for="course in teacherClass" @click="toClass(course.id)">
-      <img src="@/assets/images/login-background.jpg" alt=""/>
+      <img src="@/assets/images/login-background.jpg" alt="localImg"/>
       <div class="text-wrapper">
         <el-text>{{ course.name }}</el-text>
       </div>
@@ -106,10 +106,11 @@ onMounted(()=>{
 <style scoped>
 .classTable{
   display: flex;
-  flex-wrap: wrap; /* 允许换行 */
-  //justify-content: space-between; /* 子元素平均分布 */
-  align-items: center; /* 垂直居中 */
-  gap: 2%; /* 每个子项之间的间距为 2% */
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 2%;
   width: 100%;
   height: 100%;
 }
