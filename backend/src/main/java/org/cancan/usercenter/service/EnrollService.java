@@ -1,6 +1,7 @@
 package org.cancan.usercenter.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Enroll;
 import org.cancan.usercenter.model.domain.User;
 
@@ -71,4 +72,12 @@ public interface EnrollService extends IService<Enroll> {
      * @return 该学生的该课程的分数
      */
     float calculateScore(Long studentId, Long courseId);
+
+    /**
+     * 获取高热度课程
+     *
+     * @return 所有课程中热度排名高的几门课程
+     */
+    List<Courses> getHighCourses();
+
 }

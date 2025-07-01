@@ -2,7 +2,9 @@ package org.cancan.usercenter.utils;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
 /**
  * 配置类：后端 Cors 跨域
  * 告诉浏览器，我允许哪些域名访问，哪些请求方式访问，是否运行携带请求头
@@ -19,4 +21,12 @@ public class GlobalCorsConfig implements WebMvcConfigurer {
                 .allowCredentials(true)//请求可以携带会话相关信息(cookie/session)
                 .maxAge(3600);//同一请求一小时内不再检测 直接放行
     }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String realPath = "file:" + System.getProperty("user.dir") + "/uploads/avatars/";
+        registry.addResourceHandler("/local/avatar/**")
+                .addResourceLocations(realPath);
+    }
+
 }

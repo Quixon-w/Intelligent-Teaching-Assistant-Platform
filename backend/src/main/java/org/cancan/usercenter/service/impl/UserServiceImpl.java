@@ -133,6 +133,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 脱敏，仅返回部分用户信息
         User safetyUser = getSafetyUser(user);
         // 更新用户信息
+        safetyUser.setAvatarUrl(null);
         userMapper.updateById(safetyUser);
         // 将用户信息更新到 Redis
         String sessionId = request.getSession().getId(); // 使用 session ID 作为 Redis 的 key

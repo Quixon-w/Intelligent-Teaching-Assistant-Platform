@@ -124,4 +124,14 @@ public class EnrollController {
         List<User> safeUsers = studentsList.stream().map(userService::getSafetyUser).toList();
         return ResultUtils.success(safeUsers);
     }
+
+    @GetMapping("/list/hot")
+    @Operation(summary = "查看高热度课程")
+    public BaseResponse<List<Courses>> listHotCourses() {
+        List<Courses> coursesList = enrollService.getHighCourses();
+        if (coursesList == null || coursesList.isEmpty()) {
+            return ResultUtils.success(null);
+        }
+        return ResultUtils.success(coursesList);
+    }
 }
