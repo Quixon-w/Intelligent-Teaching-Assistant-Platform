@@ -71,6 +71,9 @@ public class EnrollController {
         User currentUser = userService.getCurrentUser(request);
         // 获取课程信息
         Courses courses = coursesService.getValidCourseById(courseId);
+        if (courses.getIsOver() == 1) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "课程已结束");
+        }
         // 判断退课权限
         if (
                 !Objects.equals(currentUser.getId(), studentId) &&

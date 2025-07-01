@@ -1,6 +1,5 @@
 package org.cancan.usercenter.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -83,12 +82,7 @@ public class LessonsController {
             @Parameter(name = "courseId", description = "课程id", required = true)
     })
     public BaseResponse<List<Lessons>> listLessons(@RequestParam Long courseId) {
-        // 参数校验
-        coursesService.getValidCourseById(courseId);
-        // 查询
-        QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("course_id", courseId);
-        return ResultUtils.success(lessonsService.list(queryWrapper));
+        return ResultUtils.success(lessonsService.listLessons(courseId));
     }
 
     @GetMapping("/getScore")

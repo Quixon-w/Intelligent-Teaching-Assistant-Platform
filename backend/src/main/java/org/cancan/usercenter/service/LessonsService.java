@@ -4,12 +4,22 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.User;
 
+import java.util.List;
+
 /**
  * @author 洪
  * {@code @description} 针对表【lessons】的数据库操作Service
  * {@code @createDate} 2025-06-22 11:12:14
  */
 public interface LessonsService extends IService<Lessons> {
+
+    /**
+     * 查看某课程的所有课时
+     *
+     * @param courseId 课程id
+     * @return 课时列表
+     */
+    List<Lessons> listLessons(Long courseId);
 
     /**
      * 添加课时
