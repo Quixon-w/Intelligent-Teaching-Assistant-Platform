@@ -2,6 +2,8 @@
 import {onMounted, ref} from 'vue'
 import {getUsersList} from "@/api/admin/admin.js";
 import UserRoleMap from "@/utils/userrole.js";
+import { deleteUser } from "@/api/user/userinfo.js";
+import {ElMessage, ElMessageBox} from "element-plus";
 
 const tableData = ref([]);
 const tableSetting=ref({
@@ -27,6 +29,27 @@ const handleCurrentChange=(number)=>{
   getUserList()
   console.log(number);
 }
+const handleDelete = (row) => {
+  ElMessageBox.confirm('此操作将永久删除该用户, 是否继续?', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    deleteUser(row.id).then(res => {
+      if (res.data.code === 0) {
+        ElMessage.success('删除成功');
+        getUserList();
+      } else {
+        ElMessage.error(res.message);
+      }
+    }).catch(err => {
+      ElMessage.error('删除请求失败'+err);
+    });
+  }).catch(() => {
+    ElMessage.info('已取消删除');
+  });
+};
+
 onMounted(()=>{
   getUserList();
 })
@@ -55,8 +78,7 @@ onMounted(()=>{
         <el-table-column property="userStatus" label="用户状态" width="120" />
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button size="small" @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
