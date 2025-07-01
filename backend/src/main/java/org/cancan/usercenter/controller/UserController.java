@@ -28,12 +28,9 @@ import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 import static org.cancan.usercenter.constant.UserConstant.*;
 
@@ -285,7 +282,12 @@ public class UserController {
     }
 
     @PostMapping("/setAvatar")
+    @Operation(summary = "上传头像")
+    @Parameters({
+            @Parameter(name = "file", description = "文件", required = true),
+    })
     public BaseResponse<String> uploadAvatar(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        // 检查文件是否为空
         if (file.isEmpty()) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件为空");
         }
@@ -295,36 +297,7 @@ public class UserController {
         if (!allowedTypes.contains(contentType)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "不支持的文件类型");
         }
-
-        // 保存目录
-        String uploadDir = System.getProperty("user.dir") + "/backend/uploads/avatars/";
-        File dir = new File(uploadDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-
-        // 生成唯一文件名
-        String originalName = file.getOriginalFilename();
-        String fileExt = originalName.substring(originalName.lastIndexOf("."));
-        String fileName = UUID.randomUUID() + fileExt;
-
-        // 保存文件
-        File dest = new File(uploadDir + fileName);
-        try {
-            file.transferTo(dest);
-        } catch (IOException e) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "保存失败");
-        }
-
-        // 构造可访问路径
-        String urlPath = "/local/avatar/" + fileName;
-
-        // 示例：保存到当前登录用户的 avatar 字段
-        User loginUser = userService.getCurrentUser(request);
-        loginUser.setAvatarUrl(urlPath);
-        userService.updateById(loginUser);
-
-        return ResultUtils.success(urlPath);
+        return ResultUtils.success(userService.updateAvatar(file, request));
     }
 
 }

@@ -3,6 +3,7 @@ package org.cancan.usercenter.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.cancan.usercenter.model.domain.User;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -97,5 +98,14 @@ public interface UserService extends IService<User> {
      * @return 被删除的用户列表
      */
     List<User> listDeletedUsers();
+
+    /**
+     * 更新用户头像
+     *
+     * @param file    文件
+     * @param request 请求
+     * @return 头像地址
+     */
+    String updateAvatar(MultipartFile file, HttpServletRequest request);
 
 }

@@ -24,8 +24,9 @@ public class GlobalCorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String realPath = "file:" + System.getProperty("user.dir") + "/uploads/avatars/";
-        registry.addResourceHandler("/local/avatar/**")
+        String realPath = "file:" + System.getProperty("user.dir") + "/backend/uploads/avatars/";
+        System.out.println(realPath);
+        registry.addResourceHandler("/avatar/**")
                 .addResourceLocations(realPath);
     }
 
