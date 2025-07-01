@@ -7,13 +7,14 @@ import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.mapper.CoursesMapper;
 import org.cancan.usercenter.mapper.EnrollMapper;
-import org.cancan.usercenter.mapper.LessonQuestionMapMapper;
+import org.cancan.usercenter.mapper.QuestionRecordsMapper;
 import org.cancan.usercenter.mapper.UserMapper;
 import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.LessonsService;
 import org.cancan.usercenter.service.ScoresService;
 import org.cancan.usercenter.utils.RedisUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
@@ -34,8 +35,6 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     @Resource
     private UserMapper userMapper;
     @Resource
-    private LessonQuestionMapMapper lessonQuestionMapMapper;
-    @Resource
     private CoursesMapper coursesMapper;
 
     @Resource
@@ -45,6 +44,8 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
 
     @Resource
     private RedisUtil redisUtil;
+    @Autowired
+    private QuestionRecordsMapper questionRecordsMapper;
 
     /**
      * @param courseId  课程id
@@ -55,12 +56,12 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     public Boolean dismiss(Long courseId, Long studentId) {
         // 删除学生做题记录
         List<Lessons> lessons = lessonsService.listLessons(courseId);
-        if (lessons != null) {
+        if (lessons != null && !lessons.isEmpty()) {
             List<Long> lessonIds = lessons.stream().map(Lessons::getLessonId).toList();
-            QueryWrapper<LessonQuestionMap> queryWrapperM = new QueryWrapper<>();
+            QueryWrapper<QuestionRecords> queryWrapperM = new QueryWrapper<>();
             queryWrapperM.in("lesson_id", lessonIds);
             queryWrapperM.eq("student_id", studentId);
-            lessonQuestionMapMapper.delete(queryWrapperM);
+            questionRecordsMapper.delete(queryWrapperM);
         }
         // 删除选课记录
         QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();

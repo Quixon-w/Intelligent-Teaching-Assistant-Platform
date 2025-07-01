@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.cancan.usercenter.constant.UserConstant.*;
@@ -108,7 +109,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 用户脱敏
         User safetyUser = getSafetyUser(user);
         // 将用户登录态存储到 Redis
-        String sessionId = request.getSession().getId(); // 使用 session ID 作为 Redis 的 key
+        String sessionId = request.getSession().getId();
         redisUtil.set(sessionId, JSON.toJSONString(safetyUser), EXPIRE_TIME, TimeUnit.SECONDS);
 
         return safetyUser;
@@ -239,6 +240,33 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         return user;
     }
+
+    /**
+     * @param id 用户id
+     * @return 被删除用户
+     */
+    @Override
+    public User selectDeletedUserById(Long id) {
+        return userMapper.selectDeletedUserById(id);
+    }
+
+    /**
+     * @param id 用户id
+     * @return 恢复结果
+     */
+    @Override
+    public boolean restoreUser(Long id) {
+        return userMapper.restoreUser(id);
+    }
+
+    /**
+     * @return 删除用户列表
+     */
+    @Override
+    public List<User> listDeletedUsers() {
+        return userMapper.listDeletedUsers();
+    }
+
 }
 
 

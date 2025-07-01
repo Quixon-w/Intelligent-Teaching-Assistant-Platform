@@ -11,9 +11,9 @@ import java.io.Serializable;
  */
 @Data
 public class GetListScoresResponse implements Serializable {
-
+    
     @Serial
-    private static final long serialVersionUID = -2991457539774439991L;
+    private static final long serialVersionUID = 1L;
 
     private User student; // 学生
     private Float score; // 学生分数
