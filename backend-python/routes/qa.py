@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
-import pickle
-import numpy as np
-import faiss
 from fastapi import APIRouter, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from typing import Union, Optional, List, Dict, Any
-from sentence_transformers import SentenceTransformer
 import asyncio
 from threading import Lock
 
 from utils.rwkv import *
+from utils.knowledge import load_vector_db, search_knowledge_db, ChromaDBManager
 from utils.session_manager import session_manager
 import global_var
 from config.settings import get_settings
@@ -64,212 +61,183 @@ class QABody(BaseModel):
     }
 
 
-def load_embeddings_model():
-    """
-    加载文本嵌入模型
-    """
-    try:
-        settings = get_settings()
-        model = SentenceTransformer(str(settings.EMBEDDING_MODEL_PATH))
-        # 确保模型使用归一化
-        model.encode("测试", normalize_embeddings=True)
-        print("嵌入模型加载成功，已启用归一化")
-        return model
-    except Exception as e:
-        print(f"加载嵌入模型失败: {e}")
-        return None
-
-
 def search_knowledge_db(user_id, session_id, query, is_teacher=False, course_id=None, lesson_num=None, top_k=3, search_mode="existing"):
     """
-    从知识库中搜索相关内容 - 使用归一化嵌入和余弦相似度
+    从ChromaDB知识库中搜索相关内容
     """
-    # 获取用户路径
-    user_path = get_user_path(user_id, is_teacher)
-    
-    # 根据搜索模式决定知识库路径
-    if search_mode == "uploaded":
-        # 用户上传文件查询模式 - 从用户路径下的ask/vector_kb中搜索
-        vector_kb_folder = os.path.join(user_path, "ask", "vector_kb")
-    else:
-        # 已有文件查询模式 - 从用户路径下的课程/课时/vector_kb中搜索
-        if not course_id:
-            print("已有文件查询模式下courseId不能为空")
-            return None
-        if not lesson_num:
-            print("已有文件查询模式下lessonNum不能为空")
-            return None
-        vector_kb_folder = os.path.join(user_path, course_id, lesson_num, "vector_kb")
-    
-    if not os.path.exists(vector_kb_folder):
-        print(f"知识库路径不存在: {vector_kb_folder}")
-        return None
+    print(f"开始搜索知识库: userID={user_id}, query={query}, search_mode={search_mode}")
     
     try:
-        # 加载嵌入模型
-        model = load_embeddings_model()
-        if model is None:
-            return "嵌入模型加载失败"
+        # 根据搜索模式决定知识库参数
+        if search_mode == "uploaded":
+            # 用户上传文件查询模式 - 从用户路径下的ask文件夹中搜索
+            chroma_manager = load_vector_db(
+                userId=user_id,
+                isTeacher=is_teacher,
+                courseID="ask",  # 使用ask作为courseID
+                lessonNum="uploaded"  # 使用uploaded作为lessonNum
+            )
+        else:
+            # 已有文件查询模式 - 从用户路径下的课程/课时中搜索
+            if not course_id:
+                print("已有文件查询模式下courseId不能为空")
+                return None
+            if not lesson_num:
+                print("已有文件查询模式下lessonNum不能为空")
+                return None
+            
+            chroma_manager = load_vector_db(
+                userId=user_id,
+                isTeacher=is_teacher,
+                courseID=course_id,
+                lessonNum=lesson_num
+            )
         
-        # 加载FAISS索引
-        index_path = os.path.join(vector_kb_folder, "index.faiss")
-        metadata_path = os.path.join(vector_kb_folder, "index.pkl")
-        
-        if not os.path.exists(index_path) or not os.path.exists(metadata_path):
-            print(f"FAISS索引文件不存在: {vector_kb_folder}")
+        if not chroma_manager:
+            print("ChromaDB知识库不存在")
             return None
         
-        # 读取FAISS索引
-        index = faiss.read_index(index_path)
-        print(f"FAISS索引加载成功，包含 {index.ntotal} 个向量")
-        
-        # 读取元数据
-        with open(metadata_path, 'rb') as f:
-            metadata = pickle.load(f)
-        
-        # 提取文档存储和ID映射
-        if isinstance(metadata, tuple) and len(metadata) >= 2:
-            docstore = metadata[0]
-            id_to_uuid = metadata[1]
-            print(f"元数据加载成功，文档数量: {len(id_to_uuid)}")
+        # 生成collection名称
+        if search_mode == "uploaded":
+            collection_name = f"kb_{user_id}_ask_uploaded"
         else:
-            print("元数据格式不正确")
-            return None
+            collection_name = f"kb_{user_id}_{course_id}_{lesson_num}"
         
-        # 对查询文本进行编码，使用归一化
-        query_embedding = model.encode([query], normalize_embeddings=True)
-        print(f"查询向量编码完成，维度: {query_embedding.shape}")
+        print(f"使用collection: {collection_name}")
         
-        # 执行向量搜索
-        print(f"正在从知识库检索: {query}")
-        print(f"搜索模式: {search_mode}, 路径: {vector_kb_folder}")
+        # 使用search_knowledge_db函数进行搜索
+        search_results = search_knowledge_db(
+            chroma_manager=chroma_manager,
+            collection_name=collection_name,
+            query=query,
+            top_k=top_k
+        )
         
-        # 搜索最相似的向量
-        distances, indices = index.search(query_embedding, k=min(top_k, index.ntotal))
-        
-        # 打印原始距离信息
-        print(f"原始距离: {distances[0]}")
-        print(f"原始索引: {indices[0]}")
-        
-        # 提取搜索结果
-        retrieved_contents = []
-        print(f"\n=== 找到的最相近的{min(top_k, index.ntotal)}段内容 ===")
-        
-        for i, (distance, idx) in enumerate(zip(distances[0], indices[0])):
-            if idx < len(id_to_uuid):
-                doc_id = id_to_uuid[idx]
-                
-                # 从文档存储中获取内容
-                if hasattr(docstore, '_dict') and doc_id in docstore._dict:
-                    doc = docstore._dict[doc_id]
-                elif hasattr(docstore, 'docstore') and doc_id in docstore.docstore:
-                    doc = docstore.docstore[doc_id]
-                else:
-                    print(f"无法找到文档ID: {doc_id}")
-                    continue
-                
-                if hasattr(doc, 'page_content'):
-                    content = doc.page_content
-                    if isinstance(content, bytes):
-                        try:
-                            content = content.decode('utf-8')
-                        except UnicodeDecodeError:
-                            try:
-                                content = content.decode('gbk')
-                            except UnicodeDecodeError:
-                                content = content.decode('utf-8', errors='ignore')
-                    
-                    # 计算余弦相似度 - 使用归一化向量
-                    # 由于向量已经归一化，余弦相似度 = 1 - 距离/2
-                    cosine_similarity = 1.0 - distance / 2.0
-                    
-                    # 打印调试信息
-                    print(f"\n--- 第{i+1}段内容 ---")
-                    print(f"原始距离: {distance:.6f}")
-                    print(f"余弦相似度: {cosine_similarity:.6f}")
-                    print(f"内容: {content[:200]}{'...' if len(content) > 200 else ''}")
-                    
-                    # 只返回相似度较高的内容（相似度 > 0.5）
-                    if cosine_similarity > 0.5:
-                        # 返回内容时不包含相似度标记，只在调试信息中显示
-                        retrieved_contents.append(content)
-                    else:
-                        print(f"相似度过低，跳过此内容")
-        
-        print("=== 搜索结果结束 ===\n")
-        
-        if retrieved_contents:
-            print(f"最终返回 {len(retrieved_contents)} 段相关内容")
-            return "\n\n".join(retrieved_contents)
+        if search_results and len(search_results) > 0:
+            # 合并搜索结果
+            combined_content = "\n\n".join(search_results)
+            print(f"成功从ChromaDB获取相关内容，返回 {len(search_results)} 段内容")
+            return combined_content
         else:
-            print("没有找到相似度足够高的内容")
+            print("ChromaDB中没有找到相关内容")
             return "未找到相关内容"
             
     except Exception as e:
-        print(f"搜索失败: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"搜索ChromaDB知识库失败: {e}")
         return f"搜索过程中出现错误: {str(e)}"
 
 
-async def generate_answer_with_rwkv(prompt: str, request: Request, temperature: float):
+async def generate_answer_with_rwkv(prompt: str, request: Request, temperature: float, max_tokens: int = 1000):
     """
-    使用RWKV模型生成回答 - 改进的生成逻辑
+    使用RWKV模型生成回答
     """
-    model: TextRWKV = global_var.get(global_var.Model)
-    if model is None:
-        raise Exception("模型未加载")
+    print("开始使用RWKV模型生成回答...")
     
     try:
+        # 获取RWKV模型实例
+        model = global_var.get(global_var.Model)
+        if model is None:
+            raise Exception("RWKV模型未初始化")
+        
         # 设置生成参数
         model.temperature = temperature
         model.top_p = 0.9
         
+        # 重要：临时增加max_tokens_per_generation以支持更长的生成
+        original_max_tokens = model.max_tokens_per_generation
+        model.max_tokens_per_generation = max_tokens
+        
         # 生成回答内容
         answer_content = ""
         token_count = 0
-        last_complete_sentence = ""
         
-        print("开始生成智能回答...")
+        print("开始生成回答...")
+        print(f"提示词长度: {len(prompt)} 字符")
+        print(f"最大token数: {max_tokens}")
+        print(f"温度: {temperature}")
+        print(f"模型原始max_tokens_per_generation: {original_max_tokens}")
+        print(f"临时设置为: {model.max_tokens_per_generation}")
         
-        # 改进的停止条件，避免在句子中间截断
+        # 设置停止条件
         stop_sequences = [
             "\n\n用户:", "\n\nUser:", "\n\n问题:", "\n\nQuestion:", 
             "\n\nQ:", "\n\nHuman:", "\n\n---", "\n\n###"
         ]
         
+        print("开始生成循环...")
         for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
             answer_content += delta
             token_count += 1
             
-            # 检查是否形成了完整的句子
-            if delta in ['。', '！', '？', '；', '.', '!', '?', ';']:
-                last_complete_sentence = answer_content
+            # 每50个token打印一次进度
+            if token_count % 50 == 0:
+                print(f"已生成 {token_count} tokens, 当前内容长度: {len(answer_content)} 字符")
             
             # 检查请求是否断开
             if await request.is_disconnected():
                 print("请求已断开")
                 break
+            
+            # 检查是否达到最大token数
+            if token_count >= max_tokens:
+                print(f"达到最大token数: {max_tokens}")
+                break
         
-        # 如果最后没有完整句子，尝试找到最后一个完整句子
-        if not last_complete_sentence and answer_content:
-            # 查找最后一个句号、感叹号或问号
-            for end_char in ['。', '！', '？', '；', '.', '!', '?', ';']:
-                last_pos = answer_content.rfind(end_char)
-                if last_pos != -1:
-                    last_complete_sentence = answer_content[:last_pos + 1]
-                    break
+        # 恢复原始设置
+        model.max_tokens_per_generation = original_max_tokens
         
-        # 使用最后一个完整句子，如果没有则使用全部内容
-        final_answer = last_complete_sentence if last_complete_sentence else answer_content
+        # 确保句子完整性
+        answer_content = ensure_sentence_completeness(answer_content)
         
-        print(f"回答生成完成，生成长度: {len(final_answer)} 字符")
+        print(f"回答生成完成，生成长度: {len(answer_content)} 字符")
+        print(f"内容预览: {answer_content[:200]}...")
         
-        return final_answer.strip()
+        return answer_content.strip()
         
     except Exception as e:
-        print(f"生成回答时出错: {e}")
-        raise Exception(f"生成回答失败: {str(e)}")
+        print(f"RWKV生成回答时出错: {e}")
+        # 确保在出错时也恢复原始设置
+        try:
+            model = global_var.get(global_var.Model)
+            if model:
+                model.max_tokens_per_generation = original_max_tokens
+        except:
+            pass
+        raise e
+
+
+def ensure_sentence_completeness(text: str) -> str:
+    """
+    确保句子完整性，避免句子被截断
+    """
+    if not text:
+        return text
+    
+    # 常见的句子结束标点
+    sentence_endings = ['。', '！', '？', '；', '：', '\n']
+    
+    # 如果文本以句子结束标点结尾，直接返回
+    if text[-1] in sentence_endings:
+        return text
+    
+    # 查找最后一个完整的句子
+    last_complete_sentence = ""
+    for i in range(len(text) - 1, -1, -1):
+        if text[i] in sentence_endings:
+            last_complete_sentence = text[:i + 1]
+            break
+    
+    # 如果找到了完整句子，返回完整句子部分
+    if last_complete_sentence:
+        return last_complete_sentence
+    
+    # 如果没有找到完整句子，尝试在最后一个逗号处截断
+    last_comma = text.rfind('，')
+    if last_comma > 0:
+        return text[:last_comma + 1]
+    
+    # 如果都没有，返回原文本
+    return text
 
 
 def build_qa_prompt(query: str, context: str, qa_history: List[Dict[str, Any]] = None) -> str:
@@ -436,7 +404,7 @@ async def intelligent_qa(body: QABody, request: Request):
             prompt = build_qa_prompt(body.query, search_result, qa_history if body.use_context else None)
             
             # 3. 使用RWKV模型生成回答
-            answer = await generate_answer_with_rwkv(prompt, request, body.temperature)
+            answer = await generate_answer_with_rwkv(prompt, request, body.temperature, body.max_tokens)
             
             # 4. 保存问答历史记录到会话管理器
             messages = [

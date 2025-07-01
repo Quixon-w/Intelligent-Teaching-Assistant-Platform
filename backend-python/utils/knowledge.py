@@ -1,13 +1,14 @@
 from langchain_community.document_loaders import UnstructuredMarkdownLoader, TextLoader
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
-from sentence_transformers import SentenceTransformer
 from langchain.schema import Document
+from FlagEmbedding import BGEM3FlagModel, FlagReranker
+import chromadb
 import os
 import fitz  # PyMuPDF 用于处理 PDF 文件
 import docx  # python-docx 用于处理 DOCX 文件
 import re
+import uuid
+from typing import List, Dict, Any, Optional
 from config.settings import get_settings
 
 # 智能文本分块器
@@ -149,45 +150,160 @@ class SmartTextSplitter:
             docs.append(Document(page_content=current_chunk.strip()))
         
         return docs
+
+# ChromaDB管理器
+class ChromaDBManager:
+    def __init__(self, host: str = "localhost", port: int = 8000):
+        """初始化ChromaDB管理器"""
+        self.host = host
+        self.port = port
+        self.client = None
+        self._init_client()
     
-    def _split_by_paragraphs(self, text):
-        """按段落分割文本（保留原方法作为备用）"""
-        paragraphs = re.split(r'\n\s*\n', text.strip())
-        docs = []
-        current_chunk = ""
-        
-        for para in paragraphs:
-            if len(current_chunk) + len(para) <= self.chunk_size:
-                current_chunk += para + "\n\n"
-            else:
-                if current_chunk:
-                    docs.append(Document(page_content=current_chunk.strip()))
-                current_chunk = para + "\n\n"
-        
-        if current_chunk:
-            docs.append(Document(page_content=current_chunk.strip()))
-        
-        return docs
+    def _init_client(self):
+        """初始化ChromaDB客户端"""
+        try:
+            self.client = chromadb.HttpClient(host=self.host, port=self.port)
+            print(f"✅ 成功连接到ChromaDB: {self.host}:{self.port}")
+        except Exception as e:
+            print(f"❌ 连接ChromaDB失败: {e}")
+            raise
     
-    def _split_by_sentences(self, text):
-        """按句子分割文本（保留原方法作为备用）"""
-        # 中文句子分割
-        sentences = re.split(r'[。！？；]', text)
-        docs = []
-        current_chunk = ""
-        
-        for sentence in sentences:
-            if len(current_chunk) + len(sentence) <= self.chunk_size:
-                current_chunk += sentence + "。"
-            else:
-                if current_chunk:
-                    docs.append(Document(page_content=current_chunk.strip()))
-                current_chunk = sentence + "。"
-        
-        if current_chunk:
-            docs.append(Document(page_content=current_chunk.strip()))
-        
-        return docs
+    def get_or_create_collection(self, collection_name: str):
+        """获取或创建collection"""
+        try:
+            collection = self.client.get_or_create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+            return collection
+        except Exception as e:
+            print(f"❌ 创建collection失败: {e}")
+            raise
+    
+    def add_documents(self, collection_name: str, documents: List[Document], embeddings: List[List[float]]):
+        """添加文档到collection"""
+        try:
+            collection = self.get_or_create_collection(collection_name)
+            
+            # 生成唯一ID
+            ids = [str(uuid.uuid4()) for _ in documents]
+            texts = [doc.page_content for doc in documents]
+            
+            # 添加文档
+            collection.add(
+                ids=ids,
+                embeddings=embeddings,
+                documents=texts
+            )
+            
+            print(f"✅ 成功添加 {len(documents)} 个文档到collection: {collection_name}")
+            return ids
+        except Exception as e:
+            print(f"❌ 添加文档失败: {e}")
+            raise
+    
+    def search_documents(self, collection_name: str, query_embedding: List[float], top_k: int = 5):
+        """搜索文档"""
+        try:
+            collection = self.client.get_collection(collection_name)
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k,
+                include=['documents', 'distances']
+            )
+            return results
+        except Exception as e:
+            print(f"❌ 搜索文档失败: {e}")
+            raise
+    
+    def delete_collection(self, collection_name: str):
+        """删除collection"""
+        try:
+            self.client.delete_collection(collection_name)
+            print(f"✅ 成功删除collection: {collection_name}")
+        except Exception as e:
+            print(f"❌ 删除collection失败: {e}")
+            raise
+    
+    def list_collections(self):
+        """列出所有collections"""
+        try:
+            collections = self.client.list_collections()
+            return collections
+        except Exception as e:
+            print(f"❌ 列出collections失败: {e}")
+            raise
+
+# BGEM3模型管理器
+class BGEM3Manager:
+    def __init__(self, model_path: str):
+        """初始化BGEM3模型管理器"""
+        self.model_path = model_path
+        self.model = None
+        self._load_model()
+    
+    def _load_model(self):
+        """加载BGEM3模型"""
+        try:
+            self.model = BGEM3FlagModel(self.model_path, use_fp16=True)
+            print(f"✅ 成功加载BGEM3模型: {self.model_path}")
+        except Exception as e:
+            print(f"❌ 加载BGEM3模型失败: {e}")
+            raise
+    
+    def encode(self, texts: List[str]) -> List[List[float]]:
+        """编码文本为向量"""
+        try:
+            embeddings = self.model.encode(
+                texts,
+                max_length=512
+            )["dense_vecs"].tolist()
+            return embeddings
+        except Exception as e:
+            print(f"❌ 编码文本失败: {e}")
+            raise
+
+# BGE-Reranker模型管理器
+class BGERerankerManager:
+    def __init__(self, model_path: str):
+        """初始化BGE-Reranker模型管理器"""
+        self.model_path = model_path
+        self.model = None
+        self._load_model()
+    
+    def _load_model(self):
+        """加载BGE-Reranker模型"""
+        try:
+            self.model = FlagReranker(self.model_path, use_fp16=True)
+            print(f"✅ 成功加载BGE-Reranker模型: {self.model_path}")
+        except Exception as e:
+            print(f"❌ 加载BGE-Reranker模型失败: {e}")
+            raise
+    
+    def compute_score(self, text_a: str, text_b: str) -> float:
+        """计算两个文本的相关性分数"""
+        try:
+            score = self.model.compute_score([text_a, text_b])
+            return score
+        except Exception as e:
+            print(f"❌ 计算相关性分数失败: {e}")
+            raise
+    
+    def rerank_documents(self, query: str, documents: List[str]) -> List[tuple]:
+        """重排序文档"""
+        try:
+            scores = []
+            for doc in documents:
+                score = self.compute_score(query, doc)
+                scores.append((score, doc))
+            
+            # 按分数降序排序
+            scores.sort(key=lambda x: x[0], reverse=True)
+            return scores
+        except Exception as e:
+            print(f"❌ 重排序文档失败: {e}")
+            raise
 
 # 加载 DOCX 文件
 def load_docx(file_path):
@@ -261,66 +377,38 @@ def load_documents(dir_path):
     print(f"总共加载了 {len(docs)} 个文档块")  # 调试输出
     return docs
 
-# 生成向量知识库
-def create_vector_db(documents, vector_kb_folder):
+# 创建向量知识库
+def create_vector_db(documents, collection_name):
     if not documents:
         print("没有文档需要处理")
         return None
 
     try:
-        # 使用配置管理系统获取嵌入模型路径
+        # 使用配置管理系统获取模型路径和ChromaDB配置
         settings = get_settings()
-        embeddings = HuggingFaceEmbeddings(
-            model_name=str(settings.EMBEDDING_MODEL_PATH),
-            model_kwargs={'device': 'cpu'},  # 强制使用CPU避免CUDA问题
-            encode_kwargs={'normalize_embeddings': True}
-        )
-        print("✅ 成功加载 m3e-base 模型")
-    except Exception as e:
-        print(f"加载m3e-base模型失败: {e}")
-        print("尝试使用备用方案...")
-        # 备用方案：使用SentenceTransformer并手动处理
-        try:
-            from sentence_transformers import SentenceTransformer
-            settings = get_settings()
-            model = SentenceTransformer(str(settings.EMBEDDING_MODEL_PATH))
-            
-            # 手动创建嵌入
-            texts = [doc.page_content for doc in documents]
-            embeddings_list = model.encode(texts, normalize_embeddings=True)
-            
-            # 创建自定义嵌入类
-            class CustomEmbeddings:
-                def __init__(self, model):
-                    self.model = model
-                
-                def embed_documents(self, texts):
-                    return self.model.encode(texts, normalize_embeddings=True)
-                
-                def embed_query(self, text):
-                    return self.model.encode([text], normalize_embeddings=True)[0]
-            
-            embeddings = CustomEmbeddings(model)
-            print("✅ 成功加载 m3e-base 模型（备用方案）")
-        except Exception as e2:
-            print(f"备用方案也失败: {e2}")
-            return None
-
-    # 创建或更新 FAISS 向量数据库
-    try:
-        vectordb = FAISS.from_documents(
-            documents=documents,
-            embedding=embeddings
+        
+        # 初始化BGEM3模型
+        bgem3_manager = BGEM3Manager(str(settings.BGEM3_MODEL_PATH))
+        
+        # 初始化ChromaDB管理器
+        chroma_manager = ChromaDBManager(
+            host=settings.CHROMADB_HOST,
+            port=settings.CHROMADB_PORT
         )
         
-        # 保存到指定目录
-        vectordb.save_local(vector_kb_folder)
+        # 生成文档向量
+        texts = [doc.page_content for doc in documents]
+        embeddings = bgem3_manager.encode(texts)
         
-        print(f"FAISS向量数据库已创建或更新: {vector_kb_folder}")  # 调试输出
-        print(f"向量数据库包含 {vectordb.index.ntotal} 个向量")  # 调试输出
-        return vectordb
+        # 添加到ChromaDB
+        ids = chroma_manager.add_documents(collection_name, documents, embeddings)
+        
+        print(f"✅ 成功创建向量知识库，collection: {collection_name}")
+        print(f"✅ 添加了 {len(documents)} 个文档块")
+        return chroma_manager
+        
     except Exception as e:
-        print(f"创建向量数据库失败: {e}")
+        print(f"❌ 创建向量知识库失败: {e}")
         return None
 
 def update_knowledge_db(userId, isTeacher=False, courseID=None, lessonNum=None, isResource=False, isAsk=False):
@@ -360,19 +448,22 @@ def update_knowledge_db(userId, isTeacher=False, courseID=None, lessonNum=None, 
                 # 其他文件：保存在userId文件夹
                 session_folder = f"{base_folder}/{userId}"
         
-        vector_kb_folder = os.path.join(session_folder, "vector_kb")
-        os.makedirs(vector_kb_folder, exist_ok=True)
-
         print(f"开始更新知识库，userId: {userId}, isTeacher: {isTeacher}, courseID: {courseID}, lessonNum: {lessonNum}, isResource: {isResource}, isAsk: {isAsk}")  # 调试输出
 
-        # 加载文档并生成或更新向量库
+        # 加载文档
         docs = load_documents(session_folder)
         if not docs:
             print("没有找到任何支持的文档类型，请确认上传的文件类型。")  # 调试输出
             return None
-            
-        vector_db = create_vector_db(docs, vector_kb_folder)
-        return vector_db
+        
+        # 生成collection名称
+        collection_name = f"kb_{userId}_{courseID or 'student'}_{lessonNum or 'default'}"
+        if isAsk:
+            collection_name += "_ask"
+        
+        # 创建向量知识库
+        chroma_manager = create_vector_db(docs, collection_name)
+        return chroma_manager
         
     except ValueError as e:
         print(f"路径参数错误: {e}")
@@ -382,75 +473,110 @@ def update_knowledge_db(userId, isTeacher=False, courseID=None, lessonNum=None, 
         return None
 
 # 加载已存在的向量数据库
-def load_vector_db(session_id, isTeacher=False, courseID=None, lessonNum=None):
+def load_vector_db(userId, isTeacher=False, courseID=None, lessonNum=None):
     """
     加载已存在的向量数据库
-    :param session_id: 会话ID
+    :param userId: 用户ID
     :param isTeacher: 是否为教师模式
     :param courseID: 课程ID（教师模式下必填）
     :param lessonNum: 课时号（教师模式下必填）
     """
     try:
-        # 使用配置管理系统获取路径
+        # 使用配置管理系统获取ChromaDB配置
         settings = get_settings()
         
-        # 根据isTeacher决定存储路径
-        if isTeacher:
-            # 教师模式：从Teachers目录下的session_id/courseID/lessonNum文件夹中加载
-            if not courseID:
-                print("教师模式下courseID不能为空")
-                return None
-            if not lessonNum:
-                print("教师模式下lessonNum不能为空")
-                return None
-            vector_kb_folder = f"{settings.TEACHERS_DIR}/{session_id}/{courseID}/{lessonNum}/vector_kb"
-        else:
-            # 学生模式：从Students目录下的session_id文件夹中加载
-            vector_kb_folder = f"{settings.STUDENTS_DIR}/{session_id}/vector_kb"
+        # 生成collection名称
+        collection_name = f"kb_{userId}_{courseID or 'student'}_{lessonNum or 'default'}"
         
-        if not os.path.exists(vector_kb_folder):
-            print(f"向量数据库不存在: {vector_kb_folder}")
-            return None
+        # 初始化ChromaDB管理器
+        chroma_manager = ChromaDBManager(
+            host=settings.CHROMADB_HOST,
+            port=settings.CHROMADB_PORT
+        )
         
+        # 检查collection是否存在
         try:
-            # 使用配置管理系统获取嵌入模型路径
-            embeddings = HuggingFaceEmbeddings(
-                model_name=str(settings.EMBEDDING_MODEL_PATH),
-                model_kwargs={'device': 'cpu'},
-                encode_kwargs={'normalize_embeddings': True}
-            )
-            vector_db = FAISS.load_local(vector_kb_folder, embeddings)
-            print(f"成功加载向量数据库，包含 {vector_db.index.ntotal} 个向量")
-            return vector_db
+            collection = chroma_manager.client.get_collection(collection_name)
+            print(f"✅ 成功加载向量数据库，collection: {collection_name}")
+            return chroma_manager
         except Exception as e:
-            print(f"加载向量数据库时出错: {str(e)}")
-            print("尝试使用备用方案...")
-            try:
-                # 备用方案：使用SentenceTransformer
-                from sentence_transformers import SentenceTransformer
-                model = SentenceTransformer(str(settings.EMBEDDING_MODEL_PATH))
+            print(f"❌ 向量数据库不存在: {collection_name}")
+            return None
                 
-                class CustomEmbeddings:
-                    def __init__(self, model):
-                        self.model = model
-                    
-                    def embed_documents(self, texts):
-                        return self.model.encode(texts, normalize_embeddings=True)
-                    
-                    def embed_query(self, text):
-                        return self.model.encode([text], normalize_embeddings=True)[0]
-                
-                embeddings = CustomEmbeddings(model)
-                vector_db = FAISS.load_local(vector_kb_folder, embeddings)
-                print(f"成功加载向量数据库（备用方案），包含 {vector_db.index.ntotal} 个向量")
-                return vector_db
-            except Exception as e2:
-                print(f"备用方案也失败: {e2}")
-                return None
-                
-    except ValueError as e:
-        print(f"路径参数错误: {e}")
-        return None
     except Exception as e:
         print(f"加载向量数据库时出错: {e}")
         return None
+
+# 搜索知识库
+def search_knowledge_db(query: str, chroma_manager: ChromaDBManager, collection_name: str, 
+                       top_k: int = 5, use_rerank: bool = True):
+    """
+    搜索知识库
+    :param query: 查询文本
+    :param chroma_manager: ChromaDB管理器
+    :param collection_name: collection名称
+    :param top_k: 返回结果数量
+    :param use_rerank: 是否使用重排序
+    """
+    try:
+        settings = get_settings()
+        
+        # 初始化BGEM3模型
+        bgem3_manager = BGEM3Manager(str(settings.BGEM3_MODEL_PATH))
+        
+        # 生成查询向量
+        query_embedding = bgem3_manager.encode([query])[0]
+        
+        # 搜索文档
+        results = chroma_manager.search_documents(collection_name, query_embedding, top_k * 2)  # 获取更多候选
+        
+        if not results['documents'] or not results['documents'][0]:
+            print("没有找到相关文档")
+            return []
+        
+        documents = results['documents'][0]
+        distances = results['distances'][0]
+        
+        # 如果启用重排序
+        if use_rerank and len(documents) > 1:
+            try:
+                # 初始化BGE-Reranker模型
+                reranker_manager = BGERerankerManager(str(settings.BGE_RERANKER_MODEL_PATH))
+                
+                # 重排序
+                reranked_results = reranker_manager.rerank_documents(query, documents)
+                
+                # 返回前top_k个结果
+                final_results = []
+                for score, doc in reranked_results[:top_k]:
+                    final_results.append({
+                        'document': doc,
+                        'score': score,
+                        'reranked': True
+                    })
+                
+                print(f"✅ 重排序完成，返回 {len(final_results)} 个结果")
+                return final_results
+                
+            except Exception as e:
+                print(f"重排序失败，使用原始结果: {e}")
+                # 如果重排序失败，使用原始结果
+                pass
+        
+        # 不使用重排序或重排序失败时，使用原始结果
+        final_results = []
+        for i, (doc, distance) in enumerate(zip(documents, distances)):
+            if i >= top_k:
+                break
+            final_results.append({
+                'document': doc,
+                'score': 1.0 - distance,  # 距离转换为相似度分数
+                'reranked': False
+            })
+        
+        print(f"✅ 搜索完成，返回 {len(final_results)} 个结果")
+        return final_results
+        
+    except Exception as e:
+        print(f"搜索知识库失败: {e}")
+        return []
