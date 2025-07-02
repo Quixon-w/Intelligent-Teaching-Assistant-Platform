@@ -66,9 +66,7 @@ public class CoursesController {
             @Parameter(name = "teacherId", description = "老师id", required = true)
     })
     public BaseResponse<List<Courses>> listById(@RequestParam Long teacherId) {
-        QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("teacher_id", teacherId);
-        return ResultUtils.success(coursesService.list(queryWrapper));
+        return ResultUtils.success(coursesService.getCoursesByTeacherId(teacherId));
     }
 
     @GetMapping("/listPage")
@@ -119,10 +117,11 @@ public class CoursesController {
     })
     public BaseResponse<Boolean> deleteCourse(@RequestParam Long courseId, HttpServletRequest request) {
         User currentUser = userService.getCurrentUser(request);
-        if (currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "不是管理员不可删除课程");
+        Courses courses = coursesService.getValidCourseById(courseId);
+        if (!Objects.equals(currentUser.getId(), courses.getTeacherId()) && currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "非本人不可删除课程");
         }
-        return ResultUtils.success(coursesService.removeById(courseId));
+        return ResultUtils.success(coursesService.deleteCourse(courseId));
     }
 
     @PostMapping("/edit")

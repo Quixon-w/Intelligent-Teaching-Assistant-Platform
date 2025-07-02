@@ -1,6 +1,7 @@
 package org.cancan.usercenter.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.Questions;
 
 import java.util.List;
@@ -29,13 +30,13 @@ public interface QuestionsService extends IService<Questions> {
      */
     Boolean addQuestion(Questions question);
 
-    /**
-     * 批量添加问题
-     *
-     * @param questions 问题
-     * @return 批量添加结果
-     */
-    Boolean addQuestionList(List<Questions> questions);
+//    /**
+//     * 批量添加问题
+//     *
+//     * @param questions 问题
+//     * @return 批量添加结果
+//     */
+//    Boolean addQuestionList(List<Questions> questions);
 
     /**
      * 根据教师id获得问题集
@@ -44,5 +45,13 @@ public interface QuestionsService extends IService<Questions> {
      * @return 问题集
      */
     List<Questions> listByTeacherId(Long teacherId);
+
+    /**
+     * 问题在哪些课室里出现过
+     *
+     * @param questionId 问题id
+     * @return 所有使用到的课时列表
+     */
+    List<Lessons> isCommitted(Long questionId);
 
 }

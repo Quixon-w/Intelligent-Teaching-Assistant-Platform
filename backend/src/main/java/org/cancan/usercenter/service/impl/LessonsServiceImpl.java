@@ -5,11 +5,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
-import org.cancan.usercenter.mapper.CoursesMapper;
-import org.cancan.usercenter.mapper.LessonsMapper;
-import org.cancan.usercenter.model.domain.Courses;
-import org.cancan.usercenter.model.domain.Lessons;
-import org.cancan.usercenter.model.domain.User;
+import org.cancan.usercenter.mapper.*;
+import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.service.LessonsService;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
@@ -28,6 +25,12 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
     private LessonsMapper lessonsMapper;
     @Resource
     private CoursesMapper coursesMapper;
+    @Resource
+    private QuestionRecordsMapper questionRecordsMapper;
+    @Resource
+    private LessonQuestionMapMapper lessonQuestionMapMapper;
+    @Resource
+    private ScoresMapper scoresMapper;
 
     /**
      * @param courseId 课程id
@@ -62,13 +65,11 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
     }
 
     /**
-     * @param lessonId    课时ID
+     * @param lessons     课时
      * @param currentUser 当前用户
      */
     @Override
-    public Boolean isTeacher(Long lessonId, User currentUser) {
-        // 确认有效性
-        Lessons lessons = this.getValidLessonById(lessonId);
+    public Boolean isTeacher(Lessons lessons, User currentUser) {
         // 判断是否是老师本人
         QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("id", lessons.getCourseId());
@@ -91,6 +92,28 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "课时不存在");
         }
         return lessons;
+    }
+
+    /**
+     * @param lessonId 课时ID
+     * @return 删除结果
+     */
+    @Override
+    public Boolean deleteLesson(Long lessonId) {
+        // 删除课时答题记录
+        QueryWrapper<QuestionRecords> queryWrapperR = new QueryWrapper<>();
+        queryWrapperR.eq("lesson_id", lessonId);
+        questionRecordsMapper.delete(queryWrapperR);
+        // 删除课时习题映射关系
+        QueryWrapper<LessonQuestionMap> queryWrapperM = new QueryWrapper<>();
+        queryWrapperM.eq("lesson_id", lessonId);
+        lessonQuestionMapMapper.delete(queryWrapperM);
+        // 删除课时成绩表
+        QueryWrapper<Scores> queryWrapperS = new QueryWrapper<>();
+        queryWrapperS.eq("lesson_id", lessonId);
+        scoresMapper.delete(queryWrapperS);
+        // 移除课时
+        return this.removeById(lessonId);
     }
 
 }

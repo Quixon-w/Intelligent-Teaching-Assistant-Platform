@@ -265,22 +265,6 @@ public class UserController {
         return ResultUtils.success(deletedUsers);
     }
 
-    @GetMapping("/getUser")
-    @Operation(summary = "获取用户信息")
-    @Parameters({
-            @Parameter(name = "id", description = "用户id", required = true),
-    })
-    public BaseResponse<User> getUserById(@RequestParam long id) {
-        if (id <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数不合法");
-        }
-        User user = userService.getById(id);
-        if (user == null) {
-            return ResultUtils.success(null);
-        }
-        return ResultUtils.success(userService.getSafetyUser(user));
-    }
-
     @PostMapping("/setAvatar")
     @Operation(summary = "上传头像", description = "头像url为‘后端ip:8080+用户avatarUrl字符串’")
     @Parameters({

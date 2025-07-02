@@ -5,12 +5,15 @@ import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.ibatis.executor.BatchResult;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.mapper.CoursesMapper;
+import org.cancan.usercenter.mapper.LessonQuestionMapMapper;
+import org.cancan.usercenter.mapper.LessonsMapper;
 import org.cancan.usercenter.mapper.QuestionsMapper;
 import org.cancan.usercenter.model.domain.Courses;
+import org.cancan.usercenter.model.domain.LessonQuestionMap;
+import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.Questions;
 import org.cancan.usercenter.service.QuestionsService;
 import org.springframework.stereotype.Service;
@@ -28,9 +31,12 @@ public class QuestionsServiceImpl extends ServiceImpl<QuestionsMapper, Questions
 
     @Resource
     private CoursesMapper coursesMapper;
-
     @Resource
     private QuestionsMapper questionsMapper;
+    @Resource
+    private LessonQuestionMapMapper lessonQuestionMapMapper;
+    @Resource
+    private LessonsMapper lessonsMapper;
 
     /**
      * @param father 父级知识点
@@ -69,36 +75,36 @@ public class QuestionsServiceImpl extends ServiceImpl<QuestionsMapper, Questions
         }
     }
 
-    /**
-     * @param questions 问题
-     * @return 修改成功
-     */
-    @Override
-    public Boolean addQuestionList(List<Questions> questions) {
-        if (CollectionUtils.isEmpty(questions)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "问题列表不能为空");
-        }
-        // 校验老师是否有课程
-        QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("teacher_id", questions.get(0).getTeacherId());
-        if (!coursesMapper.exists(queryWrapper)) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "无开设课程");
-        }
-        // 校验参数
-        for (Questions question : questions) {
-            if (StringUtils.isAnyBlank(
-                    question.getKnowledge(), question.getQuestion(), question.getAnswer(), question.getExplanation()
-            ) || question.getOptions() == null) {
-                throw new BusinessException(ErrorCode.NULL_ERROR, "存在参数为空");
-            }
-        }
-        // 批量保存
-        List<BatchResult> saved = questionsMapper.insert(questions);
-        if (CollectionUtils.isEmpty(Collections.singleton(saved))) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "批量添加失败");
-        }
-        return true;
-    }
+//    /**
+//     * @param questions 问题
+//     * @return 修改成功
+//     */
+//    @Override
+//    public Boolean addQuestionList(List<Questions> questions) {
+//        if (CollectionUtils.isEmpty(questions)) {
+//            throw new BusinessException(ErrorCode.PARAMS_ERROR, "问题列表不能为空");
+//        }
+//        // 校验老师是否有课程
+//        QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
+//        queryWrapper.eq("teacher_id", questions.get(0).getTeacherId());
+//        if (!coursesMapper.exists(queryWrapper)) {
+//            throw new BusinessException(ErrorCode.NO_AUTH, "无开设课程");
+//        }
+//        // 校验参数
+//        for (Questions question : questions) {
+//            if (StringUtils.isAnyBlank(
+//                    question.getKnowledge(), question.getQuestion(), question.getAnswer(), question.getExplanation()
+//            ) || question.getOptions() == null) {
+//                throw new BusinessException(ErrorCode.NULL_ERROR, "存在参数为空");
+//            }
+//        }
+//        // 批量保存
+//        List<BatchResult> saved = questionsMapper.insert(questions);
+//        if (CollectionUtils.isEmpty(Collections.singleton(saved))) {
+//            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "批量添加失败");
+//        }
+//        return true;
+//    }
 
     /**
      * @param teacherId 教师id
@@ -112,6 +118,27 @@ public class QuestionsServiceImpl extends ServiceImpl<QuestionsMapper, Questions
         QueryWrapper<Questions> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("teacher_id", teacherId);
         return questionsMapper.selectList(queryWrapper);
+    }
+
+    /**
+     * @param questionId 问题id
+     * @return 查询结果
+     */
+    @Override
+    public List<Lessons> isCommitted(Long questionId) {
+        // 查询所有使用到该题的课时 Ids
+        QueryWrapper<LessonQuestionMap> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("question_id", questionId);
+        queryWrapper.select("DISTINCT lesson_id"); // 去重
+        List<Object> rawIds = lessonQuestionMapMapper.selectObjs(queryWrapper);
+        List<Long> lessonQuestionMapIds = rawIds.stream()
+                .map(id -> Long.valueOf(id.toString()))
+                .toList();
+        // 批量查所有课时
+        if (CollectionUtils.isEmpty(lessonQuestionMapIds)) {
+            return Collections.emptyList();
+        }
+        return lessonsMapper.selectByIds(lessonQuestionMapIds);
     }
 }
 

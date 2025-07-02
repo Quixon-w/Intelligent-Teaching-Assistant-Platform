@@ -1,5 +1,6 @@
 package org.cancan.usercenter.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -12,6 +13,9 @@ import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.mapper.LessonQuestionMapMapper;
+import org.cancan.usercenter.model.domain.LessonQuestionMap;
+import org.cancan.usercenter.model.domain.Lessons;
 import org.cancan.usercenter.model.domain.Questions;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.QuestionsService;
@@ -38,9 +42,14 @@ public class QuestionsController {
     private QuestionsService questionsService;
     @Resource
     private UserService userService;
+    @Resource
+    private LessonQuestionMapMapper lessonQuestionMapMapper;
 
     @PostMapping("/addOne")
     @Operation(summary = "添加教师个人习题集", description = "id不需要传入")
+    @Parameters({
+            @Parameter(name = "question", description = "习题信息", required = true)
+    })
     public BaseResponse<Questions> addOne(@RequestBody Questions question, HttpServletRequest request) {
         User currentUser = userService.getCurrentUser(request);
         if (!Objects.equals(question.getTeacherId(), currentUser.getId()) && currentUser.getUserRole() != ADMIN_ROLE) {
@@ -58,13 +67,25 @@ public class QuestionsController {
         return ResultUtils.success(question);
     }
 
-    @GetMapping("/selectById")
-    @Operation(summary = "查找某题")
+    @PostMapping("/deleteOne")
+    @Operation(summary = "删除某题", description = "只允许删除未在课时中出现过的题")
     @Parameters({
             @Parameter(name = "questionId", description = "题id", required = true)
     })
-    public BaseResponse<Questions> getQuestion(@RequestParam Long questionId) {
-        return ResultUtils.success(questionsService.getById(questionId));
+    public BaseResponse<Boolean> deleteOne(@RequestParam Long questionId, HttpServletRequest request) {
+        // 鉴权
+        User currentUser = userService.getCurrentUser(request);
+        Questions question = questionsService.getById(questionId);
+        if (!Objects.equals(question.getTeacherId(), currentUser.getId()) && currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可删除");
+        }
+        // 确保习题未在课时出现过
+        QueryWrapper<LessonQuestionMap> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("question_id", questionId);
+        if (lessonQuestionMapMapper.exists(queryWrapper)) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "该题已出现在课时中");
+        }
+        return ResultUtils.success(questionsService.removeById(questionId));
     }
 
     @GetMapping("/selectByFather")
@@ -88,6 +109,43 @@ public class QuestionsController {
             throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可查看");
         }
         return ResultUtils.success(questionsService.listByTeacherId(teacherId));
+    }
+
+    @PostMapping("/update")
+    @Operation(summary = "修改某题", description = "id不能为空")
+    @Parameters({
+            @Parameter(name = "question", description = "题信息", required = true)
+    })
+    public BaseResponse<Boolean> update(@RequestBody Questions question, HttpServletRequest request) {
+        User currentUser = userService.getCurrentUser(request);
+        if (question == null || question.getQuestionId() == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "question参数或questionId为空");
+        }
+        if (!Objects.equals(question.getTeacherId(), currentUser.getId()) && currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可修改");
+        }
+        // 获取出现过的所有课时
+        List<Lessons> lessonsList = questionsService.isCommitted(question.getQuestionId());
+        // 判断是否有已发布的
+        if (!lessonsList.isEmpty() && lessonsList.stream().anyMatch(lesson -> lesson.getHasQuestion() == 1)) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "该题已出现在发布过的课时中");
+        }
+        return ResultUtils.success(questionsService.updateById(question));
+    }
+
+    @GetMapping("/listLessons")
+    @Operation(summary = "查找某个习题在哪些课时里出现过")
+    @Parameters({
+            @Parameter(name = "questionId", description = "题id", required = true)
+    })
+    public BaseResponse<List<Lessons>> listLessons(@RequestParam Long questionId, HttpServletRequest request) {
+        User currentUser = userService.getCurrentUser(request);
+        Questions question = questionsService.getById(questionId);
+        if (!Objects.equals(question.getTeacherId(), currentUser.getId()) && currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可查看");
+        }
+        // 查询所有使用到该题的课时
+        return ResultUtils.success(questionsService.isCommitted(questionId));
     }
 
 }

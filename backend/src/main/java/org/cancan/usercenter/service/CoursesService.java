@@ -73,4 +73,20 @@ public interface CoursesService extends IService<Courses> {
      */
     List<Courses> getCoursesByStudentId(Long studentId);
 
+    /**
+     * 删除课程
+     *
+     * @param courseId 课程id
+     * @return 是否成功
+     */
+    Boolean deleteCourse(Long courseId);
+
+    /**
+     * 获取该老师所有课程
+     *
+     * @param teacherId 老师 id
+     * @return 课程列表
+     */
+    List<Courses> getCoursesByTeacherId(Long teacherId);
+
 }

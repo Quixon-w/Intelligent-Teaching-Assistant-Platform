@@ -33,10 +33,10 @@ public interface LessonsService extends IService<Lessons> {
     /**
      * 判断用户是否是课时的教师
      *
-     * @param lessonId    课时ID
+     * @param lessons     课时
      * @param currentUser 当前用户
      */
-    Boolean isTeacher(Long lessonId, User currentUser);
+    Boolean isTeacher(Lessons lessons, User currentUser);
 
     /**
      * 获取有效的课时对象
@@ -45,5 +45,13 @@ public interface LessonsService extends IService<Lessons> {
      * @return 课时对象
      */
     Lessons getValidLessonById(Long lessonId);
+
+    /**
+     * 删除课时
+     *
+     * @param lessonId 课时ID
+     * @return 是否删除成功
+     */
+    Boolean deleteLesson(Long lessonId);
 
 }

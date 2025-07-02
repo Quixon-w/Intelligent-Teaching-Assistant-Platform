@@ -13,21 +13,12 @@ import java.util.List;
  */
 public interface LessonQuestionMapService extends IService<LessonQuestionMap> {
 
-//    /**
-//     * 判断课时中是否有此题
-//     *
-//     * @param lessonId 课时id
-//     * @return 是否有题
-//     */
-//    Boolean hasQuestion(Long lessonId);
-
     /**
      * 获取课时中的所有题
      *
-     * @param lessonId  课时id
-     * @param committed 是否已发布
+     * @param lessonId 课时id
      * @return 课时中的所有题
      */
-    List<Questions> getOrderedQuestions(Long lessonId, boolean committed);
+    List<Questions> getOrderedQuestions(Long lessonId);
 
 }

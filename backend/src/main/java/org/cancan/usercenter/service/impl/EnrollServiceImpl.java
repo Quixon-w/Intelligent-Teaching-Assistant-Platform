@@ -5,16 +5,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
-import org.cancan.usercenter.mapper.CoursesMapper;
-import org.cancan.usercenter.mapper.EnrollMapper;
-import org.cancan.usercenter.mapper.QuestionRecordsMapper;
-import org.cancan.usercenter.mapper.UserMapper;
+import org.cancan.usercenter.mapper.*;
 import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.LessonsService;
 import org.cancan.usercenter.service.ScoresService;
 import org.cancan.usercenter.utils.RedisUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +32,10 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     private UserMapper userMapper;
     @Resource
     private CoursesMapper coursesMapper;
+    @Resource
+    private QuestionRecordsMapper questionRecordsMapper;
+    @Resource
+    private ScoresMapper scoresMapper;
 
     @Resource
     private LessonsService lessonsService;
@@ -44,8 +44,6 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
 
     @Resource
     private RedisUtil redisUtil;
-    @Autowired
-    private QuestionRecordsMapper questionRecordsMapper;
 
     /**
      * @param courseId  课程id
@@ -54,7 +52,7 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
      */
     @Override
     public Boolean dismiss(Long courseId, Long studentId) {
-        // 删除学生做题记录
+        // 删除学生做题记录和课时成绩
         List<Lessons> lessons = lessonsService.listLessons(courseId);
         if (lessons != null && !lessons.isEmpty()) {
             List<Long> lessonIds = lessons.stream().map(Lessons::getLessonId).toList();
@@ -62,6 +60,10 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
             queryWrapperM.in("lesson_id", lessonIds);
             queryWrapperM.eq("student_id", studentId);
             questionRecordsMapper.delete(queryWrapperM);
+            QueryWrapper<Scores> queryWrapperS = new QueryWrapper<>();
+            queryWrapperS.in("lesson_id", lessonIds);
+            queryWrapperS.eq("student_id", studentId);
+            scoresMapper.delete(queryWrapperS);
         }
         // 删除选课记录
         QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();

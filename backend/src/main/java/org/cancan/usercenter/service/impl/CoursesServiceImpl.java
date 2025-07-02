@@ -6,10 +6,8 @@ import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
-import org.cancan.usercenter.mapper.CoursesMapper;
-import org.cancan.usercenter.mapper.UserMapper;
-import org.cancan.usercenter.model.domain.Courses;
-import org.cancan.usercenter.model.domain.User;
+import org.cancan.usercenter.mapper.*;
+import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.utils.SpecialCode;
@@ -32,6 +30,14 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
     private UserMapper userMapper;
     @Resource
     private CoursesMapper coursesMapper;
+    @Resource
+    private LessonsMapper lessonsMapper;
+    @Resource
+    private QuestionRecordsMapper questionRecordsMapper;
+    @Resource
+    private LessonQuestionMapMapper lessonQuestionMapMapper;
+    @Resource
+    private ScoresMapper scoresMapper;
 
     @Resource
     private EnrollService enrollService;
@@ -158,6 +164,50 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
             throw new BusinessException(ErrorCode.NULL_ERROR, "该学生无选课记录");
         }
         return coursesMapper.selectByIds(courseIds);
+    }
+
+    /**
+     * @param courseId 课程id
+     * @return 是否成功
+     */
+    @Override
+    public Boolean deleteCourse(Long courseId) {
+        QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("course_id", courseId);
+        List<Long> lessonIds = lessonsMapper.selectList(queryWrapper).stream().map(Lessons::getLessonId).toList();
+        if (!lessonIds.isEmpty()) {
+            // 删除答题记录
+            QueryWrapper<QuestionRecords> queryWrapperQ = new QueryWrapper<>();
+            queryWrapperQ.in("lesson_id", lessonIds);
+            questionRecordsMapper.delete(queryWrapperQ);
+            // 删除课时习题映射关系
+            QueryWrapper<LessonQuestionMap> queryWrapperM = new QueryWrapper<>();
+            queryWrapperM.in("lesson_id", lessonIds);
+            lessonQuestionMapMapper.delete(queryWrapperM);
+            // 删除课时成绩表
+            QueryWrapper<Scores> queryWrapperS = new QueryWrapper<>();
+            queryWrapperS.in("lesson_id", lessonIds);
+            scoresMapper.delete(queryWrapperS);
+            // 删除课时
+            lessonsMapper.delete(queryWrapper);
+        }
+        // 删除选课
+        QueryWrapper<Enroll> queryWrapperE = new QueryWrapper<>();
+        queryWrapperE.eq("courses_id", courseId);
+        enrollService.remove(queryWrapperE);
+        // 删除课程
+        return this.removeById(courseId);
+    }
+
+    /**
+     * @param teacherId 老师 id
+     * @return 课程列表
+     */
+    @Override
+    public List<Courses> getCoursesByTeacherId(Long teacherId) {
+        QueryWrapper<Courses> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("teacher_id", teacherId);
+        return coursesMapper.selectList(queryWrapper);
     }
 
 }

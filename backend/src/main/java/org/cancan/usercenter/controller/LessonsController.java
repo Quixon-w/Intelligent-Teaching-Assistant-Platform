@@ -1,5 +1,6 @@
 package org.cancan.usercenter.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -66,14 +67,18 @@ public class LessonsController {
             @Parameter(name = "lessonId", description = "课时id", required = true)
     })
     public BaseResponse<Boolean> deleteLesson(@RequestParam Long lessonId, HttpServletRequest request) {
-        // 参数校验
-        lessonsService.getValidLessonById(lessonId);
         // 判断是否是老师本人
+        Lessons lessons = lessonsService.getValidLessonById(lessonId);
         User currentUser = userService.getCurrentUser(request);
-        if (!lessonsService.isTeacher(lessonId, currentUser) && currentUser.getUserRole() != ADMIN_ROLE) {
+        if (!lessonsService.isTeacher(lessons, currentUser) && currentUser.getUserRole() != ADMIN_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "非老师本人开设的课时");
         }
-        return ResultUtils.success(lessonsService.removeById(lessonId));
+        // 课程不可已经结束
+        Courses courses = coursesService.getValidCourseById(lessons.getCourseId());
+        if (courses.getIsOver() == 1) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "课程已结束");
+        }
+        return ResultUtils.success(lessonsService.deleteLesson(lessonId));
     }
 
     @GetMapping("/list")
@@ -152,6 +157,23 @@ public class LessonsController {
         } else {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "该课程无选课学生");
         }
+    }
+
+    @GetMapping("/getQuestionedLessonNum")
+    @Operation(summary = "查看某老师发布过习题的课时数量")
+    @Parameters({
+            @Parameter(name = "teacherId", description = "老师id", required = true),
+    })
+    public BaseResponse<Long> getQuestionedLessonNum(@RequestParam Long teacherId) {
+        List<Courses> courses = coursesService.getCoursesByTeacherId(teacherId);
+        if (courses.isEmpty()) {
+            return ResultUtils.success(0L);
+        }
+        List<Long> courseIds = courses.stream().map(Courses::getId).toList();
+        QueryWrapper<Lessons> queryWrapperL = new QueryWrapper<>();
+        queryWrapperL.in("course_id", courseIds);
+        queryWrapperL.eq("has_question", 1);
+        return ResultUtils.success(lessonsService.count(queryWrapperL));
     }
 
 }

@@ -1,5 +1,6 @@
 package org.cancan.usercenter.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -12,12 +13,14 @@ import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.model.domain.Courses;
+import org.cancan.usercenter.model.domain.Enroll;
 import org.cancan.usercenter.model.domain.User;
 import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -103,7 +106,7 @@ public class EnrollController {
         }
         List<Courses> coursesList = coursesService.getCoursesByStudentId(studentId);
         if (coursesList == null || coursesList.isEmpty()) {
-            return ResultUtils.success(null);
+            return ResultUtils.success(new ArrayList<>());
         }
         return ResultUtils.success(coursesList);
     }
@@ -119,7 +122,7 @@ public class EnrollController {
         }
         List<User> studentsList = enrollService.getStudentsByCourseId(courseId);
         if (studentsList == null || studentsList.isEmpty()) {
-            return ResultUtils.success(null);
+            return ResultUtils.success(new ArrayList<>());
         }
         List<User> safeUsers = studentsList.stream().map(userService::getSafetyUser).toList();
         return ResultUtils.success(safeUsers);
@@ -130,8 +133,22 @@ public class EnrollController {
     public BaseResponse<List<Courses>> listHotCourses() {
         List<Courses> coursesList = enrollService.getHighCourses();
         if (coursesList == null || coursesList.isEmpty()) {
-            return ResultUtils.success(null);
+            return ResultUtils.success(new ArrayList<>());
         }
         return ResultUtils.success(coursesList);
     }
+
+    @GetMapping("/studentNum")
+    @Operation(summary = "某老师所有课程的学生数量总和")
+    public BaseResponse<Long> sumNumOfStudent(@RequestParam Long teacherId) {
+        List<Courses> courses = coursesService.getCoursesByTeacherId(teacherId);
+        if (courses.isEmpty()) {
+            return ResultUtils.success(0L);
+        }
+        List<Long> courseIds = courses.stream().map(Courses::getId).toList();
+        QueryWrapper<Enroll> queryWrapperE = new QueryWrapper<>();
+        queryWrapperE.in("courses_id", courseIds);
+        return ResultUtils.success(enrollService.count(queryWrapperE));
+    }
+
 }

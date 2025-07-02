@@ -61,7 +61,7 @@ public class QuestionRecordsController {
             @Parameter(name = "answers", description = "答案列表", required = true)
     })
     public BaseResponse<List<QuestionRecords>> add(@RequestParam Long lessonId, @RequestParam List<String> answers, HttpServletRequest request) {
-        // 校验课时
+        // 确认课时含有已发布习题
         Lessons lessons = lessonsService.getValidLessonById(lessonId);
         if (lessons.getHasQuestion() == 0) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "该课时没有习题");
@@ -81,7 +81,7 @@ public class QuestionRecordsController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "已提交过该课时的习题");
         }
         // 获取习题列表
-        List<Questions> questionsList = lessonQuestionMapService.getOrderedQuestions(lessonId, true);
+        List<Questions> questionsList = lessonQuestionMapService.getOrderedQuestions(lessonId);
         // 校验答案数量
         if (answers == null || answers.size() != questionsList.size()) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "答案数量与题目数量不一致");
