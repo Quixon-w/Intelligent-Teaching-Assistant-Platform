@@ -10,13 +10,16 @@ import {
 } from "@/api/course/lesson.js";
 import {ElMessage} from "element-plus";
 import QuestionsOfTeacher from "@/components/questions/QuestionsOfTeacher.vue";
+import {downloadUrl} from "@/api/file.js";
 
 const route = useRoute();
 const questions = ref([]);
+const urls=ref([]);
 const currentquestion = ref({});
 const dialogChangeQuestionVisible = ref(false);
 const dialogCreateQuestionVisible = ref(false);
 const dialogAddQuestionOfMine=ref(false);
+const dialogDownloadVisible=ref(false);
 const getQuestions = (lessonId) => {
   getLessonQuestions(lessonId).then(res => {
     console.log(res);
@@ -88,6 +91,8 @@ const addQuestionOfMine=()=>{
   dialogAddQuestionOfMine.value=true;
 }
 const aiCreateQuestions=()=>{
+  getAiCreateUrls()
+  dialogDownloadVisible.value=true;
 }
 onMounted(() => {
   getQuestions(route.params.lessonId)
@@ -220,6 +225,9 @@ onMounted(() => {
   </el-dialog>
   <el-dialog v-model="dialogAddQuestionOfMine" title="从题库中添加">
     <QuestionsOfTeacher :action="'add'" :lessonId=route.params.lessonId />
+  </el-dialog>
+  <el-dialog v-model="dialogDownloadVisible" title="文件下载">
+    <el-text v-for="url in urls" @click="downloadUrl(url)" style=":hover{color: #409eff}">{{url}}<br></el-text>
   </el-dialog>
 </template>
 
