@@ -5,7 +5,7 @@
       <el-tab-pane label="基本信息" name="info">
         <div class="user-edit">
           <div class="avatar-section">
-            <img :src="userInfo.avatarUrl" alt="上传头像" class="avatar" />
+            <img :src="userInfo.avatarUrl" alt="上传头像" class="avatar" @click="uploadAvatar"/>
           </div>
           <div class="edit-form">
             <h3>编辑个人信息</h3>
@@ -70,12 +70,17 @@
       </el-tab-pane>
     </el-tabs>
   </div>
+
+  <el-dialog v-model="dialogImageUp" title="上传头像">
+    <ImageUp/>
+  </el-dialog>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import { getCurrentUser, updateUserInfo, changePassword } from '@/api/user/userinfo';
 import { ElMessage } from 'element-plus';
+import ImageUp from "@/components/file/ImageUp.vue";
 
 const activeTab = ref('info');
 
@@ -149,7 +154,10 @@ const updatePassword = async () => {
     ElMessage.error('请求失败，请重试');
   }
 };
-
+const dialogImageUp=ref(false)
+const uploadAvatar = () => {
+  dialogImageUp.value=true;
+}
 onMounted(fetchCurrentUser);
 </script>
 

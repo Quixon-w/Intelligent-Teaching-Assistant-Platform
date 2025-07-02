@@ -13,6 +13,11 @@ const route = useRoute();
 const role=sessionStorage.getItem('role');
 const currentWeb=ref(PathNameMap[route.name]);
 watch(() => router.currentRoute.value.path, (toPath) => {currentWeb.value=PathNameMap[toPath];},{immediate: true,deep: true});
+const userImage = ref(sessionStorage.getItem('avatarUrl'));
+const errorImage = ()=>{
+  userImage.value='@/src/assets/logo.svg';
+  console.log(userImage.value);
+};
 const handleCommand = (command) => {
   if (command === 'onExit') {
     onExit().then(res=>{
@@ -44,7 +49,8 @@ const handleCommand = (command) => {
           <el-text style="color: #B0C4DE;font-size: 30px">{{role}}</el-text>
           <el-dropdown @command="handleCommand">
             <span>
-              <img alt="头像" class="logo" src="http://192.168.10.86:8080/{{sessionStorage.getItem('avatarUrl')}}" width="50" height="50"/>
+              <el-avatar :size="50" :src=userImage :on-error="errorImage"></el-avatar>
+<!--              <img alt="头像" class="logo" src="http://192.168.10.86:8080/{{sessionStorage.getItem('avatarUrl')}}" onerror="this.src='@/assent/logo.svg'" width="50" height="50"/>-->
             </span>
             <template #dropdown>
               <el-dropdown-menu>
