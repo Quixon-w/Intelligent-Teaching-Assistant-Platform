@@ -51,7 +51,8 @@ const beforeRemove: UploadProps['beforeRemove'] = (uploadFile, uploadFiles) => {
 }
 
 const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile, uploadFiles) => {
-  console.log(response, uploadFile, uploadFiles)
+  console.log(response, uploadFile, uploadFiles);
+  location.reload();
 }
 
 const handleError: UploadProps['onError'] = (error, uploadFile, uploadFiles) => {

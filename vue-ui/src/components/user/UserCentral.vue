@@ -106,6 +106,7 @@ const fetchCurrentUser = async () => {
     const res = await getCurrentUser();
     userInfo.value = res.data;
     editInfo.value = { ...res.data };
+    sessionStorage.setItem('avatarUrl', userInfo.value.avatarUrl);
   } catch (error) {
     ElMessage.error('无法加载当前用户信息');
   }
