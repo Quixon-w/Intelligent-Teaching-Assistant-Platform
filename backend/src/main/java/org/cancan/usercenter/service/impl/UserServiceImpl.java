@@ -17,8 +17,13 @@ import org.cancan.usercenter.utils.RedisUtil;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.cancan.usercenter.constant.UserConstant.*;
@@ -108,7 +113,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 用户脱敏
         User safetyUser = getSafetyUser(user);
         // 将用户登录态存储到 Redis
-        String sessionId = request.getSession().getId(); // 使用 session ID 作为 Redis 的 key
+        String sessionId = request.getSession().getId();
         redisUtil.set(sessionId, JSON.toJSONString(safetyUser), EXPIRE_TIME, TimeUnit.SECONDS);
 
         return safetyUser;
@@ -133,6 +138,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 脱敏，仅返回部分用户信息
         User safetyUser = getSafetyUser(user);
         // 更新用户信息
+        safetyUser.setAvatarUrl(null);
         userMapper.updateById(safetyUser);
         // 将用户信息更新到 Redis
         String sessionId = request.getSession().getId(); // 使用 session ID 作为 Redis 的 key
@@ -238,6 +244,80 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         return user;
     }
+
+    /**
+     * @param id 用户id
+     * @return 被删除用户
+     */
+    @Override
+    public User selectDeletedUserById(Long id) {
+        return userMapper.selectDeletedUserById(id);
+    }
+
+    /**
+     * @param id 用户id
+     * @return 恢复结果
+     */
+    @Override
+    public boolean restoreUser(Long id) {
+        return userMapper.restoreUser(id);
+    }
+
+    /**
+     * @return 删除用户列表
+     */
+    @Override
+    public List<User> listDeletedUsers() {
+        return userMapper.listDeletedUsers();
+    }
+
+    /**
+     * @param file    文件
+     * @param request 请求
+     * @return 头像地址
+     */
+    @Override
+    public String updateAvatar(MultipartFile file, HttpServletRequest request) {
+        // 生成唯一文件名
+        String originalName = file.getOriginalFilename();
+        if (originalName == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件名错误");
+        }
+        String fileExt = originalName.substring(originalName.lastIndexOf("."));
+        String fileName = UUID.randomUUID() + fileExt;
+        // 保存文件
+        File dest = new File(System.getProperty("user.dir") + "/backend/uploads/avatars/" + fileName);
+        try {
+            file.transferTo(dest);
+        } catch (IOException e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "保存失败");
+        }
+        // 删除旧头像文件
+        User currentUser = this.getCurrentUser(request);
+        String oldAvatarUrl = currentUser.getAvatarUrl();
+        if (oldAvatarUrl != null && oldAvatarUrl.startsWith("/api/avatar/")) {
+            // 截取文件名
+            String oldFileName = oldAvatarUrl.substring(oldAvatarUrl.lastIndexOf("/") + 1);
+            String oldPath = System.getProperty("user.dir") + "/backend/uploads/avatars/" + oldFileName;
+            File oldFile = new File(oldPath);
+            if (oldFile.exists()) {
+                boolean deleteResult = oldFile.delete();
+                if (!deleteResult) {
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "删除旧头像失败");
+                }
+            }
+        }
+        // 保存到当前登录用户的 avatar 字段
+        String urlPath = "/api/avatar/" + fileName;
+        currentUser.setAvatarUrl(urlPath);
+        userMapper.updateById(currentUser);
+        // 同步更新 Redis 缓存
+        String sessionId = request.getSession().getId();
+        redisUtil.set(sessionId, JSON.toJSONString(currentUser), EXPIRE_TIME, TimeUnit.SECONDS);
+
+        return urlPath;
+    }
+
 }
 
 

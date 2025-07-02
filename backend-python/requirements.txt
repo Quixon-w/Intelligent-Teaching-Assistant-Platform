@@ -6,7 +6,7 @@ sse-starlette>=1.8.0
 
 # 数据处理和科学计算
 numpy>=1.24.0
-torch>=2.0.0
+torch>=2.6.0
 safetensors>=0.4.0
 
 # AI和机器学习
@@ -14,9 +14,12 @@ rwkv>=0.8.0
 langchain>=0.1.0
 langchain-community>=0.0.10
 sentence-transformers>=2.2.0
-faiss-cpu>=1.7.0
 tiktoken>=0.5.0
 tokenizers>=0.15.0
+
+# 向量数据库
+chromadb>=0.4.0
+chroma-hnswlib>=0.7.0
 
 # 文档处理
 PyMuPDF>=1.23.0  # fitz
@@ -48,4 +51,38 @@ python-multipart>=0.0.6
 cyac>=2.0.0
 
 # 开发工具
-setuptools>=70.0.0 
+setuptools>=70.0.0
+
+# 新增依赖
+# BGEM3嵌入模型
+FlagEmbedding>=1.2.0
+
+# BGE重排序模型
+bge-reranker>=0.1.0
+
+# 正则表达式增强
+regex>=2023.0.0
+
+# 异步支持
+aiofiles>=23.0.0
+
+# 配置管理
+python-dotenv>=1.0.0
+
+# 日志管理
+loguru>=0.7.0
+
+# 时间处理
+python-dateutil>=2.8.0
+
+# 文件路径处理
+pathlib2>=2.3.0
+
+# 数据验证
+marshmallow>=3.20.0
+
+# 缓存支持
+cachetools>=5.3.0
+
+# 并发控制
+asyncio-throttle>=1.0.0 

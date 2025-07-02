@@ -35,5 +35,5 @@ public interface UserConstant {
     /**
      * token 过期时间
      */
-    long EXPIRE_TIME = 2 * 3600;
+    long EXPIRE_TIME = 3 * 3600;
 }

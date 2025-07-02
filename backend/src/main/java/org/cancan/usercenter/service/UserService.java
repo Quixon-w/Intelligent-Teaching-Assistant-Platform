@@ -3,6 +3,9 @@ package org.cancan.usercenter.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.cancan.usercenter.model.domain.User;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * 用户服务
@@ -72,4 +75,37 @@ public interface UserService extends IService<User> {
      * @return 有效用户
      */
     User getById(Long id);
+
+    /**
+     * 根据id获取被删除用户
+     *
+     * @param id 用户id
+     * @return 被删除用户
+     */
+    User selectDeletedUserById(Long id);
+
+    /**
+     * 恢复用户
+     *
+     * @param id 用户id
+     * @return 是否成功
+     */
+    boolean restoreUser(Long id);
+
+    /**
+     * 获取被删除的用户列表
+     *
+     * @return 被删除的用户列表
+     */
+    List<User> listDeletedUsers();
+
+    /**
+     * 更新用户头像
+     *
+     * @param file    文件
+     * @param request 请求
+     * @return 头像地址
+     */
+    String updateAvatar(MultipartFile file, HttpServletRequest request);
+
 }

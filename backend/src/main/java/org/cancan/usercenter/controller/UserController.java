@@ -26,7 +26,9 @@ import org.cancan.usercenter.model.domain.request.UserLoginRequest;
 import org.cancan.usercenter.model.domain.request.UserRegisterRequest;
 import org.cancan.usercenter.service.UserService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -217,7 +219,7 @@ public class UserController {
     @Parameters({
             @Parameter(name = "id", description = "用户id", required = true),
     })
-    public BaseResponse<Boolean> deleteUsers(@RequestParam long id, HttpServletRequest request) {
+    public BaseResponse<Boolean> deleteUser(@RequestParam long id, HttpServletRequest request) {
         // 获取当前用户
         User currentUser = userService.getCurrentUser(request);
         // 仅管理员与本用户可删除
@@ -230,6 +232,37 @@ public class UserController {
         boolean result = userService.removeById(id);
         userService.userLogout(request);
         return ResultUtils.success(result);
+    }
+
+    @PostMapping("/recover")
+    @Operation(summary = "恢复用户", description = "仅管理员可恢复用户")
+    @Parameters({
+            @Parameter(name = "id", description = "用户id", required = true),
+    })
+    public BaseResponse<Boolean> recoverUser(@RequestParam long id, HttpServletRequest request) {
+        // 验证权限
+        User currentUser = userService.getCurrentUser(request);
+        if (currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有管理员才可恢复用户");
+        }
+        // 检索被删除用户
+        User deletedUser = userService.selectDeletedUserById(id);
+        if (deletedUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或未被删除");
+        }
+        // 恢复用户
+        return ResultUtils.success(userService.restoreUser(id));
+    }
+
+    @GetMapping("/listDeleted")
+    @Operation(summary = "获取被删除的用户列表")
+    public BaseResponse<List<User>> listDeletedUsers(HttpServletRequest request) {
+        User currentUser = userService.getCurrentUser(request);
+        if (currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有管理员才可查看被删除的用户列表");
+        }
+        List<User> deletedUsers = userService.listDeletedUsers();
+        return ResultUtils.success(deletedUsers);
     }
 
     @GetMapping("/getUser")
@@ -246,6 +279,25 @@ public class UserController {
             return ResultUtils.success(null);
         }
         return ResultUtils.success(userService.getSafetyUser(user));
+    }
+
+    @PostMapping("/setAvatar")
+    @Operation(summary = "上传头像", description = "头像url为‘后端ip:8080+用户avatarUrl字符串’")
+    @Parameters({
+            @Parameter(name = "file", description = "文件", required = true),
+    })
+    public BaseResponse<String> uploadAvatar(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        // 检查文件是否为空
+        if (file.isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件为空");
+        }
+        // 检查文件类型
+        String contentType = file.getContentType();
+        List<String> allowedTypes = Arrays.asList("image/jpeg", "image/png", "image/gif");
+        if (!allowedTypes.contains(contentType)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "不支持的文件类型");
+        }
+        return ResultUtils.success(userService.updateAvatar(file, request));
     }
 
 }

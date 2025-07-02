@@ -1,3 +1,11 @@
+# ========================================
+# 智能教学助手平台 API 路由列表
+# ========================================
+
+# ========================================
+# 核心AI接口 (Core AI APIs)
+# ========================================
+
 # 聊天完成接口 (Chat Completions)
 /v1/chat/completions
 /chat/completions
@@ -10,17 +18,63 @@
 /v1/engines/text-embedding-ada-002/embeddings
 /engines/text-embedding-ada-002/embeddings
 
+# ========================================
 # 模型配置接口 (Model Configuration)
+# ========================================
 /switch-model
 /update-config
 /status
 
+# ========================================
+# 文件管理接口 (File Management)
+# ========================================
+
 # 文件上传接口 (File Upload)
 /v1/upload
 
-# 知识搜索接口 (Knowledge Search)
+# 文件下载接口 (File Download)
+/v1/download/resource/{user_id}/{course_id}/{filename}
+/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{filename}
+/v1/download/exercise/{user_id}/{course_id}/{lesson_num}/{filename}
+
+# 文件列表接口 (File Listing)
+/v1/list/resources/{user_id}/{course_id}
+/v1/list/outlines/{user_id}/{course_id}/{lesson_num}
+/v1/list/exercises/{user_id}/{course_id}/{lesson_num}
+
+# ========================================
+# 知识库管理接口 (Knowledge Base Management)
+# ========================================
+
+# 知识库搜索接口 (Knowledge Search)
+/v1/knowledge/search
 /v1/search
 /search
+
+# 知识库管理接口 (Knowledge Base Management)
+/v1/knowledge/collections
+/v1/knowledge/collection
+/v1/knowledge/status
+
+# ========================================
+# 智能问答接口 (Intelligent Q&A)
+# ========================================
+
+# 智能问答接口 (Intelligent Q&A)
+/v1/qa
+
+# 问答状态接口 (Q&A Status)
+/v1/qa/status
+
+# 问答会话管理 (Q&A Session Management)
+/v1/qa/sessions/{user_id}/{session_id}/history
+/v1/qa/sessions/{user_id}/{session_id}/context
+/v1/qa/sessions/{user_id}/{session_id}/history
+/v1/qa/sessions/{user_id}
+
+# ========================================
+# 内容生成接口 (Content Generation)
+# ========================================
 
 # 练习生成接口 (Exercise Generation)
 /v1/exercise
@@ -31,18 +85,9 @@
 /create/outline
 /v1/create/outline/status
 
-# 文件下载接口 (File Download)
-/v1/download/resource/{user_id}/{course_id}/{filename}
-/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{filename}
-/v1/list/resources/{user_id}/{course_id}
-/v1/list/outlines/{user_id}/{course_id}/{lesson_num}
-
-# 状态缓存管理 (State Cache Management)
-/disable-state-cache
-/enable-state-cache
-/reset-state
-
+# ========================================
 # 会话管理接口 (Session Management)
+# ========================================
 /v1/users/{user_id}/sessions/{session_id}/dialogues
 /v1/users/{user_id}/sessions/{session_id}/context
 /v1/users/{user_id}/sessions/{session_id}/info
@@ -50,7 +95,24 @@
 /v1/users/{user_id}/sessions/{session_id}/load
 /v1/users/{user_id}/sessions
 
+# ========================================
+# 状态管理接口 (State Management)
+# ========================================
+
+# 状态缓存管理 (State Cache Management)
+/disable-state-cache
+/enable-state-cache
+/reset-state
+
+# ========================================
+# 系统接口 (System APIs)
+# ========================================
+
 # 根接口 (Root)
 /
 /exit
 
+# ChromaDB知识库管理
+/v1/knowledge/collections
+/v1/knowledge/collection
+/v1/knowledge/status

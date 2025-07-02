@@ -5,19 +5,22 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.exception.BusinessException;
+import org.cancan.usercenter.mapper.CoursesMapper;
 import org.cancan.usercenter.mapper.EnrollMapper;
-import org.cancan.usercenter.mapper.LessonQuestionMapMapper;
+import org.cancan.usercenter.mapper.QuestionRecordsMapper;
 import org.cancan.usercenter.mapper.UserMapper;
-import org.cancan.usercenter.model.domain.Enroll;
-import org.cancan.usercenter.model.domain.LessonQuestionMap;
-import org.cancan.usercenter.model.domain.Lessons;
-import org.cancan.usercenter.model.domain.User;
+import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.LessonsService;
 import org.cancan.usercenter.service.ScoresService;
+import org.cancan.usercenter.utils.RedisUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author 洪
@@ -32,12 +35,17 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     @Resource
     private UserMapper userMapper;
     @Resource
-    private LessonQuestionMapMapper lessonQuestionMapMapper;
+    private CoursesMapper coursesMapper;
 
     @Resource
     private LessonsService lessonsService;
     @Resource
     private ScoresService scoresService;
+
+    @Resource
+    private RedisUtil redisUtil;
+    @Autowired
+    private QuestionRecordsMapper questionRecordsMapper;
 
     /**
      * @param courseId  课程id
@@ -48,12 +56,12 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
     public Boolean dismiss(Long courseId, Long studentId) {
         // 删除学生做题记录
         List<Lessons> lessons = lessonsService.listLessons(courseId);
-        if (lessons != null) {
+        if (lessons != null && !lessons.isEmpty()) {
             List<Long> lessonIds = lessons.stream().map(Lessons::getLessonId).toList();
-            QueryWrapper<LessonQuestionMap> queryWrapperM = new QueryWrapper<>();
+            QueryWrapper<QuestionRecords> queryWrapperM = new QueryWrapper<>();
             queryWrapperM.in("lesson_id", lessonIds);
             queryWrapperM.eq("student_id", studentId);
-            lessonQuestionMapMapper.delete(queryWrapperM);
+            questionRecordsMapper.delete(queryWrapperM);
         }
         // 删除选课记录
         QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
@@ -78,6 +86,7 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
         enroll.setCoursesId(courseId);
         enroll.setStudentId(studentId);
         this.save(enroll);
+        redisUtil.incrementScore("hot:course:rank", courseId.toString(), 1);
         return true;
     }
 
@@ -141,6 +150,33 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
                 .filter(lesson -> lesson.getHasQuestion() == 0)
                 .map(lesson -> scoresService.getScore(lesson.getLessonId(), studentId))
                 .reduce(0.0f, Float::sum);
+    }
+
+    /**
+     * @return 热门课程
+     */
+    @Override
+    public List<Courses> getHighCourses() {
+        Set<ZSetOperations.TypedTuple<String>> topCourses = redisUtil.getTopN("hot:course:rank", 10);
+        if (topCourses == null || topCourses.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 提取 courseId 列表
+        List<Long> courseIds = topCourses.stream()
+                .map(ZSetOperations.TypedTuple::getValue)
+                .filter(Objects::nonNull)
+                .map(Long::valueOf)
+                .toList();
+        // 从数据库中查询课程信息
+        List<Courses> courses = coursesMapper.selectByIds(courseIds);
+
+        // 排序
+        Map<Long, Courses> courseMap = courses.stream().collect(Collectors.toMap(Courses::getId, Function.identity()));
+        return courseIds.stream()
+                .map(courseMap::get)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
 }
