@@ -5,7 +5,7 @@
       <el-tab-pane label="基本信息" name="info">
         <div class="user-edit">
           <div class="avatar-section">
-            <img :src="userInfo.avatarUrl" alt="头像" class="avatar" />
+            <img :src="userInfo.avatarUrl" alt="上传头像" class="avatar" />
           </div>
           <div class="edit-form">
             <h3>编辑个人信息</h3>

@@ -44,7 +44,7 @@ const handleCommand = (command) => {
           <el-text style="color: #B0C4DE;font-size: 30px">{{role}}</el-text>
           <el-dropdown @command="handleCommand">
             <span>
-              <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="50" height="50"/>
+              <img alt="头像" class="logo" src="http://192.168.10.86:8080/{{sessionStorage.getItem('avatarUrl')}}" width="50" height="50"/>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
