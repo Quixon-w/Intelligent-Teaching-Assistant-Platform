@@ -66,6 +66,7 @@ const handleError: UploadProps['onError'] = (error, uploadFile, uploadFiles) => 
       class="upload-demo"
       action="/api/user/setAvatar"
       method="post"
+      drag
       :on-preview="handlePreview"
       :on-remove="handleRemove"
       :before-remove="beforeRemove"
