@@ -1,6 +1,6 @@
-const UserRoleMap ={
-  0:'student',
-  1:'teacher',
-  2:'admin'
+const UserRoleMap = {
+  0: '学生',
+  1: '教师', 
+  2: '管理员'
 }
 export default UserRoleMap;

@@ -30,7 +30,7 @@ import static org.cancan.usercenter.constant.UserConstant.*;
 
 /**
  * @author 洪
- * {@code @description} 针对表【users】的数据库操作Service实现
+ *         {@code @description} 针对表【users】的数据库操作Service实现
  */
 @Service
 @Slf4j
@@ -51,26 +51,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
         // 校验
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "注册信息不能为空");
         }
         if (userAccount.length() < 4) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号过短，不少于四位");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户名长度不能少于4位");
         }
         if (userPassword.length() < 8 || checkPassword.length() < 8) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码过短，不少于八位");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码长度不能少于8位");
         }
         // 账户不能包含特殊字符
-        SpecialCode.validateCode(userAccount);
+        try {
+            SpecialCode.validateCode(userAccount);
+        } catch (BusinessException e) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户名不能包含特殊字符");
+        }
         // 密码和校验密码相同
         if (!userPassword.equals(checkPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "校验失败");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
         }
         // 账户不能重复
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_account", userAccount);
         long count = userMapper.selectCount(queryWrapper);
         if (count > 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号重复");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户名已存在，请选择其他用户名");
         }
         // 对密码进行加密
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes(StandardCharsets.UTF_8));
@@ -80,7 +84,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUserPassword(encryptPassword);
         boolean saveResult = this.save(user);
         if (!saveResult) {
-            return -1;
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，请稍后重试");
         }
         return user.getId();
     }
@@ -124,12 +128,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             return null;
         }
-        if (
-                user.getGender() != null
-                        && user.getGender() != UNKNOWN_GENDER
-                        && user.getGender() != MALE_GENDER
-                        && user.getGender() != FEMALE_GENDER
-        ) {
+        if (user.getGender() != null
+                && user.getGender() != UNKNOWN_GENDER
+                && user.getGender() != MALE_GENDER
+                && user.getGender() != FEMALE_GENDER) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "性别参数错误");
         }
         if (user.getUserRole() != STUDENT_ROLE && user.getUserRole() != TEACHER_ROLE) {
@@ -191,7 +193,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         if (currentUser.getUserRole() != ADMIN_ROLE) {
             // 校验旧密码正确
-            String encryptOldPassword = DigestUtils.md5DigestAsHex((SALT + oldPassword).getBytes(StandardCharsets.UTF_8));
+            String encryptOldPassword = DigestUtils
+                    .md5DigestAsHex((SALT + oldPassword).getBytes(StandardCharsets.UTF_8));
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("id", userId).eq("user_password", encryptOldPassword);
             if (!userMapper.exists(queryWrapper)) {
@@ -319,7 +322,3 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
 }
-
-
-
-

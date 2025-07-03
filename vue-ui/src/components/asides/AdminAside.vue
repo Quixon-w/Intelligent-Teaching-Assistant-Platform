@@ -2,13 +2,16 @@
 import {useRouter} from 'vue-router'
 const router = useRouter();
 const toDashboard = () => {
-  router.push('/dashboard/main')
+  router.push('/dashboard/home')
 }
 const toClass = () => {
-  router.push('/dashboard/admin/class');
+  router.push('/dashboard/admin/courses');
 }
 const toUsers = () => {
   router.push('/dashboard/admin/users');
+}
+const toAIAssistant = () => {
+  router.push('/dashboard/ai-assistant');
 }
 </script>
 
@@ -23,12 +26,15 @@ const toUsers = () => {
       </el-sub-menu>
       <el-sub-menu index="1">
         <template #title><el-text style="color: #B0C4DE">课程管理</el-text></template>
-        <el-menu-item index="1-1" @click="toClass" style="background: #304156"><el-text style="color: #B0C4DE">课程列表</el-text></el-menu-item>
+        <el-menu-item index="1-1" @click="toClass" style="background: #304156"><el-text style="color: #B0C4DE">课程监控</el-text></el-menu-item>
       </el-sub-menu>
       <el-sub-menu index="2">
         <template #title><el-text style="color: #B0C4DE">用户管理</el-text></template>
         <el-menu-item index="2-1" @click="toUsers" style="background: #304156"><el-text style="color: #B0C4DE">用户列表</el-text></el-menu-item>
       </el-sub-menu>
+      <el-menu-item @click="toAIAssistant" index="3" style="background: #304156">
+        <el-text style="color: #B0C4DE">智能助手</el-text>
+      </el-menu-item>
     </el-menu>
   </el-scrollbar>
 </template>

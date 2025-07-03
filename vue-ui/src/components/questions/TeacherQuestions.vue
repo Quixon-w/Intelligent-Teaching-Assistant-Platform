@@ -120,8 +120,11 @@ onMounted(() => {
 
   <el-dialog v-model="dialogChangeQuestionVisible" title="修改题目">
     <el-form v-model="currentquestion">
-      <el-form-item label="题目知识点">
-        <el-input v-model="currentquestion.questionKonwledge"></el-input>
+      <el-form-item label="父知识点">
+        <el-input v-model="currentquestion.parentKnowledge" placeholder="请输入父级知识点"></el-input>
+      </el-form-item>
+      <el-form-item label="子知识点">
+        <el-input v-model="currentquestion.childKnowledge" placeholder="请输入具体知识点"></el-input>
       </el-form-item>
       <el-form-item label="题目内容">
         <el-input v-model="currentquestion.questionContent"></el-input>
@@ -171,8 +174,11 @@ onMounted(() => {
   <el-dialog v-model="dialogCreateQuestionVisible" title="新建题目">
     <el-form v-model="currentquestion">
       <el-text>第{{ currentquestion.questionId }}题</el-text>
-      <el-form-item label="题目知识点">
-        <el-input v-model="currentquestion.questionKonwledge"></el-input>
+      <el-form-item label="父知识点">
+        <el-input v-model="currentquestion.parentKnowledge" placeholder="请输入父级知识点"></el-input>
+      </el-form-item>
+      <el-form-item label="子知识点">
+        <el-input v-model="currentquestion.childKnowledge" placeholder="请输入具体知识点"></el-input>
       </el-form-item>
       <el-form-item label="题目内容">
         <el-input v-model="currentquestion.questionContent"></el-input>

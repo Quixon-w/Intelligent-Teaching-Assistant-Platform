@@ -32,12 +32,16 @@ export function updateUserInfo(id,
         "userRole":userRole,
     })
     .then(res => {
-      console.log('更新成功:', res.data);
+      console.log('更新用户信息API响应:', res);
       return res.data;
     })
     .catch(err => {
-      console.error('更新失败:', err);
-      return err;
+      console.error('更新用户信息API错误:', err);
+      // 返回错误信息，而不是整个错误对象
+      return {
+        code: -1,
+        message: err.response?.data?.message || err.message || '网络错误'
+      };
     });
 }
 // 修改密码

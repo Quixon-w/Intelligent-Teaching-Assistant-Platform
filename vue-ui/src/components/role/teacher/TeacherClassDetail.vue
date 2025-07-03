@@ -14,7 +14,7 @@ import {
 import FileUp from "@/components/file/FileUp.vue";
 import FilePreview from "@/components/file/FilePreview.vue";
 import {downloadFile, downloadUrl} from "@/api/file.js";
-import {createLessonOutline} from "@/api/ai/ai.js";
+import {createLessonOutline} from "@/api/ai.js";
 const route=useRoute();
 const showView=ref(0);
 const dialogLessonFormVisible=ref(false);

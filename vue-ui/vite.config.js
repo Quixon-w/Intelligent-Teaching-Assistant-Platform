@@ -21,7 +21,9 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api': {
-        target: 'http://192.168.10.86:8080',
+        target: 'http://192.168.240.226:8080',
+        // target: 'http://192.168.10.86:8080',
+        // target: 'http://172.20.10.11:8080',
         changeOrigin: true,
       },
       '/ai': {

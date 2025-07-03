@@ -1,43 +1,24 @@
 <script setup>
 import {useRouter} from 'vue-router'
-import {onMounted, ref} from "vue";
-import {getAllSessions, getSession} from "@/api/ai/ai.js";
 const router = useRouter();
 const toDashboard = () => {
-  router.push('/dashboard/main');
+  router.push('/dashboard/home');
 }
 const toFindCourses=()=>{
   router.push('/dashboard/findcourses');
 }
 const toClass = () => {
-  router.push('/dashboard/student/class');
+  router.push('/dashboard/student/courses');
 }
 const toMyCourses = () => {
-  router.push('/dashboard/student/mycourse');
+  router.push('/dashboard/student/my-courses');
 }
 const toChooseCourse = () => {
-  router.push('/dashboard/student/choosecourse');
+  router.push('/dashboard/student/courses');
 }
-const AISessions=ref([]);
-const getAISessions =async () => {
-  let sessions=await getAllSessions();
-  for(let session of sessions){
-    let sessionName=await getSession(session);
-    if(sessionName){
-      AISessions.value.push({sessionId:session,sessionName:sessionName[0].content});
-    }
-  }
-  console.log(AISessions);
+const toAIAssistant = () => {
+  router.push('/dashboard/ai-assistant');
 }
-const createAISession=()=>{
-  router.push('/dashboard/aitalk/'+Date.now());
-}
-const toAISession=(id)=>{
-  router.push('/dashboard/aitalk/'+id);
-}
-onMounted(()=>{
-  getAISessions();
-})
 </script>
 
 <template>
@@ -54,13 +35,11 @@ onMounted(()=>{
         <template #title><el-text style="color: #B0C4DE">课程管理</el-text></template>
         <el-menu-item @click="toClass" index="1-1" style="background: #304156"><el-text style="color: #B0C4DE">查询课程</el-text></el-menu-item>
         <el-menu-item @click="toMyCourses" index="1-2" style="background: #304156"><el-text style="color: #B0C4DE">我的课程</el-text></el-menu-item>
-        <el-menu-item @click="toChooseCourse" index="1-1" style="background: #304156"><el-text style="color: #B0C4DE">选课</el-text></el-menu-item>
+        <el-menu-item @click="toChooseCourse" index="1-3" style="background: #304156"><el-text style="color: #B0C4DE">选课</el-text></el-menu-item>
       </el-sub-menu>
-      <el-sub-menu index="2">
-        <template #title><el-text style="color: #B0C4DE">AI助手</el-text></template>
-        <el-menu-item @click="toAISession(session.sessionId)" index="2-0-{{session}}" style="background: #304156" v-for="session in AISessions"><el-text style="color: #B0C4DE">{{session.sessionName}}</el-text></el-menu-item>
-        <el-menu-item @click="createAISession" index="2-1" style="background: #304156"><el-text style="color: #B0C4DE">+创建新对话</el-text></el-menu-item>
-      </el-sub-menu>
+      <el-menu-item @click="toAIAssistant" index="2" style="background: #304156">
+        <el-text style="color: #B0C4DE">智能助手</el-text>
+      </el-menu-item>
     </el-menu>
   </el-scrollbar>
 </template>
