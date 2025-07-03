@@ -9,16 +9,16 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: 20040326hyc
-    url: jdbc:mysql://localhost:3306/itap
+    url: jdbc:mysql://localhost:3306/itap?useSSL=false&rewriteBatchedStatements=true
   data:
     redis:
       host: localhost
       port: 6379
       lettuce:
         pool:
-          max-active: 8
-          max-idle: 4
-          min-idle: 2
+          max-active: 32
+          max-idle: 16
+          min-idle: 4
           max-wait: 2000ms
 springdoc:
   swagger-ui:
@@ -38,6 +38,14 @@ knife4j:
   setting:
     language: zh_cn
 server:
+  compression:
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+    enabled: true
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
   port: 8080
   servlet:
     session:

@@ -167,10 +167,6 @@ public class UserController {
         }
         // 获取当前用户
         User currentUser = userService.getCurrentUser(request);
-        // 验证是本人
-        if (!Objects.equals(currentUser.getId(), userId) && currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "没有权限");
-        }
         // 修改密码
         if (!newPassword.equals(checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码校验失败，两次密码不同");
@@ -184,24 +180,30 @@ public class UserController {
     @Parameters({
             @Parameter(name = "pageNum", description = "当前页码", required = true),
             @Parameter(name = "pageSize", description = "每页条数", required = true),
-            @Parameter(name = "username", description = "用户名", required = true),
+            @Parameter(name = "username", description = "用户名"),
+            @Parameter(name = "userAccount", description = "用户账号"),
     })
-    public BaseResponse<Page<User>> searchUsers(
+    public BaseResponse<Page<User>> listByPage(
             @RequestParam Integer pageNum,
             @RequestParam Integer pageSize,
-            @RequestParam String username,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String userAccount,
             HttpServletRequest request
     ) {
         // 校验参数
         if (pageNum == null || pageNum <= 0 || pageSize == null || pageSize <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "分页参数非法");
         }
-        if (getCurrentUser(request) == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        User currentUser = userService.getCurrentUser(request);
+        if (currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有管理员可查看");
         }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNotBlank(username)) {
             queryWrapper.like("username", username);
+        }
+        if (StringUtils.isNotBlank(userAccount)) {
+            queryWrapper.like("user_account", userAccount);
         }
         // 分页查询
         Page<User> page = new Page<>(pageNum, pageSize);
@@ -219,15 +221,19 @@ public class UserController {
     @Parameters({
             @Parameter(name = "id", description = "用户id", required = true),
     })
-    public BaseResponse<Boolean> deleteUser(@RequestParam long id, HttpServletRequest request) {
+    public BaseResponse<Boolean> negateUser(@RequestParam long id, HttpServletRequest request) {
         // 获取当前用户
         User currentUser = userService.getCurrentUser(request);
         // 仅管理员与本用户可删除
         if (currentUser.getId() != id && currentUser.getUserRole() != ADMIN_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
-        if (id <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户id <= 0");
+        User deletedUser = userService.getById(id);
+        if (deletedUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或已删除");
+        }
+        if (deletedUser.getUserRole() == ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该用户不可被删除");
         }
         boolean result = userService.removeById(id);
         userService.userLogout(request);
@@ -282,6 +288,22 @@ public class UserController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "不支持的文件类型");
         }
         return ResultUtils.success(userService.updateAvatar(file, request));
+    }
+
+    @GetMapping("/getTeacherNum")
+    @Operation(summary = "获取老师数量")
+    public BaseResponse<Long> getTeacherNum() {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_role", 1);
+        return ResultUtils.success(userService.count(queryWrapper));
+    }
+
+    @GetMapping("/getStudentNum")
+    @Operation(summary = "获取学生数量")
+    public BaseResponse<Long> getStudentNum() {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_role", 0);
+        return ResultUtils.success(userService.count(queryWrapper));
     }
 
 }

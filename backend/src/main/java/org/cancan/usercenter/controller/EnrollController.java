@@ -15,6 +15,7 @@ import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.model.domain.Courses;
 import org.cancan.usercenter.model.domain.Enroll;
 import org.cancan.usercenter.model.domain.User;
+import org.cancan.usercenter.model.domain.response.ListEnrollResponse;
 import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.service.UserService;
@@ -50,8 +51,9 @@ public class EnrollController {
             @Parameter(name = "courseId", description = "课程id", required = true),
     })
     public BaseResponse<Boolean> enrollCourse(@RequestParam Long courseId, HttpServletRequest request) {
-        if (courseId == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
+        Courses courses = coursesService.getValidCourseById(courseId);
+        if (courses.getIsOver() == 1) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "课程已结束");
         }
         User currentUser = userService.getCurrentUser(request);
         if (currentUser.getUserRole() != STUDENT_ROLE) {
@@ -89,11 +91,11 @@ public class EnrollController {
     }
 
     @GetMapping("/list/student")
-    @Operation(summary = "查看某学生的所有选课")
+    @Operation(summary = "查看某学生的所有选课信息")
     @Parameters({
             @Parameter(name = "studentId", description = "学生id", required = true)
     })
-    public BaseResponse<List<Courses>> listCourses(@RequestParam Long studentId, HttpServletRequest request) {
+    public BaseResponse<List<ListEnrollResponse>> listCoursesByStudent(@RequestParam Long studentId, HttpServletRequest request) {
         if (studentId == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "学生ID不能为空");
         }
@@ -108,7 +110,17 @@ public class EnrollController {
         if (coursesList == null || coursesList.isEmpty()) {
             return ResultUtils.success(new ArrayList<>());
         }
-        return ResultUtils.success(coursesList);
+        List<ListEnrollResponse> responses = coursesList.stream().map(courses -> {
+            ListEnrollResponse response = new ListEnrollResponse();
+            response.setCourse(courses);
+            QueryWrapper<Enroll> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("courses_id", courses.getId());
+            queryWrapper.eq("student_id", studentId);
+            Enroll enroll = enrollService.getOne(queryWrapper);
+            response.setEnroll(enroll);
+            return response;
+        }).toList();
+        return ResultUtils.success(responses);
     }
 
     @GetMapping("/list/course")
@@ -116,7 +128,7 @@ public class EnrollController {
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true)
     })
-    public BaseResponse<List<User>> listStudents(@RequestParam Long courseId) {
+    public BaseResponse<List<User>> listStudentsByCourse(@RequestParam Long courseId) {
         if (courseId == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
         }
@@ -126,6 +138,22 @@ public class EnrollController {
         }
         List<User> safeUsers = studentsList.stream().map(userService::getSafetyUser).toList();
         return ResultUtils.success(safeUsers);
+    }
+
+    @GetMapping("/studentNum")
+    @Operation(summary = "查看某课程的学生数量")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程id", required = true)
+    })
+    public BaseResponse<Integer> getStudentNumByCourse(@RequestParam Long courseId) {
+        if (courseId == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "课程ID不能为空");
+        }
+        List<User> studentsList = enrollService.getStudentsByCourseId(courseId);
+        if (studentsList == null || studentsList.isEmpty()) {
+            return ResultUtils.success(0);
+        }
+        return ResultUtils.success(studentsList.size());
     }
 
     @GetMapping("/list/hot")
@@ -138,9 +166,9 @@ public class EnrollController {
         return ResultUtils.success(coursesList);
     }
 
-    @GetMapping("/studentNum")
+    @GetMapping("/studentNumSum")
     @Operation(summary = "某老师所有课程的学生数量总和")
-    public BaseResponse<Long> sumNumOfStudent(@RequestParam Long teacherId) {
+    public BaseResponse<Long> getStudentNumByTeacher(@RequestParam Long teacherId) {
         List<Courses> courses = coursesService.getCoursesByTeacherId(teacherId);
         if (courses.isEmpty()) {
             return ResultUtils.success(0L);

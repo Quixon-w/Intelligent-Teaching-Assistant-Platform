@@ -136,6 +136,7 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
         queryWrapper.eq("courses_id", courseId);
         List<Enroll> enrollList = enrollMapper.selectList(queryWrapper);
         enrollList.forEach(enroll -> enroll.setFinalScore(this.calculateScore(enroll.getStudentId(), courseId)));
+        enrollMapper.updateById(enrollList);
     }
 
     /**
@@ -148,10 +149,12 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
         QueryWrapper<Lessons> queryWrapperL = new QueryWrapper<>();
         queryWrapperL.eq("course_id", courseId);
         List<Lessons> lessonsList = lessonsService.list(queryWrapperL);
-        return lessonsList.stream()
-                .filter(lesson -> lesson.getHasQuestion() == 0)
+        OptionalDouble result = lessonsList.stream()
+                .filter(lesson -> lesson.getHasQuestion() == 1)
                 .map(lesson -> scoresService.getScore(lesson.getLessonId(), studentId))
-                .reduce(0.0f, Float::sum);
+                .mapToDouble(Float::doubleValue)
+                .average();
+        return (float) result.orElse(0.0f);
     }
 
     /**

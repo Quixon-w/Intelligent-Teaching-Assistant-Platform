@@ -55,7 +55,7 @@ public class CoursesController {
     @Parameters({
             @Parameter(name = "courseId", description = "课程id", required = true)
     })
-    public BaseResponse<Courses> findOne(@RequestParam Long courseId) {
+    public BaseResponse<Courses> findById(@RequestParam Long courseId) {
         Courses courses = coursesService.getValidCourseById(courseId);
         return ResultUtils.success(courses);
     }
@@ -65,7 +65,7 @@ public class CoursesController {
     @Parameters({
             @Parameter(name = "teacherId", description = "老师id", required = true)
     })
-    public BaseResponse<List<Courses>> listById(@RequestParam Long teacherId) {
+    public BaseResponse<List<Courses>> listByTeacherId(@RequestParam Long teacherId) {
         return ResultUtils.success(coursesService.getCoursesByTeacherId(teacherId));
     }
 
@@ -77,7 +77,7 @@ public class CoursesController {
             @Parameter(name = "courseName", description = "课程名"),
             @Parameter(name = "teacherName", description = "老师名字")
     })
-    public BaseResponse<Page<Courses>> listPage(
+    public BaseResponse<Page<Courses>> listByPage(
             @RequestParam Integer pageNum,
             @RequestParam Integer pageSize,
             @RequestParam(required = false) String courseName,
@@ -179,7 +179,7 @@ public class CoursesController {
             @Parameter(name = "courseId", description = "课程id", required = true),
             @Parameter(name = "studentId", description = "学生id", required = true)
     })
-    public BaseResponse<List<Scores>> getListScores(@RequestParam Long courseId, @RequestParam Long studentId, HttpServletRequest request) {
+    public BaseResponse<List<Scores>> listStudentScores(@RequestParam Long courseId, @RequestParam Long studentId, HttpServletRequest request) {
         // 非老师，非学生，非管理员不可查看成绩
         User currentUser = userService.getCurrentUser(request);
         if (!coursesService.isTeacher(courseId, currentUser.getId())

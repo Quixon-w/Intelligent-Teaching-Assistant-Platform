@@ -143,6 +143,9 @@ public class QuestionRecordsController {
         }
         // 搜索答题记录
         List<QuestionRecords> questionRecordsList = questionRecordsService.getStudentLessonRecords(lessonId, studentId);
+        if (questionRecordsList.isEmpty()) {
+            return ResultUtils.success(new ArrayList<>());
+        }
         // 封装响应体
         List<GetQuestionRecordsResponse> responses = questionRecordsList.stream().map(record -> {
             GetQuestionRecordsResponse response = new GetQuestionRecordsResponse();
@@ -158,7 +161,7 @@ public class QuestionRecordsController {
     @Parameters({
             @Parameter(name = "lessonId", description = "课时ID", required = true)
     })
-    public BaseResponse<List<QuestionRecords>> getByLesson(@RequestParam Long lessonId, HttpServletRequest request) {
+    public BaseResponse<List<QuestionRecords>> listAllByLesson(@RequestParam Long lessonId, HttpServletRequest request) {
         // 课时校验
         Lessons lessons = lessonsService.getValidLessonById(lessonId);
         // 权限校验
@@ -173,6 +176,28 @@ public class QuestionRecordsController {
         QueryWrapper<QuestionRecords> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("lesson_id", lessonId);
         return ResultUtils.success(questionRecordsService.list(queryWrapper));
+    }
+
+    @GetMapping("/getFinishedTestNum")
+    @Operation(summary = "获取某学生已完成测试数量")
+    @Parameters({
+            @Parameter(name = "studentId", description = "学生ID", required = true)
+    })
+    public BaseResponse<Long> getFinishedTestNum(@RequestParam Long studentId, HttpServletRequest request) {
+        User currentUser = userService.getCurrentUser(request);
+        if (!studentId.equals(currentUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有学生本人可查看");
+        }
+        // 搜索返回答题记录
+        QueryWrapper<QuestionRecords> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("student_id", studentId).select("lesson_id");
+        List<QuestionRecords> records = questionRecordsService.list(queryWrapper);
+        long distinctCount = records.stream()
+                .map(QuestionRecords::getLessonId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+        return ResultUtils.success(distinctCount);
     }
 
 }

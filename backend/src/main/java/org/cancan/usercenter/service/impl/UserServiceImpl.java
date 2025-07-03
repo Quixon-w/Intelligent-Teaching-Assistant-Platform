@@ -121,9 +121,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public User userUpdate(User user, HttpServletRequest request) {
-        if (user == null) {
-            return null;
-        }
         if (
                 user.getGender() != null
                         && user.getGender() != UNKNOWN_GENDER
@@ -132,8 +129,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         ) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "性别参数错误");
         }
-        if (user.getUserRole() != STUDENT_ROLE && user.getUserRole() != TEACHER_ROLE) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户角色参数错误");
+        if (this.getCurrentUser(request).getUserRole() != ADMIN_ROLE) { // 当前用户不是管理员
+            if (user.getUserRole() != STUDENT_ROLE && user.getUserRole() != TEACHER_ROLE) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户角色参数错误");
+            }
+        } else {
+            if (user.getUserRole() != ADMIN_ROLE) {
+                throw new BusinessException(ErrorCode.NO_AUTH, "管理员不可改变自己身份");
+            }
         }
         // 脱敏，仅返回部分用户信息
         User safetyUser = getSafetyUser(user);

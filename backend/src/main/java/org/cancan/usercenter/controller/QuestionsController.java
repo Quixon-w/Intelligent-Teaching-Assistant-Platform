@@ -88,12 +88,12 @@ public class QuestionsController {
         return ResultUtils.success(questionsService.removeById(questionId));
     }
 
-    @GetMapping("/selectByFather")
+    @GetMapping("/listByFather")
     @Operation(summary = "教师根据knowledge父标签获得问题集")
     @Parameters({
             @Parameter(name = "father", description = "知识点", required = true)
     })
-    public BaseResponse<List<Questions>> selectByFather(@RequestParam String father, @RequestParam Long teacherId, HttpServletRequest request) {
+    public BaseResponse<List<Questions>> listByFather(@RequestParam String father, @RequestParam Long teacherId, HttpServletRequest request) {
         User currentUser = userService.getCurrentUser(request);
         if (!Objects.equals(currentUser.getId(), teacherId) && currentUser.getUserRole() != ADMIN_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "不是老师本人不可查看");
@@ -138,7 +138,7 @@ public class QuestionsController {
     @Parameters({
             @Parameter(name = "questionId", description = "题id", required = true)
     })
-    public BaseResponse<List<Lessons>> listLessons(@RequestParam Long questionId, HttpServletRequest request) {
+    public BaseResponse<List<Lessons>> listLessonsById(@RequestParam Long questionId, HttpServletRequest request) {
         User currentUser = userService.getCurrentUser(request);
         Questions question = questionsService.getById(questionId);
         if (!Objects.equals(question.getTeacherId(), currentUser.getId()) && currentUser.getUserRole() != ADMIN_ROLE) {

@@ -146,26 +146,4 @@ public class LessonQuestionMapController {
         return ResultUtils.success(lessonQuestionMapService.getOrderedQuestions(lessonId));
     }
 
-    @PostMapping("/commit")
-    @Operation(summary = "发布习题")
-    @Parameters({
-            @Parameter(name = "lessonId", description = "课时ID", required = true),
-            @Parameter(name = "questionIds", description = "习题ID列表", required = true)
-    })
-    public BaseResponse<Boolean> commit(@RequestParam Long lessonId, HttpServletRequest request) {
-        // 校验参数与权限
-        User currentUser = userService.getCurrentUser(request);
-        Lessons lesson = lessonsService.getValidLessonById(lessonId);
-        if (!lessonsService.isTeacher(lesson, currentUser)) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "只有该课程老师可发布习题");
-        }
-        if (lesson.getHasQuestion() == 1) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "该课时已发布过习题");
-        }
-        // 设置该课时已有习题
-        lesson.setHasQuestion(1);
-        lessonsService.updateById(lesson);
-        return ResultUtils.success(true);
-    }
-
 }
