@@ -98,9 +98,24 @@ export async function chatCompletions(sessionId, currentMessage) {
     let result
     try {
       result = JSON.parse(responseText)
-      console.log('✅ JSON解析成功')
-      console.log('🔍 解析后的result类型:', typeof result)
-      console.log('🔍 解析后的result是否为对象:', result && typeof result === 'object')
+      console.log('✅ 第一次JSON解析成功')
+      console.log('🔍 第一次解析后的result类型:', typeof result)
+      
+      // 检查是否需要二次解析（双重编码的情况）
+      if (typeof result === 'string') {
+        console.log('⚠️ 检测到双重JSON编码，进行二次解析...')
+        try {
+          result = JSON.parse(result)
+          console.log('✅ 二次JSON解析成功')
+          console.log('🔍 二次解析后的result类型:', typeof result)
+        } catch (secondParseError) {
+          console.error('❌ 二次JSON解析失败:', secondParseError)
+          // 如果二次解析失败，保持第一次解析的结果
+        }
+      }
+      
+      console.log('🔍 最终result类型:', typeof result)
+      console.log('🔍 最终result是否为对象:', result && typeof result === 'object')
     } catch (parseError) {
       console.error('❌ JSON解析失败:', parseError)
       console.log('🔍 尝试解析的文本:', responseText)
