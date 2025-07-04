@@ -21,7 +21,6 @@ const initCharts = async () => {
           return params.data.description || params.name;
         }
       },
-
       series: [
         {
           type: 'tree',
@@ -32,7 +31,6 @@ const initCharts = async () => {
           symbol: 'circle',
           symbolSize: 60,
           label: {
-            show: true,
             position: 'inside',
             color: '#fff',
             fontSize: 12,
@@ -50,69 +48,111 @@ const initCharts = async () => {
           data: [
             {
               name: '管理员端',
-              description: '教学平台管理后台入口',
+              description: '教师操作系统的入口',
               children: [
                 {
                   name: '个人中心',
-                  description: '管理管理员账户信息',
+                  description: '管理个人信息',
                   children: [
                     {
-                      name: '查看信息',
-                      description: '浏览当前管理员的基本资料'
+                      name: '添加学生',
+                      description: '添加学生',
+                      children: [
+                        {
+                          name: '添加学生',
+                          description: '添加学生',
+
+                        },
+                        {
+                          name: '删除学生',
+                          description: '删除学生'
+                        }
+                      ]
                     },
                     {
-                      name: '更新信息',
-                      description: '编辑并保存新的个人信息'
-                    },
-                    {
-                      name: '修改密码',
-                      description: '更改当前管理员登录密码'
+                      name: '删除学生',
+                      description: '删除学生' ,
+                      children: [
+                        {
+                          name: '添加学生',
+                          description: '添加学生',
+
+                        },
+                        {
+                          name: '删除学生',
+                          description: '删除学生'
+                        }
+                      ]
                     }
                   ]
                 },
                 {
                   name: '课程管理',
-                  description: '管理所有课程资源',
+                  description: '创建课程内容、试题等教学资源等',
                   children: [
                     {
-                      name: '查看课程',
-                      description: '分页查询所有课程信息，支持按课程名、教师名过滤'
+                      name: '添加学生',
+                      description: '添加学生'
                     },
                     {
-                      name: '删除课程',
-                      description: '永久删除一门课程及其关联数据'
+                      name: '删除学生',
+                      description: '删除学生'
                     }
                   ]
                 },
                 {
-                  name: '用户管理',
-                  description: '管理平台用户账号',
+                  name: '课时管理',
+                  description: '给学生分配作业任务',
                   children: [
                     {
-                      name: '查看用户',
-                      description: '分页查询所有用户信息，包括学生和教师'
+                      name: '添加学生',
+                      description: '添加学生'
                     },
                     {
-                      name: '删除用户',
-                      description: '删除一个用户账号，支持软删除机制'
+                      name: '删除学生',
+                      description: '删除学生'
+                    }
+                  ]
+                },
+                {
+                  name: '成绩分析',
+                  description: '统计学生成绩、生成图表报告',
+                  children: [
+                    {
+                      name: '添加学生',
+                      description: '添加学生'
                     },
                     {
-                      name: '恢复用户',
-                      description: '从回收站中恢复被删除的用户账号'
+                      name: '删除学生',
+                      description: '删除学生'
+                    }
+                  ]
+                },
+                {
+                  name: '学生管理',
+                  description: '查看和管理所教班级的学生信息',
+                  children: [
+                    {
+                      name: '添加学生',
+                      description: '添加学生'
                     },
                     {
-                      name: '查看已删用户',
-                      description: '查看所有已被标记为删除状态的用户列表'
+                      name: '删除学生',
+                      description: '删除学生'
                     }
                   ]
                 },
                 {
                   name: 'AI助手',
-                  description: 'AI辅助管理工具，提供智能操作建议',
+                  description: 'ai助手',
                   children: [
                     {
-                      name: '智能问答',
-                      description: '向AI提问，获取系统操作、数据管理相关解答'
+                      name: '添加学生',
+                      description: '添加学生'
+                    },
+                    {
+                      name: '删除学生',
+                      description: '删除学生'
                     }
                   ]
                 }
@@ -122,11 +162,9 @@ const initCharts = async () => {
           expandAndCollapse: true,
           initialTreeDepth: 2,
           animationDuration: 750,
-          nodePadding: 30
+          nodePadding: 30,
         }
       ]
-
-
     })
   } catch (error) {
     console.error('图表加载失败:', error);

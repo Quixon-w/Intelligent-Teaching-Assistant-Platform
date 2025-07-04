@@ -39,16 +39,17 @@ const registerForm = reactive({
 const onSubmit = () => {
   register(registerForm.username, registerForm.password, registerForm.checkpassword)
       .then(res => {
-        if (res.data.code === 0) {
-          sessionStorage.setItem('token', registerForm.username)
-          sessionStorage.setItem('role', 'student')
-          router.push('/dashboard')
+        console.log('注册响应:', res)
+        if (res.code === 0) {
+          ElMessage.success('注册成功！请登录')
+          router.push('/login')
         } else {
-          ElMessage(res.data.description)
+          ElMessage.error(res.description || res.message || '注册失败')
         }
       })
       .catch(err => {
-        ElMessage(err)
+        console.error('注册错误:', err)
+        ElMessage.error(err.message || '注册失败，请检查输入信息')
       })
 }
 
