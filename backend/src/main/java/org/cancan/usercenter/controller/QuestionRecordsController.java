@@ -13,9 +13,7 @@ import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
 import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.mapper.CoursesMapper;
-import org.cancan.usercenter.mapper.QuestionsMapper;
 import org.cancan.usercenter.model.domain.*;
-import org.cancan.usercenter.model.domain.response.GetQuestionRecordsResponse;
 import org.cancan.usercenter.service.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,8 +36,6 @@ public class QuestionRecordsController {
 
     @Resource
     private CoursesMapper coursesMapper;
-    @Resource
-    private QuestionsMapper questionsMapper;
 
     @Resource
     private QuestionRecordsService questionRecordsService;
@@ -126,7 +122,7 @@ public class QuestionRecordsController {
             @Parameter(name = "lessonId", description = "课时ID", required = true),
             @Parameter(name = "studentId", description = "学生ID", required = true)
     })
-    public BaseResponse<List<GetQuestionRecordsResponse>> get(@RequestParam Long lessonId, @RequestParam Long studentId, HttpServletRequest request) {
+    public BaseResponse<List<QuestionRecords>> get(@RequestParam Long lessonId, @RequestParam Long studentId, HttpServletRequest request) {
         // 课时校验
         Lessons lessons = lessonsService.getValidLessonById(lessonId);
         if (lessons.getHasQuestion() == 0) {
@@ -143,17 +139,7 @@ public class QuestionRecordsController {
         }
         // 搜索答题记录
         List<QuestionRecords> questionRecordsList = questionRecordsService.getStudentLessonRecords(lessonId, studentId);
-        if (questionRecordsList.isEmpty()) {
-            return ResultUtils.success(new ArrayList<>());
-        }
-        // 封装响应体
-        List<GetQuestionRecordsResponse> responses = questionRecordsList.stream().map(record -> {
-            GetQuestionRecordsResponse response = new GetQuestionRecordsResponse();
-            response.setQuestions(questionsMapper.selectById(record.getQuestionId()));
-            response.setQuestionRecords(record);
-            return response;
-        }).toList();
-        return ResultUtils.success(responses);
+        return ResultUtils.success(questionRecordsList);
     }
 
     @GetMapping("/getLessonRecords")
@@ -175,6 +161,7 @@ public class QuestionRecordsController {
         // 搜索返回答题记录
         QueryWrapper<QuestionRecords> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("lesson_id", lessonId);
+        queryWrapper.orderByAsc("question_id");
         return ResultUtils.success(questionRecordsService.list(queryWrapper));
     }
 

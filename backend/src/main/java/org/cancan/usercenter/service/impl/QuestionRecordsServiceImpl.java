@@ -31,6 +31,7 @@ public class QuestionRecordsServiceImpl extends ServiceImpl<QuestionRecordsMappe
         QueryWrapper<QuestionRecords> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("student_id", studentId);
         queryWrapper.eq("lesson_id", lessonId);
+        queryWrapper.orderByAsc("question_id");
         return questionRecordsMapper.selectList(queryWrapper);
     }
 }
