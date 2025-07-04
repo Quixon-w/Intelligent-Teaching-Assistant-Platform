@@ -43,7 +43,8 @@ def example_teacher_knowledge():
             userId="teacher001",
             isTeacher=True,
             courseID="CS101",
-            lessonNum="lesson1"
+            lessonNum="lesson1",
+            isAsk=False
         )
         
         if loaded_manager:
@@ -91,7 +92,10 @@ def example_student_knowledge():
         print("\n2. 加载知识库...")
         loaded_manager = load_vector_db(
             userId="student001",
-            isTeacher=False
+            isTeacher=False,
+            courseID=None,
+            lessonNum=None,
+            isAsk=True
         )
         
         if loaded_manager:

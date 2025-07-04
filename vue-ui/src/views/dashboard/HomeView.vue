@@ -492,11 +492,61 @@ const loadStudentStats = async () => {
       console.warn('获取完成测试数量失败:', testsResult.message)
     }
     
-    // TODO: 3. 获取总体学习进度
-    // 接口: 需要你提供 - 返回学生的总体学习进度百分比 (0-100)
+    // 3. 计算总体学习进度
     let progressPercentage = 0
-    // 临时使用模拟数据
-    progressPercentage = 68
+    if (enrollResult.code === 0 && enrollResult.data && enrollResult.data.length > 0) {
+      // 为每门课程计算进度并求平均值
+      const progressPromises = enrollResult.data.map(async (item) => {
+        try {
+          const course = item.course
+          // 获取课程的课时列表
+          const lessonsRes = await request.get('/api/lesson/list', {
+            params: { courseId: course.id }
+          })
+
+          let totalLessons = 0
+          let completedLessons = 0
+
+          if (lessonsRes.code === 0 && lessonsRes.data) {
+            totalLessons = lessonsRes.data.length
+
+            // 检查每个课时的完成状态
+            for (const lesson of lessonsRes.data) {
+              if (lesson.hasQuestion === 1) {
+                // 检查是否已完成测试
+                try {
+                  const recordsRes = await request.get('/api/records/getRecords', {
+                    params: { 
+                      lessonId: lesson.lessonId,
+                      studentId: studentId
+                    }
+                  })
+
+                  if (recordsRes.code === 0 && recordsRes.data && recordsRes.data.length > 0) {
+                    completedLessons++
+                  }
+                } catch (error) {
+                  console.error('检查课时完成状态失败:', error)
+                }
+              } else {
+                // 没有测试的课时默认为已完成
+                completedLessons++
+              }
+            }
+          }
+
+          return totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
+        } catch (error) {
+          console.error('计算课程进度失败:', error)
+          return 0
+        }
+      })
+
+      const courseProgresses = await Promise.all(progressPromises)
+      progressPercentage = courseProgresses.length > 0 
+        ? Math.round(courseProgresses.reduce((sum, progress) => sum + progress, 0) / courseProgresses.length)
+        : 0
+    }
     
     stats.value = {
       courses: coursesCount,
