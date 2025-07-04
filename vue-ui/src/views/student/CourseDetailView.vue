@@ -356,12 +356,12 @@
                 <div class="expand-content">
                   <div class="question-analysis">
                     <h6>题目解析</h6>
-                                         <div class="analysis-content">
-                       <p v-if="props.row.questions.explanation" class="analysis-text">
-                         {{ props.row.questions.explanation }}
-                       </p>
-                       <p v-else class="no-analysis">暂无解析</p>
-                     </div>
+                    <div class="analysis-content">
+                      <p v-if="props.row.questionDetails?.explanation" class="analysis-text">
+                        {{ props.row.questionDetails.explanation }}
+                      </p>
+                      <p v-else class="no-analysis">暂无解析</p>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -378,11 +378,11 @@
             <el-table-column label="题目内容" min-width="300">
               <template #default="scope">
                 <div class="question-content">
-                  <p class="question-text">{{ scope.row.questions.question }}</p>
-                  <div class="question-options" v-if="getQuestionOptions(scope.row.questions).length > 0">
+                  <p class="question-text">{{ scope.row.questionDetails?.question || '题目信息加载中...' }}</p>
+                  <div class="question-options" v-if="scope.row.questionDetails?.options && getQuestionOptions(scope.row.questionDetails.options).length > 0">
                     <div 
                       class="option-item"
-                      v-for="option in getQuestionOptions(scope.row.questions)" 
+                      v-for="option in getQuestionOptions(scope.row.questionDetails.options)" 
                       :key="option.label"
                     >
                       <span class="option-label">{{ option.label }}.</span>
@@ -397,11 +397,11 @@
             <el-table-column label="您的答案" width="100" align="center">
               <template #default="scope">
                 <el-tag 
-                  :type="scope.row.questionRecords.isCorrect === 1 ? 'success' : 'danger'"
+                  :type="scope.row.isCorrect === 1 ? 'success' : 'danger'"
                   size="large"
                   class="answer-tag"
                 >
-                  {{ scope.row.questionRecords.selectedOption }}
+                  {{ scope.row.selectedOption }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -414,7 +414,7 @@
                   size="large"
                   class="answer-tag"
                 >
-                  {{ scope.row.questions.answer }}
+                  {{ scope.row.questionDetails?.answer || '未知' }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -423,7 +423,7 @@
             <el-table-column label="结果" width="80" align="center">
               <template #default="scope">
                 <div class="result-indicator">
-                  <el-icon v-if="scope.row.questionRecords.isCorrect === 1" color="#67c23a" size="20">
+                  <el-icon v-if="scope.row.isCorrect === 1" color="#67c23a" size="20">
                     <Check />
                   </el-icon>
                   <el-icon v-else color="#f56c6c" size="20">
@@ -437,7 +437,7 @@
             <el-table-column label="提交时间" width="150">
               <template #default="scope">
                 <span class="submit-time">
-                  {{ formatSubmitTime(scope.row.questionRecords.submitTime) }}
+                  {{ formatSubmitTime(scope.row.submitTime) }}
                 </span>
               </template>
             </el-table-column>
@@ -477,6 +477,7 @@ import { Check, Close } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import axios from 'axios'
 import { dismissCourse as dismissCourseAPI } from '@/api/course'
+import { getLessonRecords, getLessonQuestionsList } from '@/api/course/lesson'
 import * as echarts from 'echarts'
 
 const route = useRoute()
@@ -845,12 +846,27 @@ const takeTest = (lesson) => {
 // 获取学生做题记录
 const getStudentRecords = async (lessonId, studentId) => {
   try {
-    const res = await request.get('/api/records/getRecords', {
-      params: { lessonId, studentId }
-    })
+    // 获取测试记录
+    const recordsRes = await getLessonRecords(lessonId, studentId)
     
-    if (res.code === 0) {
-      return res.data || []
+    if (recordsRes.code === 0 && recordsRes.data) {
+      // 获取题目详情
+      const questionsRes = await getLessonQuestionsList(lessonId)
+      
+      if (questionsRes.code === 0 && questionsRes.data) {
+        // 将记录和题目详情合并
+        const mergedRecords = recordsRes.data.map(record => {
+          const question = questionsRes.data.find(q => q.questionId === record.questionId)
+          return {
+            ...record,
+            questionDetails: question || null
+          }
+        })
+        
+        return mergedRecords
+      }
+      
+      return recordsRes.data
     }
     return []
   } catch (error) {
@@ -978,6 +994,7 @@ const loadLessonsCompletionStatus = async () => {
       if (lesson.hasQuestion === 1) {
         const lessonIndex = publishedLessons.findIndex(l => l.lessonId === lesson.lessonId)
         const records = recordsResults[lessonIndex] || []
+        
         return {
           ...lesson,
           isCompleted: records.length > 0,
@@ -991,8 +1008,6 @@ const loadLessonsCompletionStatus = async () => {
       }
     })
     
-
-    
   } catch (error) {
     console.error('加载课时完成状态失败:', error)
   }
@@ -1004,7 +1019,7 @@ const viewTestResult = (lesson) => {
     currentTestResult.value = {
       lesson,
       records: lesson.records,
-      correctCount: lesson.records.filter(r => r.questionRecords.isCorrect === 1).length,
+      correctCount: lesson.records.filter(r => r.isCorrect === 1).length,
       totalCount: lesson.records.length
     }
     
@@ -1026,7 +1041,7 @@ const handleCloseDialog = (done) => {
 
 // 表格行类名
 const getRowClassName = ({ row }) => {
-  if (row.questionRecords.isCorrect === 1) {
+  if (row.isCorrect === 1) {
     return 'success-row'
   } else {
     return 'error-row'

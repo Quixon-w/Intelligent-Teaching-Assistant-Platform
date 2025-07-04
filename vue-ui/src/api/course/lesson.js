@@ -332,15 +332,41 @@ export function commitQuestionHistory(questions,lessonId){
     throw err;
   })
 }
-export function lessonQuestionIsFinished(lessonId,studentId){
-  return request.get('/api/records/getRecords',{
-    params:{
-      lessonId:lessonId,
-      studentId:studentId
-    }
-  }).then(res=>{
+export function getLessonRecords(lessonId, studentId) {
+  return request.get('/api/records/getRecords', {
+    params: { lessonId, studentId }
+  }).then(res => {
     return res;
-  }).catch(err=>{
+  }).catch(err => {
+    return err;
+  })
+}
+
+// 获取课时所有学生的做题记录（教师端使用）
+export function getLessonAllRecords(lessonId) {
+  return request.get('/api/records/getLessonRecords', {
+    params: { lessonId }
+  }).then(res => {
+    return res;
+  }).catch(err => {
+    return err;
+  })
+}
+export function getLessonQuestionsList(lessonId) {
+  return request.get('/api/map/list', {
+    params: { lessonId }
+  }).then(res => {
+    return res;
+  }).catch(err => {
+    return err;
+  })
+}
+export function lessonQuestionIsFinished(lessonId, studentId) {
+  return request.get('/api/records/getLessonRecords', {
+    params: { lessonId }
+  }).then(res => {
+    return res;
+  }).catch(err => {
     return err;
   })
 }

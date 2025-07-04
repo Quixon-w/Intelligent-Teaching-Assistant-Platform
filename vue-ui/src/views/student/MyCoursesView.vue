@@ -313,8 +313,8 @@ const loadEnrolledCourses = async () => {
                   try {
                     const recordsRes = await request.get('/api/records/getRecords', {
                       params: { 
-                        lessonId: lesson.lessonId, 
-                        studentId: authStore.user.id 
+                        lessonId: lesson.lessonId,
+                        studentId: authStore.user.id
                       }
                     })
 

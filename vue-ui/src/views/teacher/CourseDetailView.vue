@@ -209,6 +209,16 @@
                       查看测试
                     </el-button>
                     
+                    <!-- 已发布测试的课时可以查看学生做题统计 -->
+                    <el-button 
+                      v-if="scope.row.hasQuestion === 1"
+                      size="small" 
+                      type="success" 
+                      @click="viewTestStatistics(scope.row)"
+                    >
+                      查看统计
+                    </el-button>
+                    
                     <el-button 
                       v-if="courseInfo.isOver === 0 && scope.row.hasQuestion !== 1" 
                       size="small" 
@@ -630,7 +640,18 @@
           />
           
           <el-table :data="questionsList" style="width: 100%">
-            <el-table-column prop="questionContent" label="题目内容" />
+            <el-table-column type="expand" width="50">
+              <template #default="props">
+                <div class="question-detail">
+                  <h6>题目解析</h6>
+                  <p v-if="props.row.questionExplanation" class="explanation-text">
+                    {{ props.row.questionExplanation }}
+                  </p>
+                  <p v-else class="no-explanation">暂无解析</p>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="questionContent" label="题目内容" min-width="200" />
             <el-table-column prop="questionKnowledge" label="知识点" width="120" />
             <el-table-column label="选项" width="300">
               <template #default="scope">
@@ -911,6 +932,99 @@
         <el-button @click="showStudentScoreDialog = false">关闭</el-button>
       </template>
     </el-dialog>
+    
+    <!-- 测试统计对话框 -->
+    <el-dialog 
+      v-model="showStatisticsDialog" 
+      title="测试统计" 
+      width="90%"
+      :before-close="() => showStatisticsDialog = false"
+    >
+      <div v-if="currentStatisticsLesson" class="statistics-container">
+        <div class="statistics-header">
+          <h4>{{ currentStatisticsLesson.lessonName }} - 测试统计</h4>
+          <el-button @click="loadTestStatistics(currentStatisticsLesson.lessonId)" :loading="testStatisticsLoading">
+            刷新统计
+          </el-button>
+        </div>
+        
+        <div v-loading="testStatisticsLoading" class="statistics-content">
+          <div v-if="testStatisticsData.length === 0" class="no-statistics">
+            <el-empty description="暂无统计数据">
+              <template #description>
+                <span>该课时暂无学生完成测试</span>
+              </template>
+            </el-empty>
+          </div>
+          
+          <div v-else class="statistics-list">
+            <div v-for="(item, index) in testStatisticsData" :key="item.questionId" class="statistics-item">
+              <div class="question-header">
+                <h5>第{{ index + 1 }}题：{{ item.question }}</h5>
+                <div class="question-meta">
+                  <el-tag size="small" type="info">{{ item.knowledge }}</el-tag>
+                  <el-tag size="small" type="success">正确答案：{{ item.answer }}</el-tag>
+                  <el-tag size="small" :type="item.correctRate >= 80 ? 'success' : item.correctRate >= 60 ? 'warning' : 'danger'">
+                    正确率：{{ item.correctRate.toFixed(1) }}%
+                  </el-tag>
+                </div>
+              </div>
+              
+              <div class="statistics-details">
+                <div class="overview-stats">
+                  <el-row :gutter="20">
+                    <el-col :span="6">
+                      <el-statistic title="答题人数" :value="item.totalAnswers" />
+                    </el-col>
+                    <el-col :span="6">
+                      <el-statistic title="正确人数" :value="item.correctCount" />
+                    </el-col>
+                    <el-col :span="6">
+                      <el-statistic title="正确率" :value="item.correctRate" suffix="%" :precision="1" />
+                    </el-col>
+                    <el-col :span="6">
+                      <el-statistic title="错误人数" :value="item.totalAnswers - item.correctCount" />
+                    </el-col>
+                  </el-row>
+                </div>
+                
+                <div class="options-chart">
+                  <h6>选项分布</h6>
+                  <div class="chart-container">
+                    <div class="option-bars">
+                      <div v-for="option in ['A', 'B', 'C', 'D']" :key="option" class="option-bar-item">
+                        <div class="option-label">
+                          <span class="option-letter">{{ option }}</span>
+                          <span class="option-text">{{ item.options[option] }}</span>
+                          <el-tag v-if="item.optionStats[option].isCorrect" size="small" type="success">正确答案</el-tag>
+                        </div>
+                        <div class="bar-container">
+                          <div 
+                            class="bar-fill" 
+                            :style="{ 
+                              width: item.optionStats[option].percentage + '%',
+                              backgroundColor: item.optionStats[option].isCorrect ? '#67c23a' : '#f56c6c'
+                            }"
+                          ></div>
+                          <span class="bar-text">
+                            {{ item.optionStats[option].count }}人 ({{ item.optionStats[option].percentage.toFixed(1) }}%)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-if="item.explanation" class="question-explanation">
+                  <h6>题目解析</h6>
+                  <p>{{ item.explanation }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
 
   </div>
 </template>
@@ -1090,6 +1204,12 @@ const selectedQuestionBankItems = ref([])
 const questionBankLoading = ref(false)
 const importing = ref(false)
 const publishing = ref(false)
+
+// 测试统计相关
+const showStatisticsDialog = ref(false)
+const currentStatisticsLesson = ref(null)
+const testStatisticsData = ref([])
+const testStatisticsLoading = ref(false)
 
 // 学生管理
 const studentsList = ref([])
@@ -2218,6 +2338,13 @@ const viewTest = async (lesson) => {
   await openTestDialog(lesson)
 }
 
+// 查看测试统计
+const viewTestStatistics = async (lesson) => {
+  currentStatisticsLesson.value = lesson
+  showStatisticsDialog.value = true
+  await loadTestStatistics(lesson.lessonId)
+}
+
 const getUploadData = (lessonId) => ({
   session_id: Date.now().toString(),
   user_id: authStore.user?.id || '',
@@ -2241,6 +2368,99 @@ const parseOptions = (options) => {
     }
   }
   return options || { A: '', B: '', C: '', D: '' }
+}
+
+// 加载测试统计
+const loadTestStatistics = async (lessonId) => {
+  try {
+    testStatisticsLoading.value = true
+    
+    // 并行获取题目列表和做题记录
+    const [questionsRes, recordsRes] = await Promise.all([
+      request.get('/api/map/list', { params: { lessonId } }),
+      request.get('/api/records/getLessonRecords', { params: { lessonId } })
+    ])
+    
+    if (questionsRes.code === 0 && recordsRes.code === 0) {
+      const questions = questionsRes.data || []
+      const records = recordsRes.data || []
+      
+      // 为每个题目计算统计信息
+      const statistics = questions.map(question => {
+        const questionRecords = records.filter(record => record.questionId === question.questionId)
+        const totalAnswers = questionRecords.length
+        
+        if (totalAnswers === 0) {
+          return {
+            questionId: question.questionId,
+            question: question.question,
+            knowledge: question.knowledge,
+            answer: question.answer,
+            explanation: question.explanation,
+            options: parseOptions(question.options),
+            totalAnswers: 0,
+            correctCount: 0,
+            correctRate: 0,
+            optionStats: {
+              A: { count: 0, percentage: 0, isCorrect: false },
+              B: { count: 0, percentage: 0, isCorrect: false },
+              C: { count: 0, percentage: 0, isCorrect: false },
+              D: { count: 0, percentage: 0, isCorrect: false }
+            }
+          }
+        }
+        
+        // 统计每个选项的选择次数
+        const optionStats = { A: 0, B: 0, C: 0, D: 0 }
+        let correctCount = 0
+        
+        questionRecords.forEach(record => {
+          optionStats[record.selectedOption]++
+          if (record.isCorrect === 1) {
+            correctCount++
+          }
+        })
+        
+        // 计算百分比和正确率
+        const correctRate = (correctCount / totalAnswers) * 100
+        const optionStatsWithPercentage = {}
+        
+        Object.keys(optionStats).forEach(option => {
+          const count = optionStats[option]
+          const percentage = (count / totalAnswers) * 100
+          optionStatsWithPercentage[option] = {
+            count,
+            percentage,
+            isCorrect: option === question.answer
+          }
+        })
+        
+        return {
+          questionId: question.questionId,
+          question: question.question,
+          knowledge: question.knowledge,
+          answer: question.answer,
+          explanation: question.explanation,
+          options: parseOptions(question.options),
+          totalAnswers,
+          correctCount,
+          correctRate,
+          optionStats: optionStatsWithPercentage
+        }
+      })
+      
+      testStatisticsData.value = statistics
+    } else {
+      ElMessage.error('获取测试统计数据失败')
+      testStatisticsData.value = []
+    }
+  } catch (error) {
+    console.error('加载测试统计失败:', error)
+    ElMessage.error('加载测试统计失败')
+    testStatisticsData.value = []
+  } finally {
+    testStatisticsLoading.value = false
+  }
 }
 
 // 加载当前测试的题目列表
@@ -3525,5 +3745,188 @@ onMounted(async () => {
 
 .file-status {
   margin-top: 15px;
+}
+
+/* 测试统计样式 */
+.statistics-container {
+  padding: 20px;
+}
+
+.statistics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.statistics-header h4 {
+  margin: 0;
+  color: #303133;
+}
+
+.statistics-content {
+  min-height: 400px;
+}
+
+.no-statistics {
+  padding: 40px;
+  text-align: center;
+}
+
+.statistics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.statistics-item {
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  padding: 20px;
+  background: #fafafa;
+}
+
+.question-header {
+  margin-bottom: 20px;
+}
+
+.question-header h5 {
+  margin: 0 0 10px 0;
+  color: #303133;
+  font-size: 16px;
+}
+
+.question-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.statistics-details {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.overview-stats {
+  padding: 15px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+}
+
+.options-chart {
+  padding: 15px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+}
+
+.options-chart h6 {
+  margin: 0 0 15px 0;
+  color: #303133;
+  font-size: 14px;
+}
+
+.option-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.option-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.option-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+  flex-shrink: 0;
+}
+
+.option-letter {
+  font-weight: bold;
+  color: #409eff;
+  min-width: 20px;
+}
+
+.option-text {
+  flex: 1;
+  font-size: 14px;
+  color: #606266;
+}
+
+.bar-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  height: 30px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  min-width: 20px;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.bar-text {
+  position: absolute;
+  right: 10px;
+  font-size: 12px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.question-explanation {
+  padding: 15px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+}
+
+.question-explanation h6 {
+  margin: 0 0 10px 0;
+  color: #303133;
+  font-size: 14px;
+}
+
+.question-explanation p {
+  margin: 0;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.question-detail {
+  padding: 15px;
+}
+
+.question-detail h6 {
+  margin: 0 0 10px 0;
+  color: #303133;
+  font-size: 14px;
+}
+
+.explanation-text {
+  margin: 0;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.no-explanation {
+  margin: 0;
+  color: #909399;
+  font-style: italic;
 }
 </style> 

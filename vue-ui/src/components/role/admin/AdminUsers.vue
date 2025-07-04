@@ -103,7 +103,10 @@ const handleSaveEdit = async () => {
 }
 
 const handleToggleStatus = async (row) => {
-  const action = row.userStatus === 0 ? '封禁' : '解封'
+  // 确保状态值为数字类型
+  const numStatus = Number(row.isDelete)
+  const action = numStatus === 0 ? '封禁' : '解封'
+  
   ElMessageBox.confirm(
     `确定要${action}用户 "${row.username}" 吗?`,
     `${action}确认`,
@@ -150,6 +153,38 @@ const getRoleTagType = (role) => {
     case 2: return 'success' // 教师
     default: return 'info'
   }
+}
+
+// 获取状态标签类型
+const getStatusTagType = (status) => {
+  // 确保状态值为数字类型
+  const numStatus = Number(status)
+  // isDelete: 0=正常, 1=封禁
+  return numStatus === 0 ? 'success' : 'danger'
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  // 确保状态值为数字类型
+  const numStatus = Number(status)
+  // isDelete: 0=正常, 1=封禁
+  return numStatus === 0 ? '正常' : '封禁'
+}
+
+// 获取切换按钮类型
+const getToggleButtonType = (status) => {
+  // 确保状态值为数字类型
+  const numStatus = Number(status)
+  // isDelete: 0=正常, 1=封禁
+  return numStatus === 0 ? 'warning' : 'success'
+}
+
+// 获取切换按钮文本
+const getToggleButtonText = (status) => {
+  // 确保状态值为数字类型
+  const numStatus = Number(status)
+  // isDelete: 0=正常, 1=封禁
+  return numStatus === 0 ? '封禁' : '解封'
 }
 
 onMounted(() => {
@@ -236,10 +271,10 @@ onMounted(() => {
         </el-table-column>
         <el-table-column property="phone" label="手机号" width="120" />
         <el-table-column property="email" label="邮箱" width="180" />
-        <el-table-column property="userStatus" label="状态" width="100">
+        <el-table-column property="isDelete" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.userStatus === 0 ? 'success' : 'danger'">
-              {{ row.userStatus === 0 ? '正常' : '封禁' }}
+            <el-tag :type="getStatusTagType(row.isDelete)">
+              {{ getStatusText(row.isDelete) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -256,12 +291,12 @@ onMounted(() => {
             </el-button>
             <el-button 
               size="small" 
-              :type="row.userStatus === 0 ? 'warning' : 'success'"
+              :type="getToggleButtonType(row.isDelete)"
               @click="handleToggleStatus(row)"
               v-if="row.userRole !== 0"
             >
               <el-icon><Switch /></el-icon>
-              {{ row.userStatus === 0 ? '封禁' : '解封' }}
+              {{ getToggleButtonText(row.isDelete) }}
             </el-button>
             <el-button 
               size="small" 

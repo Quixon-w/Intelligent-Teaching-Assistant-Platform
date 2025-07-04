@@ -23,7 +23,13 @@ export function getUsersList(pageNum, pageSize, username = '', userAccount = '')
 // 获取已封禁用户列表
 export function getDeletedUsers() {
   console.log('调用获取已封禁用户API: /api/user/listDeleted')
-  return request.get('/api/user/listDeleted')
+  return request.get('/api/user/listDeleted').then(res => {
+    console.log('getDeletedUsers原始响应:', res)
+    return res
+  }).catch(err => {
+    console.error('getDeletedUsers请求失败:', err)
+    return err
+  })
 }
 
 // 恢复用户
