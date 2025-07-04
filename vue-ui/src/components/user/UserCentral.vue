@@ -5,44 +5,42 @@
       <el-tab-pane label="基本信息" name="info">
         <div class="user-edit">
           <div class="avatar-section">
-            <img :src="userInfo.avatarUrl" alt="上传头像" class="avatar" @click="uploadAvatar"/>
+            <img :src="userInfo.avatarUrl" alt="头像" class="avatar" />
           </div>
           <div class="edit-form">
             <h3>编辑个人信息</h3>
-            <form @submit.prevent="changeUserInfo" class="form-layout">
-              <label>
-                用户名：
-                <input v-model="editInfo.username" type="text" />
-              </label>
-              <label>
-                账号：
-                <input v-model="editInfo.userAccount" type="text" />
-              </label>
-              <label>
-                电话：
-                <input v-model="editInfo.phone" type="text" />
-              </label>
-              <label>
-                邮箱：
-                <input v-model="editInfo.email" type="email" />
-              </label>
-              <label>
-                性别：
-                <select v-model="editInfo.gender">
-                  <option :value="0">未知</option>
-                  <option :value="1">男</option>
-                  <option :value="2">女</option>
-                </select>
-              </label>
-              <label>
-                身份：
-                <select v-model="editInfo.userRole">
-                  <option :value="0">学生</option>
-                  <option :value="1">老师</option>
-                </select>
-              </label>
-              <button type="submit">保存信息</button>
-            </form>
+            <div class="user-info-container">
+              <el-form :model="form" :rules="rules" ref="formRef" label-width="80px" class="user-info-form">
+                <el-form-item label="用户名" prop="username">
+                  <el-input v-model="form.username" />
+                </el-form-item>
+                <el-form-item label="账号" prop="userAccount">
+                  <el-input v-model="form.userAccount" disabled />
+                </el-form-item>
+                <el-form-item label="电话" prop="phone">
+                  <el-input v-model="form.phone" />
+                </el-form-item>
+                <el-form-item label="邮箱" prop="email">
+                  <el-input v-model="form.email" />
+                </el-form-item>
+                <el-form-item label="性别" prop="gender">
+                  <el-select v-model="form.gender" placeholder="请选择">
+                    <el-option label="未知" :value="0" />
+                    <el-option label="男" :value="1" />
+                    <el-option label="女" :value="2" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="身份" prop="userRole">
+                  <el-select v-model="form.userRole" placeholder="请选择">
+                    <el-option label="学生" :value="0" />
+                    <el-option label="教师" :value="1" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" @click="onSubmit">保存</el-button>
+                </el-form-item>
+              </el-form>
+            </div>
           </div>
         </div>
       </el-tab-pane>
@@ -70,17 +68,12 @@
       </el-tab-pane>
     </el-tabs>
   </div>
-
-  <el-dialog v-model="dialogImageUp" title="上传头像">
-    <ImageUp/>
-  </el-dialog>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, reactive } from 'vue';
 import { getCurrentUser, updateUserInfo, changePassword } from '@/api/user/userinfo';
 import { ElMessage } from 'element-plus';
-import ImageUp from "@/components/file/ImageUp.vue";
 
 const activeTab = ref('info');
 
@@ -99,40 +92,48 @@ const userInfo = ref({
   userRole: 0
 });
 
-const editInfo = ref({ ...userInfo.value });
+const formRef = ref();
+const form = reactive({ ...userInfo.value });
+
+const rules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  phone: [{ required: false }],
+  email: [{ required: false, type: 'email', message: '请输入正确的邮箱', trigger: 'blur' }],
+  gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
+  userRole: [{ required: true, message: '请选择身份', trigger: 'change' }]
+};
 
 const fetchCurrentUser = async () => {
   try {
     const res = await getCurrentUser();
-    userInfo.value = res.data;
-    editInfo.value = { ...res.data };
-    sessionStorage.setItem('avatarUrl', userInfo.value.avatarUrl);
-  } catch (error) {
-    ElMessage.error('无法加载当前用户信息');
-  }
-};
-
-const changeUserInfo = async () => {
-  try {
-    const res = await updateUserInfo(
-        editInfo.value.id,
-        editInfo.value.username,
-        editInfo.value.userAccount,
-        editInfo.value.avatarUrl,
-        editInfo.value.gender,
-        editInfo.value.phone,
-        editInfo.value.email,
-        editInfo.value.userRole
-    );
     if (res.code === 0) {
-      ElMessage.success('信息更新成功');
-      userInfo.value = { ...editInfo.value };
+      Object.assign(userInfo.value, res.data);
+      form.username = res.data.username;
+      form.userAccount = res.data.userAccount;
+      form.phone = res.data.phone;
+      form.email = res.data.email;
+      form.gender = res.data.gender;
+      form.userRole = res.data.userRole;
     } else {
-      ElMessage.error(res.message || '更新失败');
+      ElMessage.error(res.message || '无法加载当前用户信息');
     }
   } catch (error) {
     ElMessage.error('请求失败，请重试');
   }
+};
+
+const onSubmit = () => {
+  formRef.value.validate(async (valid) => {
+    if (valid) {
+      const res = await updateUserInfo(form);
+      if (res.code === 0) {
+        ElMessage.success('信息更新成功');
+        userInfo.value = { ...form };
+      } else {
+        ElMessage.error(res.message || '更新失败');
+      }
+    }
+  });
 };
 
 const updatePassword = async () => {
@@ -155,10 +156,7 @@ const updatePassword = async () => {
     ElMessage.error('请求失败，请重试');
   }
 };
-const dialogImageUp=ref(false)
-const uploadAvatar = () => {
-  dialogImageUp.value=true;
-}
+
 onMounted(fetchCurrentUser);
 </script>
 
@@ -236,6 +234,15 @@ button {
   border-radius: 6px;
   cursor: pointer;
   align-self: flex-start;
+}
+
+.user-info-container {
+  max-width: 500px;
+  margin: 40px auto;
+  background: #fff;
+  padding: 32px 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
 </style>
 

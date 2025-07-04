@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import json
-from fastapi import APIRouter, HTTPException, status, Request
+from fastapi import APIRouter, HTTPException, status, Request, Response
 from pydantic import BaseModel, Field
 from typing import Union, Optional, List, Dict, Any
 import asyncio
@@ -444,13 +444,15 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
         
         # 构建保存路径
         lesson_path = os.path.join(user_path, course_id, lesson_num)
+        exercises_dir = os.path.join(lesson_path, "exercises")
         
         # 确保目录存在
-        os.makedirs(lesson_path, exist_ok=True)
+        os.makedirs(exercises_dir, exist_ok=True)
         
-        # 生成文件名：课程号_课时号.docx
-        filename = f"{course_id}_{lesson_num}.docx"
-        file_path = os.path.join(lesson_path, filename)
+        # 生成文件名：课程号_课时号_时间戳.docx
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{course_id}_{lesson_num}_{timestamp}.docx"
+        file_path = os.path.join(exercises_dir, filename)
         
         # 创建Word文档
         doc = Document()
@@ -1034,26 +1036,28 @@ async def get_exercise_list(user_id: str, course_id: str, lesson_num: str, is_te
                 "message": "该课时暂无习题"
             }
         
-        # 读取所有习题文件
+        # 读取所有习题文件（.docx格式）
         exercise_files = []
         for filename in os.listdir(exercises_dir):
-            if filename.endswith('.json'):
+            if filename.endswith('.docx'):
                 file_path = os.path.join(exercises_dir, filename)
                 try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        exercise_files.append({
-                            "filename": filename,
-                            "file_path": file_path,
-                            "metadata": data.get("metadata", {}),
-                            "exercise_count": len(data.get("exercises", []))
-                        })
+                    # 获取文件信息
+                    file_stat = os.stat(file_path)
+                    exercise_files.append({
+                        "filename": filename,
+                        "file_path": file_path,
+                        "file_size": file_stat.st_size,
+                        "created_time": datetime.fromtimestamp(file_stat.st_ctime).isoformat(),
+                        "modified_time": datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
+                        "file_type": "docx"
+                    })
                 except Exception as e:
                     print(f"读取习题文件 {filename} 时出错: {e}")
                     continue
         
-        # 按生成时间排序
-        exercise_files.sort(key=lambda x: x["metadata"].get("generated_at", ""), reverse=True)
+        # 按修改时间排序（最新的在前）
+        exercise_files.sort(key=lambda x: x["modified_time"], reverse=True)
         
         return {
             "success": True,
@@ -1090,13 +1094,20 @@ async def get_exercise_detail(user_id: str, course_id: str, lesson_num: str, fil
                 detail="习题文件不存在"
             )
         
-        # 读取习题文件
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # 获取文件信息
+        file_stat = os.stat(file_path)
         
         return {
             "success": True,
-            "data": data,
+            "data": {
+                "filename": filename,
+                "file_path": file_path,
+                "file_size": file_stat.st_size,
+                "created_time": datetime.fromtimestamp(file_stat.st_ctime).isoformat(),
+                "modified_time": datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
+                "file_type": "docx",
+                "download_url": f"/v1/exercise/download/{user_id}/{course_id}/{lesson_num}/{filename}"
+            },
             "message": "获取习题详情成功"
         }
         
@@ -1145,6 +1156,52 @@ async def delete_exercise_file(user_id: str, course_id: str, lesson_num: str, fi
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"删除习题文件失败: {str(e)}"
+        )
+
+
+@router.get("/v1/exercise/download/{user_id}/{course_id}/{lesson_num}/{filename}", tags=["Exercise"])
+async def download_exercise_file(user_id: str, course_id: str, lesson_num: str, filename: str, is_teacher: bool = False):
+    """
+    下载指定的习题文件
+    """
+    try:
+        # 获取用户路径
+        user_path = get_user_path(user_id, is_teacher)
+        
+        # 构建文件路径
+        lesson_path = os.path.join(user_path, course_id, lesson_num)
+        exercises_dir = os.path.join(lesson_path, "exercises")
+        file_path = os.path.join(exercises_dir, filename)
+        
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="习题文件不存在"
+            )
+        
+        # 读取文件内容
+        with open(file_path, 'rb') as f:
+            file_content = f.read()
+        
+        # 设置响应头
+        headers = {
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        }
+        
+        return Response(
+            content=file_content,
+            headers=headers,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"下载习题文件时出错: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"下载习题文件失败: {str(e)}"
         )
 
 

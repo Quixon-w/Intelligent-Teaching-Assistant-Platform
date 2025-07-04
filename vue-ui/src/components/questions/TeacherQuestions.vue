@@ -10,16 +10,13 @@ import {
 } from "@/api/course/lesson.js";
 import {ElMessage} from "element-plus";
 import QuestionsOfTeacher from "@/components/questions/QuestionsOfTeacher.vue";
-import {downloadUrl} from "@/api/file.js";
 
 const route = useRoute();
 const questions = ref([]);
-const urls=ref([]);
 const currentquestion = ref({});
 const dialogChangeQuestionVisible = ref(false);
 const dialogCreateQuestionVisible = ref(false);
 const dialogAddQuestionOfMine=ref(false);
-const dialogDownloadVisible=ref(false);
 const getQuestions = (lessonId) => {
   getLessonQuestions(lessonId).then(res => {
     console.log(res);
@@ -91,8 +88,6 @@ const addQuestionOfMine=()=>{
   dialogAddQuestionOfMine.value=true;
 }
 const aiCreateQuestions=()=>{
-  getAiCreateUrls()
-  dialogDownloadVisible.value=true;
 }
 onMounted(() => {
   getQuestions(route.params.lessonId)
@@ -125,8 +120,11 @@ onMounted(() => {
 
   <el-dialog v-model="dialogChangeQuestionVisible" title="修改题目">
     <el-form v-model="currentquestion">
-      <el-form-item label="题目知识点">
-        <el-input v-model="currentquestion.questionKonwledge"></el-input>
+      <el-form-item label="父知识点">
+        <el-input v-model="currentquestion.parentKnowledge" placeholder="请输入父级知识点"></el-input>
+      </el-form-item>
+      <el-form-item label="子知识点">
+        <el-input v-model="currentquestion.childKnowledge" placeholder="请输入具体知识点"></el-input>
       </el-form-item>
       <el-form-item label="题目内容">
         <el-input v-model="currentquestion.questionContent"></el-input>
@@ -176,8 +174,11 @@ onMounted(() => {
   <el-dialog v-model="dialogCreateQuestionVisible" title="新建题目">
     <el-form v-model="currentquestion">
       <el-text>第{{ currentquestion.questionId }}题</el-text>
-      <el-form-item label="题目知识点">
-        <el-input v-model="currentquestion.questionKonwledge"></el-input>
+      <el-form-item label="父知识点">
+        <el-input v-model="currentquestion.parentKnowledge" placeholder="请输入父级知识点"></el-input>
+      </el-form-item>
+      <el-form-item label="子知识点">
+        <el-input v-model="currentquestion.childKnowledge" placeholder="请输入具体知识点"></el-input>
       </el-form-item>
       <el-form-item label="题目内容">
         <el-input v-model="currentquestion.questionContent"></el-input>
@@ -225,9 +226,6 @@ onMounted(() => {
   </el-dialog>
   <el-dialog v-model="dialogAddQuestionOfMine" title="从题库中添加">
     <QuestionsOfTeacher :action="'add'" :lessonId=route.params.lessonId />
-  </el-dialog>
-  <el-dialog v-model="dialogDownloadVisible" title="文件下载">
-    <el-text v-for="url in urls" @click="downloadUrl(url)" style=":hover{color: #409eff}">{{url}}<br></el-text>
   </el-dialog>
 </template>
 

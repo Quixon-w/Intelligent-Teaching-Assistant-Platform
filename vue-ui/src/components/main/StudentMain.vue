@@ -21,8 +21,6 @@ const initCharts = async () => {
           return params.data.description || params.name;
         }
       },
-
-
       series: [
         {
           type: 'tree',
@@ -33,7 +31,6 @@ const initCharts = async () => {
           symbol: 'circle',
           symbolSize: 60,
           label: {
-            show: true,
             position: 'inside',
             color: '#fff',
             fontSize: 12,
@@ -55,73 +52,107 @@ const initCharts = async () => {
               children: [
                 {
                   name: '个人中心',
-                  description: '管理个人信息与账户设置',
+                  description: '管理个人信息',
                   children: [
                     {
-                      name: '查看信息',
-                      description: '浏览当前学生的个人信息'
+                      name: '添加学生',
+                      description: '添加学生',
+                      children: [
+                        {
+                          name: '添加学生',
+                          description: '添加学生',
+
+                        },
+                        {
+                          name: '删除学生',
+                          description: '删除学生'
+                        }
+                      ]
                     },
                     {
-                      name: '更新信息',
-                      description: '编辑并保存新的个人信息'
-                    },
-                    {
-                      name: '修改密码',
-                      description: '更改当前账户的登录密码'
+                      name: '删除学生',
+                      description: '删除学生' ,
+                      children: [
+                        {
+                          name: '添加学生',
+                          description: '添加学生',
+
+                        },
+                        {
+                          name: '删除学生',
+                          description: '删除学生'
+                        }
+                      ]
                     }
                   ]
                 },
                 {
-                  name: '选课管理',
-                  description: '查找、加入或退出课程',
+                  name: '课程管理',
+                  description: '创建课程内容、试题等教学资源等',
                   children: [
                     {
-                      name: '加入课程',
-                      description: '选择感兴趣的课程并加入学习'
+                      name: '添加学生',
+                      description: '添加学生'
                     },
                     {
-                      name: '退出课程',
-                      description: '从已选课程中退课'
+                      name: '删除学生',
+                      description: '删除学生'
                     }
                   ]
                 },
                 {
-                  name: '我的课程',
-                  description: '根据所选课程进行学习和任务完成',
+                  name: '课时管理',
+                  description: '给学生分配作业任务',
                   children: [
                     {
-                      name: '查看课程信息',
-                      description: '浏览课程名称、教师、简介等基本信息'
+                      name: '添加学生',
+                      description: '添加学生'
                     },
                     {
-                      name: '课时学习',
-                      description: '查看课时内容，下载或预览教学资料'
+                      name: '删除学生',
+                      description: '删除学生'
+                    }
+                  ]
+                },
+                {
+                  name: '成绩分析',
+                  description: '统计学生成绩、生成图表报告',
+                  children: [
+                    {
+                      name: '添加学生',
+                      description: '添加学生'
                     },
                     {
-                      name: '完成测验',
-                      description: '在线完成课后测试题目'
+                      name: '删除学生',
+                      description: '删除学生'
+                    }
+                  ]
+                },
+                {
+                  name: '学生管理',
+                  description: '查看和管理所教班级的学生信息',
+                  children: [
+                    {
+                      name: '添加学生',
+                      description: '添加学生'
                     },
                     {
-                      name: '查看测验结果',
-                      description: '查看已完成测验的答题情况和得分'
-                    },
-                    {
-                      name: '成绩统计',
-                      description: '查看课程整体学习表现和成绩分析图表'
-                    },
-                    {
-                      name: '下载大纲',
-                      description: '下载课时对应的课程大纲文件'
+                      name: '删除学生',
+                      description: '删除学生'
                     }
                   ]
                 },
                 {
                   name: 'AI助手',
-                  description: 'AI辅助学习工具，提供答疑与学习建议',
+                  description: 'ai助手',
                   children: [
                     {
-                      name: '智能问答',
-                      description: '向AI提问，获取课程或习题相关解答'
+                      name: '添加学生',
+                      description: '添加学生'
+                    },
+                    {
+                      name: '删除学生',
+                      description: '删除学生'
                     }
                   ]
                 }
@@ -131,12 +162,9 @@ const initCharts = async () => {
           expandAndCollapse: true,
           initialTreeDepth: 2,
           animationDuration: 750,
-          nodePadding: 30
+          nodePadding: 30,
         }
       ]
-
-
-
     })
   } catch (error) {
     console.error('图表加载失败:', error);

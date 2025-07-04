@@ -1,5 +1,5 @@
 import request from '@/utils/request.js'
-import {lessonOutlineDownload, lessonOutlineStatus} from "@/api/ai/ai.js";
+import {lessonOutlineDownload, lessonOutlineStatus} from "@/api/ai.js";
 import qs from "qs";
 export function getLessons(courseId) {
   return request.get('/api/lesson/list',{
@@ -52,23 +52,39 @@ export function getLessonQuestions(lessonId){
       lessonId:lessonId
     }
   }).then(res=>{
-    console.log(res);
-    let data=[];
-    for(let adata of res.data.data){
-      let options=JSON.parse(adata.options);
-      let aadata={
-        questionId:adata.questionId,
-        questionKonwledge:adata.knowledge,
-        questionContent:adata.question,
-        questionExplanation:adata.explanation,
-        questionAnswer:[adata.answer,options.A,options.B,options.C,options.D],
-      }
-      data.push(aadata);
+    console.log('getLessonQuestions API响应:', res);
+    
+    // 响应拦截器已经处理了错误情况，这里的res已经是成功的响应
+    // 检查数据
+    if (!res.data || !Array.isArray(res.data)) {
+      console.warn('该课时暂无习题数据');
+      return [];
     }
-    console.log(data);
+    
+    let data=[];
+    for(let adata of res.data){
+      try {
+        let options=JSON.parse(adata.options);
+        let aadata={
+          questionId:adata.questionId,
+          questionKonwledge:adata.knowledge,
+          questionContent:adata.question,
+          questionExplanation:adata.explanation,
+          questionAnswer:[adata.answer,options.A,options.B,options.C,options.D],
+        }
+        data.push(aadata);
+      } catch (parseError) {
+        console.error('解析题目数据失败:', adata, parseError);
+        // 跳过有问题的数据，继续处理其他题目
+      }
+    }
+    
+    console.log('处理后的题目数据:', data);
     return data;
   }).catch(err=>{
-    return err;
+    console.error('getLessonQuestions API调用失败:', err);
+    // 重新抛出错误，让调用方能够正确处理
+    throw err;
   })
 }
 export function getLessonCommittedQuestions(lessonId){
@@ -165,7 +181,7 @@ export function commitQuestion(questions,lessonID){
     ids.push(question.questionId);
   }
   console.log(ids)
-  return request.post('/api/map/commit',null,{
+  return request.post('/api/lesson/commit',null,{
     params:{
       lessonId:lessonID,
       questionIds:ids,
@@ -287,10 +303,20 @@ export function searchFatherQuestion(questionKnowledge){
 }
 export function commitQuestionHistory(questions,lessonId){
   let questionAnswers=[];
+  
+  // 确保按顺序提取答案（学生做题时使用selectedAnswer字段）
   for(let question of questions){
-    questionAnswers.push(question.questionAnswer[0]);
+    const answer = question.selectedAnswer || '';
+    questionAnswers.push(answer);
   }
-  console.log(questionAnswers);
+  
+  console.log('按顺序提交的答案数组:', questionAnswers);
+  console.log('课时ID:', lessonId);
+  console.log('提交的题目信息:', questions.map(q => ({
+    questionId: q.questionId,
+    selectedAnswer: q.selectedAnswer
+  })));
+  
   return request.post('/api/records/add',null,{
     params:{
       lessonId:lessonId,
@@ -298,9 +324,12 @@ export function commitQuestionHistory(questions,lessonId){
     },
     paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
   }).then(res=>{
+    console.log('/api/records/add 响应:', res);
     return res;
   }).catch(err=>{
-    return err;
+    console.error('/api/records/add 错误:', err);
+    // 重新抛出错误，让调用方能够正确处理
+    throw err;
   })
 }
 export function lessonQuestionIsFinished(lessonId,studentId){

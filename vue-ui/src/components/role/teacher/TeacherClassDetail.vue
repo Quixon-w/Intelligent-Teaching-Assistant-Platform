@@ -14,7 +14,7 @@ import {
 import FileUp from "@/components/file/FileUp.vue";
 import FilePreview from "@/components/file/FilePreview.vue";
 import {downloadFile, downloadUrl} from "@/api/file.js";
-import {createLessonOutline} from "@/api/ai/ai.js";
+import {createLessonOutline} from "@/api/ai.js";
 const route=useRoute();
 const showView=ref(0);
 const dialogLessonFormVisible=ref(false);
@@ -158,12 +158,10 @@ const viewLessonQuestion=(lessonId)=>{
   router.push('/dashboard/teacher/'+route.params.id+'/viewquestions/'+lessonId);
 }
 const router=useRouter();
-const gotoLessonScore = (lessonId,courseId) => {
+const gotoLessonScore = (lessonId) => {
   router.push({
     path: '/lessonScore',
-    query: {
-      lessonId: lessonId ,
-      courseId: courseId}
+    query: { lessonId: lessonId } // 使用 query 参数传递 lessonId
   })
 }
 const createLessonFile=(lessonId)=>{
@@ -233,7 +231,7 @@ onMounted(()=>{
               <el-button size="default" @click="fileupLessonId=scope.row.lessonId;dialogCourseOutlineVisible=true" v-if="isMine===true">上传文件</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===0" size="default" @click="getLessonQuestion(scope.row.lessonId)">创建测试</el-button>
               <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" @click="viewLessonQuestion(scope.row.lessonId)">查看测试</el-button>
-              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="gotoLessonScore(scope.row.lessonId,route.params.id)">查看测试完成情况</el-button>
+              <el-button v-if="haveLessonQuestion(scope.row.lessonId)===1" size="default" type="danger" @click="gotoLessonScore(scope.row.lessonId)">查看测试完成情况</el-button>
               <el-button type="success" @click="createLessonFile(scope.row.lessonId)" v-if="isMine===true&&scope.row.outlineStatus===false">创建课程大纲</el-button>
               <el-button type="warning" @click="previewFile(scope.row.lessonId)" v-if="scope.row.outlineStatus===true">查看课程大纲</el-button>
               <el-button type="danger" @click="downloadUrls(scope.row.lessonId)" v-if="scope.row.outlineStatus===true">下载课程大纲</el-button>

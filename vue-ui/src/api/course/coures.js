@@ -137,9 +137,11 @@ export const isMyCourse=(studentId,courseId)=>{
     params: {
       studentId:studentId}
   }).then(res=>{
-    for(let i=0;i<res.data.data.length;i++){
-      if(res.data.data[i].id==courseId){
-        return true;
+    if (res.code === 0 && res.data) {
+      for(let i=0;i<res.data.length;i++){
+        if(res.data[i].course.id==courseId){
+          return true;
+        }
       }
     }
     return false;

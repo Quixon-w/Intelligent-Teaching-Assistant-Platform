@@ -99,7 +99,7 @@ def search_knowledge_db(user_id, session_id, query, is_teacher=False, course_id=
         
         # 生成collection名称
         if search_mode == "uploaded":
-            collection_name = f"kb_{user_id}_ask_uploaded"
+            collection_name = f"kb_{user_id}_student_default_ask"
         else:
             collection_name = f"kb_{user_id}_{course_id}_{lesson_num}"
         
