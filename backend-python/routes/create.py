@@ -93,7 +93,7 @@ def get_lesson_content_from_chromadb(user_id: str, course_id: str, lesson_num: s
             else:
                 print("ChromaDB中没有找到文档")
                 return None
-                
+        
         except Exception as e:
             print(f"从ChromaDB获取文档失败: {e}")
             return None
@@ -218,7 +218,7 @@ def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_
         outline_dir = os.path.join(user_path, course_id, lesson_num, "outline")
         os.makedirs(outline_dir, exist_ok=True)
         
-        # 生成文件名（包含时间戳）
+                # 生成文件名（包含时间戳）
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"outline_{timestamp}.docx"
         file_path = os.path.join(outline_dir, filename)
@@ -319,7 +319,7 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
             outline_content += delta
             token_count += 1
             
-            # 每100个token打印一次进度
+                        # 每100个token打印一次进度
             if token_count % 100 == 0:
                 current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
                 print(f"已生成 {token_count} tokens, 当前内容长度: {len(outline_content)} 字符, 字数: {current_words}")
@@ -339,7 +339,7 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
             if current_words >= max_words * 1.2:  # 允许超出20%的字数
                 print(f"达到字数限制 {current_words} >= {max_words * 1.2}")
                 break
-        
+            
         # 恢复原始设置
         model.max_tokens_per_generation = original_max_tokens
         
