@@ -41,7 +41,8 @@ export default [
       {
         path: ':courseId/questions/:lessonId',
         name: 'student-questions',
-        redirect: '/dashboard/student/courses'
+        component: () => import('@/views/student/TestTakingView.vue'),
+        meta: { title: '在线测试' }
       }
     ]
   }

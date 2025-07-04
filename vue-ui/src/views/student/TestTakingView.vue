@@ -19,8 +19,17 @@
         </el-descriptions>
       </div>
       
-      <div class="questions-section">
-        <div v-for="(question, index) in questions" :key="question.id" class="question-item">
+      <div v-if="loading" class="loading-section">
+        <el-loading-component />
+        <p>正在加载题目...</p>
+      </div>
+      
+      <div v-else-if="questions.length === 0" class="empty-section">
+        <el-empty description="暂无题目" />
+      </div>
+      
+      <div v-else class="questions-section">
+        <div v-for="(question, index) in questions" :key="question.questionId" class="question-item">
           <div class="question-header">
             <h4>第{{ index + 1 }}题 ({{ question.score }}分)</h4>
           </div>
@@ -73,60 +82,23 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { getLessonQuestionsList, commitQuestionHistory } from '@/api/course/lesson'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 // 响应式数据
 const testInfo = ref(null)
 const questions = ref([])
 const remainingTime = ref(3600) // 60分钟
+const loading = ref(false)
 let timer = null
 
-// 模拟测试数据
-const mockTestInfo = {
-  id: 1,
-  title: 'Vue.js 基础测试',
-  totalScore: 100,
-  passScore: 60,
-  duration: 60
-}
-
-const mockQuestions = [
-  {
-    id: 1,
-    type: 'single',
-    content: 'Vue.js 是什么类型的框架？',
-    score: 10,
-    options: [
-      { key: 'A', content: '后端框架' },
-      { key: 'B', content: '前端框架' },
-      { key: 'C', content: '数据库框架' },
-      { key: 'D', content: '移动端框架' }
-    ],
-    answer: ''
-  },
-  {
-    id: 2,
-    type: 'multiple',
-    content: 'Vue.js 的核心特性包括哪些？',
-    score: 20,
-    options: [
-      { key: 'A', content: '响应式数据绑定' },
-      { key: 'B', content: '组件化开发' },
-      { key: 'C', content: '虚拟DOM' },
-      { key: 'D', content: '路由管理' }
-    ],
-    answer: []
-  },
-  {
-    id: 3,
-    type: 'fill',
-    content: '请简述Vue.js的生命周期钩子函数有哪些？',
-    score: 30,
-    answer: ''
-  }
-]
+// 从路由参数获取课程ID和课时ID
+const courseId = route.params.courseId
+const lessonId = route.params.lessonId
 
 // 方法
 const formatTime = (seconds) => {
@@ -148,22 +120,97 @@ const submitTest = async () => {
       }
     )
     
-    // TODO: 调用提交测试API
-    ElMessage.success('测试提交成功')
-    router.push('/student/my-courses')
-  } catch {
-    // 用户取消
+    // 检查是否有未答题目
+    const unansweredQuestions = questions.value.filter(q => !q.answer)
+    if (unansweredQuestions.length > 0) {
+      const confirmSubmit = await ElMessageBox.confirm(
+        `还有 ${unansweredQuestions.length} 道题目未作答，确定要提交吗？`,
+        '提示',
+        {
+          confirmButtonText: '确定提交',
+          cancelButtonText: '继续答题',
+          type: 'warning'
+        }
+      )
+    }
+    
+    // 调试：打印提交前的题目数据
+    console.log('提交前的题目数据:', questions.value.map(q => ({
+      questionId: q.questionId,
+      answer: q.answer,
+      content: q.content
+    })))
+    
+    // 调用提交测试API
+    const response = await commitQuestionHistory(questions.value, lessonId)
+    
+    if (response.code === 0) {
+      ElMessage.success('测试提交成功')
+      // 跳转回课程详情页面
+      router.push(`/dashboard/student/courses/${courseId}`)
+    } else {
+      ElMessage.error(response.message || '提交失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('提交测试失败:', error)
+      ElMessage.error('提交失败，请重试')
+    }
   }
 }
 
 const loadTestInfo = () => {
-  // TODO: 调用获取测试信息API
-  testInfo.value = mockTestInfo
+  // 根据课时ID生成测试信息
+  testInfo.value = {
+    id: lessonId,
+    title: `课时 ${lessonId} 测试`,
+    totalScore: 100,
+    passScore: 60,
+    duration: 60
+  }
 }
 
-const loadQuestions = () => {
-  // TODO: 调用获取题目列表API
-  questions.value = mockQuestions
+const loadQuestions = async () => {
+  if (!lessonId) {
+    ElMessage.error('缺少课时ID参数')
+    return
+  }
+  
+  try {
+    loading.value = true
+    const response = await getLessonQuestionsList(lessonId)
+    
+    if (response.code === 0 && response.data) {
+      // 转换题目格式
+      questions.value = response.data.map((question, index) => {
+        const options = JSON.parse(question.options || '{}')
+        return {
+          questionId: question.questionId,
+          content: question.question,
+          type: 'single', // 默认为单选题
+          score: 10, // 默认每题10分
+          options: [
+            { key: 'A', content: options.A || '' },
+            { key: 'B', content: options.B || '' },
+            { key: 'C', content: options.C || '' },
+            { key: 'D', content: options.D || '' }
+          ],
+          answer: '', // 学生的答案
+          correctAnswer: question.answer,
+          explanation: question.explanation
+        }
+      })
+      
+      console.log('加载的题目:', questions.value)
+    } else {
+      ElMessage.error('加载题目失败')
+    }
+  } catch (error) {
+    console.error('加载题目失败:', error)
+    ElMessage.error('加载题目失败，请重试')
+  } finally {
+    loading.value = false
+  }
 }
 
 const startTimer = () => {
@@ -178,9 +225,16 @@ const startTimer = () => {
   }, 1000)
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 检查路由参数
+  if (!courseId || !lessonId) {
+    ElMessage.error('缺少必要的参数')
+    router.push('/dashboard/student/my-courses')
+    return
+  }
+  
   loadTestInfo()
-  loadQuestions()
+  await loadQuestions()
   startTimer()
 })
 
@@ -261,5 +315,15 @@ onUnmounted(() => {
 
 .fill-answer {
   margin-top: 15px;
+}
+
+.loading-section {
+  text-align: center;
+  padding: 40px;
+}
+
+.empty-section {
+  text-align: center;
+  padding: 40px;
 }
 </style> 

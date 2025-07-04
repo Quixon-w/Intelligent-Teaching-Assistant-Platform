@@ -217,6 +217,8 @@ const handleAvatarSuccess = (response) => {
     // 同步到authStore，保证侧边栏也刷新
     if (response.data) {
       authStore.user.avatar = response.data
+      // 同时更新localStorage中的头像信息，确保刷新页面后头像仍然显示
+      localStorage.setItem('userAvatar', response.data)
     }
   } else {
     // 优先使用后端返回的具体错误信息
@@ -306,6 +308,13 @@ const loadUserInfo = async () => {
       userInfo.value.email = userData.email || ''
       userInfo.value.phone = userData.phone || ''
       userInfo.value.avatar = userData.avatarUrl || ''
+      
+      // 同步更新authStore和localStorage中的头像信息
+      if (authStore.user) {
+        authStore.user.avatar = userData.avatarUrl || ''
+      }
+      localStorage.setItem('userAvatar', userData.avatarUrl || '')
+      
       // 正确映射用户角色：0-学生，1-教师，2-管理员
       if (userData.userRole === 0) {
         userInfo.value.role = 'student'
@@ -356,6 +365,8 @@ const onSubmit = async () => {
       // 更新 authStore 中的用户信息
       if (authStore.user) {
         authStore.user.username = form.username
+        // 同步更新localStorage中的用户名
+        localStorage.setItem('username', form.username)
       }
       } else {
       // 优先使用后端返回的具体错误信息
@@ -416,12 +427,27 @@ const changePassword = async () => {
     const response = await request.post('/api/user/password', passwordChangeRequest)
     
     if (response.code === 0) {
-      ElMessage.success('密码修改成功')
+      ElMessage.success('密码修改成功，请重新登录')
+      
+      // 清空密码表单
       passwordForm.value = {
         oldPassword: '',
         newPassword: '',
         confirmPassword: ''
       }
+      
+      // 延迟一下让用户看到成功消息，然后登出并跳转到登录页
+      setTimeout(async () => {
+        try {
+          await authStore.logout()
+          // 使用 router 跳转到登录页
+          window.location.href = '/login'
+        } catch (error) {
+          console.error('登出失败:', error)
+          // 如果登出失败，直接跳转到登录页
+          window.location.href = '/login'
+        }
+      }, 1500)
     } else {
       // 优先使用后端返回的具体错误信息
       const errorMessage = response.message || response.description || '密码修改失败'

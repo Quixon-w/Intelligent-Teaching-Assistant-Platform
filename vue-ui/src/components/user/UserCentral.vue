@@ -74,6 +74,9 @@
 import { ref, onMounted, reactive } from 'vue';
 import { getCurrentUser, updateUserInfo, changePassword } from '@/api/user/userinfo';
 import { ElMessage } from 'element-plus';
+import { useAuthStore } from '@/stores/auth';
+
+const authStore = useAuthStore();
 
 const activeTab = ref('info');
 
@@ -114,6 +117,14 @@ const fetchCurrentUser = async () => {
       form.email = res.data.email;
       form.gender = res.data.gender;
       form.userRole = res.data.userRole;
+      
+      // 同步更新authStore和localStorage中的用户信息
+      if (authStore.user) {
+        authStore.user.username = res.data.username;
+        authStore.user.avatar = res.data.avatarUrl || '';
+      }
+      localStorage.setItem('username', res.data.username);
+      localStorage.setItem('userAvatar', res.data.avatarUrl || '');
     } else {
       ElMessage.error(res.message || '无法加载当前用户信息');
     }
@@ -129,6 +140,14 @@ const onSubmit = () => {
       if (res.code === 0) {
         ElMessage.success('信息更新成功');
         userInfo.value = { ...form };
+        
+        // 同步更新authStore和localStorage中的用户信息
+        if (authStore.user) {
+          authStore.user.username = form.username;
+          authStore.user.avatar = userInfo.value.avatarUrl || '';
+        }
+        localStorage.setItem('username', form.username);
+        localStorage.setItem('userAvatar', userInfo.value.avatarUrl || '');
       } else {
         ElMessage.error(res.message || '更新失败');
       }
@@ -145,10 +164,25 @@ const updatePassword = async () => {
         checkPassword.value
     );
     if (res.code === 0) {
-      ElMessage.success('密码修改成功');
+      ElMessage.success('密码修改成功，请重新登录');
+      
+      // 清空密码表单
       oldPassword.value = '';
       newPassword.value = '';
       checkPassword.value = '';
+      
+      // 延迟一下让用户看到成功消息，然后登出并跳转到登录页
+      setTimeout(async () => {
+        try {
+          await authStore.logout()
+          // 跳转到登录页
+          window.location.href = '/login'
+        } catch (error) {
+          console.error('登出失败:', error)
+          // 如果登出失败，直接跳转到登录页
+          window.location.href = '/login'
+        }
+      }, 1500)
     } else {
       ElMessage.error(res.message || '修改失败');
     }
