@@ -92,7 +92,8 @@ def get_lesson_content_from_chromadb(user_id: str, course_id: str, lesson_num: s
             userId=user_id,
             isTeacher=is_teacher,
             courseID=course_id,
-            lessonNum=lesson_num
+            lessonNum=lesson_num,
+            isAsk=False      # 不是ask文件
         )
         
         if not chroma_manager:
@@ -308,10 +309,13 @@ async def generate_exercises_for_blocks(text_blocks: List[str], request: Request
     
     for i, block in enumerate(text_blocks):
         print(f"正在为文本块 {i+1}/{len(text_blocks)} 生成习题...")
+        print(f"文本块长度: {len(block)} 字符")
+        print(f"文本块预览: {block[:200]}...")
         
         try:
             # 为当前文本块生成提示词
             prompt = generate_exercise_prompt_for_block(block, i, difficulty)
+            print(f"生成的提示词长度: {len(prompt)} 字符")
             
             # 生成习题
             exercise = await generate_exercises_with_rwkv(
@@ -321,14 +325,27 @@ async def generate_exercises_for_blocks(text_blocks: List[str], request: Request
                 temperature
             )
             
+            # 验证生成的习题
+            if not exercise or len(exercise.strip()) == 0:
+                print(f"⚠️ 警告：文本块 {i+1} 生成的习题为空")
+                exercise = f"题目{i+1}生成失败: 生成的内容为空"
+            
             exercises.append(exercise)
-            print(f"文本块 {i+1} 习题生成完成")
+            print(f"文本块 {i+1} 习题生成完成，长度: {len(exercise)} 字符")
             
         except Exception as e:
             print(f"为文本块 {i+1} 生成习题时出错: {e}")
+            import traceback
+            traceback.print_exc()
             # 如果某个文本块生成失败，添加错误信息
             exercises.append(f"题目{i+1}生成失败: {str(e)}")
     
+    # 验证生成的习题列表
+    if not exercises or len(exercises) == 0:
+        print("⚠️ 错误：没有生成任何习题")
+        raise Exception("没有生成任何习题")
+    
+    print(f"成功生成 {len(exercises)} 道习题")
     return exercises
 
 
@@ -437,6 +454,16 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
     将生成的习题保存为docx文件
     """
     print(f"正在保存习题到docx文件: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}")
+    print(f"习题内容长度: {len(exercise_content) if exercise_content else 0} 字符")
+    
+    # 验证内容是否为空
+    if not exercise_content or len(exercise_content.strip()) == 0:
+        print("⚠️ 错误：习题内容为空，无法保存")
+        return {
+            "success": False,
+            "error": "习题内容为空",
+            "message": "生成的习题内容为空，请检查模型生成是否正常"
+        }
     
     try:
         # 获取用户路径
@@ -470,9 +497,12 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
         
         # 将习题内容按行分割并添加到文档
         lines = exercise_content.split('\n')
+        content_added = False
+        
         for line in lines:
             line = line.strip()
             if line:
+                content_added = True
                 # 检查是否是题目标题
                 if line.startswith('题目'):
                     doc.add_heading(line, level=1)
@@ -492,8 +522,35 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
                 else:
                     doc.add_paragraph(line)
         
+        # 检查是否添加了内容
+        if not content_added:
+            print("⚠️ 警告：没有添加任何内容到文档")
+            # 添加原始内容作为备用
+            doc.add_paragraph("原始生成内容：")
+            doc.add_paragraph(exercise_content)
+        
         # 保存文档
         doc.save(file_path)
+        
+        # 验证文件是否成功保存且不为空
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+            print(f"文件保存成功，大小: {file_size} 字节")
+            
+            if file_size == 0:
+                print("⚠️ 警告：保存的文件大小为0字节")
+                return {
+                    "success": False,
+                    "error": "保存的文件为空",
+                    "message": "保存的文件为空，请检查生成的内容"
+                }
+        else:
+            print("⚠️ 错误：文件保存失败")
+            return {
+                "success": False,
+                "error": "文件保存失败",
+                "message": "无法保存文件到指定路径"
+            }
         
         print(f"习题已保存到docx文件: {file_path}")
         
@@ -501,11 +558,14 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
             "success": True,
             "file_path": file_path,
             "filename": filename,
-            "message": f"习题已保存为 {filename}"
+            "message": f"习题已保存为 {filename}",
+            "file_size": file_size
         }
         
     except Exception as e:
         print(f"保存docx文件时出错: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "success": False,
             "error": str(e),
@@ -518,6 +578,8 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
     使用RWKV模型生成习题
     """
     print("开始使用RWKV模型生成习题...")
+    print(f"提示词长度: {len(prompt)} 字符")
+    print(f"提示词预览: {prompt[:200]}...")
     
     try:
         # 获取RWKV模型实例
@@ -538,7 +600,6 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
         token_count = 0
         
         print("开始生成习题...")
-        print(f"提示词长度: {len(prompt)} 字符")
         print(f"最大token数: {max_tokens}")
         print(f"温度参数: {temperature}")
         print(f"模型原始max_tokens_per_generation: {original_max_tokens}")
@@ -548,6 +609,8 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
         stop_sequences = []
         
         print("开始生成循环...")
+        generation_start_time = datetime.now()
+        
         for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
             answer_content += delta
             token_count += 1
@@ -569,21 +632,40 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
         # 恢复原始设置
         model.max_tokens_per_generation = original_max_tokens
         
+        generation_end_time = datetime.now()
+        generation_duration = (generation_end_time - generation_start_time).total_seconds()
+        
         print(f"习题生成完成，生成长度: {len(answer_content)} 字符")
         print(f"实际生成token数: {token_count}")
-        print(f"内容预览: {answer_content[:200]}...")
+        print(f"生成耗时: {generation_duration:.2f}秒")
+        print(f"内容预览: {answer_content[:500]}...")
+        
+        # 检查生成的内容是否为空
+        if not answer_content or len(answer_content.strip()) == 0:
+            print("⚠️ 错误：RWKV模型生成的内容为空")
+            raise Exception("模型生成的内容为空，请检查模型状态和参数设置")
         
         # 清理生成的内容
         cleaned_content = clean_generated_content(answer_content)
         
+        # 检查清理后的内容
+        if not cleaned_content or len(cleaned_content.strip()) == 0:
+            print("⚠️ 警告：清理后内容为空，使用原始内容")
+            cleaned_content = answer_content.strip()
+        
         # 如果生成的内容太短，给出警告
         if len(cleaned_content) < 100:
             print("⚠️ 警告：生成的内容过短，可能存在问题")
+            print(f"内容长度: {len(cleaned_content)} 字符")
+            print(f"内容: {cleaned_content}")
         
         return cleaned_content
         
     except Exception as e:
         print(f"RWKV生成习题时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        
         # 确保在出错时也恢复原始设置
         try:
             model = global_var.get(global_var.Model)
@@ -599,6 +681,12 @@ def clean_generated_content(content: str) -> str:
     清理生成的内容，移除不相关的部分
     """
     print("开始清理生成内容...")
+    print(f"原始内容长度: {len(content)} 字符")
+    print(f"原始内容预览: {content[:500]}...")
+    
+    if not content or len(content.strip()) == 0:
+        print("⚠️ 警告：原始内容为空")
+        return ""
     
     # 移除常见的无关前缀
     prefixes_to_remove = [
@@ -620,6 +708,7 @@ def clean_generated_content(content: str) -> str:
     for prefix in prefixes_to_remove:
         if cleaned.startswith(prefix):
             cleaned = cleaned[len(prefix):].strip()
+            print(f"移除了前缀: {prefix}")
     
     # 查找第一个题目开始的位置
     import re
@@ -629,6 +718,8 @@ def clean_generated_content(content: str) -> str:
         r'题目\d*：',
         r'\d+\.\s*\*\*',
         r'\d+\.\s*',
+        r'题目\d*',
+        r'\d+\.',
     ]
     
     start_pos = -1
@@ -636,10 +727,17 @@ def clean_generated_content(content: str) -> str:
         match = re.search(pattern, cleaned)
         if match:
             start_pos = match.start()
+            print(f"找到题目开始位置: {start_pos}, 模式: {pattern}")
             break
     
     if start_pos > 0:
         cleaned = cleaned[start_pos:]
+        print(f"从位置 {start_pos} 开始截取内容")
+    
+    # 如果清理后内容为空，返回原始内容
+    if not cleaned or len(cleaned.strip()) == 0:
+        print("⚠️ 警告：清理后内容为空，返回原始内容")
+        return content.strip()
     
     # 移除不相关的内容（如Question:, Answer:等）
     lines = cleaned.split('\n')
@@ -663,7 +761,14 @@ def clean_generated_content(content: str) -> str:
     
     cleaned = '\n'.join(filtered_lines)
     
+    # 如果过滤后内容为空，返回清理前的内容
+    if not cleaned or len(cleaned.strip()) == 0:
+        print("⚠️ 警告：过滤后内容为空，返回清理前的内容")
+        return content.strip()
+    
     print(f"清理后内容长度: {len(cleaned)} 字符")
+    print(f"清理后内容预览: {cleaned[:500]}...")
+    
     return cleaned.strip()
 
 
@@ -904,6 +1009,16 @@ async def generate_exercises(body: ExerciseBody, request: Request):
                     body.temperature
                 )
                 
+                # 验证生成的内容
+                if not response_text or len(response_text.strip()) == 0:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="习题生成失败：生成的内容为空"
+                    )
+                
+                print(f"生成的内容长度: {len(response_text)} 字符")
+                print(f"生成的内容预览: {response_text[:300]}...")
+                
                 # 4. 保存习题到docx文件
                 print("步骤4: 保存习题到docx文件")
                 save_result = save_exercises_to_docx(
@@ -916,8 +1031,11 @@ async def generate_exercises(body: ExerciseBody, request: Request):
                 
                 if save_result["success"]:
                     print(f"✅ {save_result['message']}")
+                    print(f"文件大小: {save_result.get('file_size', 'unknown')} 字节")
                 else:
                     print(f"⚠️ 保存docx文件失败: {save_result['error']}")
+                    # 即使保存失败，也返回生成的内容
+                    print("继续返回生成的内容...")
                 
                 # 5. 返回结果
                 end_time = datetime.now()
@@ -970,8 +1088,27 @@ async def generate_exercises(body: ExerciseBody, request: Request):
                     body.difficulty
                 )
                 
+                # 验证生成的习题
+                if not exercises or len(exercises) == 0:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="习题生成失败：没有生成任何习题"
+                    )
+                
+                print(f"成功生成 {len(exercises)} 道习题")
+                
                 # 4. 合并所有习题
                 combined_exercises = "\n\n" + "="*50 + "\n\n".join(exercises)
+                
+                # 验证合并后的内容
+                if not combined_exercises or len(combined_exercises.strip()) == 0:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="习题生成失败：合并后的内容为空"
+                    )
+                
+                print(f"合并后内容长度: {len(combined_exercises)} 字符")
+                print(f"合并后内容预览: {combined_exercises[:300]}...")
                 
                 # 5. 保存习题到docx文件
                 print("步骤3: 保存习题到docx文件")
@@ -985,8 +1122,11 @@ async def generate_exercises(body: ExerciseBody, request: Request):
                 
                 if save_result["success"]:
                     print(f"✅ {save_result['message']}")
+                    print(f"文件大小: {save_result.get('file_size', 'unknown')} 字节")
                 else:
                     print(f"⚠️ 保存docx文件失败: {save_result['error']}")
+                    # 即使保存失败，也返回生成的内容
+                    print("继续返回生成的内容...")
                 
                 # 6. 返回结果
                 end_time = datetime.now()
@@ -1215,12 +1355,29 @@ async def get_exercise_status():
         model = global_var.get(global_var.Model)
         model_status = "ready" if model is not None else "not_ready"
         
+        # 获取模型详细信息
+        model_info = {}
+        if model is not None:
+            try:
+                model_info = {
+                    "temperature": getattr(model, 'temperature', 'unknown'),
+                    "top_p": getattr(model, 'top_p', 'unknown'),
+                    "max_tokens_per_generation": getattr(model, 'max_tokens_per_generation', 'unknown'),
+                    "model_loaded": True
+                }
+            except Exception as e:
+                model_info = {
+                    "error": str(e),
+                    "model_loaded": False
+                }
+        
         return {
             "success": True,
             "data": {
                 "service": "exercise_generation",
                 "status": "running",
                 "model_status": model_status,
+                "model_info": model_info,
                 "timestamp": datetime.now().isoformat()
             },
             "message": "习题生成服务运行正常"
@@ -1237,4 +1394,146 @@ async def get_exercise_status():
                 "timestamp": datetime.now().isoformat()
             },
             "message": "习题生成服务异常"
+        }
+
+
+@router.get("/v1/exercise/debug", tags=["Exercise"])
+async def debug_exercise_generation():
+    """
+    调试习题生成功能
+    """
+    try:
+        # 检查RWKV模型状态
+        model = global_var.get(global_var.Model)
+        
+        debug_info = {
+            "model_available": model is not None,
+            "model_type": type(model).__name__ if model else None,
+            "global_var_available": hasattr(global_var, 'Model'),
+            "settings_available": True,  # 假设设置总是可用的
+        }
+        
+        if model is not None:
+            try:
+                # 测试模型基本功能
+                debug_info.update({
+                    "temperature": getattr(model, 'temperature', 'unknown'),
+                    "top_p": getattr(model, 'top_p', 'unknown'),
+                    "max_tokens_per_generation": getattr(model, 'max_tokens_per_generation', 'unknown'),
+                    "model_attributes": [attr for attr in dir(model) if not attr.startswith('_')]
+                })
+            except Exception as e:
+                debug_info["model_error"] = str(e)
+        
+        # 检查文件系统权限
+        try:
+            test_dir = "/tmp/exercise_test"
+            os.makedirs(test_dir, exist_ok=True)
+            test_file = os.path.join(test_dir, "test.txt")
+            with open(test_file, 'w') as f:
+                f.write("test")
+            os.remove(test_file)
+            os.rmdir(test_dir)
+            debug_info["file_system_ok"] = True
+        except Exception as e:
+            debug_info["file_system_error"] = str(e)
+            debug_info["file_system_ok"] = False
+        
+        return {
+            "success": True,
+            "data": debug_info,
+            "message": "调试信息获取成功"
+        }
+        
+    except Exception as e:
+        print(f"获取调试信息时出错: {e}")
+        return {
+            "success": False,
+            "data": {
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            },
+            "message": "获取调试信息失败"
+        }
+
+
+@router.post("/v1/exercise/test", tags=["Exercise"])
+async def test_exercise_generation():
+    """
+    测试习题生成功能
+    """
+    try:
+        # 检查RWKV模型状态
+        model = global_var.get(global_var.Model)
+        if model is None:
+            return {
+                "success": False,
+                "error": "RWKV模型未初始化",
+                "message": "请确保模型已正确加载"
+            }
+        
+        # 创建测试内容
+        test_content = """
+        这是一个测试内容，用于验证习题生成功能。
+        这里包含一些基本的概念和知识点，可以用来生成习题。
+        测试内容包括：
+        1. 基本概念
+        2. 重要知识点
+        3. 应用场景
+        """
+        
+        # 生成测试提示词
+        test_prompt = generate_exercise_prompt(test_content, 1, "medium")
+        
+        # 模拟请求对象
+        class MockRequest:
+            async def is_disconnected(self):
+                return False
+        
+        mock_request = MockRequest()
+        
+        # 测试生成
+        try:
+            result = await generate_exercises_with_rwkv(
+                test_prompt,
+                mock_request,
+                1000,  # max_tokens
+                0.7    # temperature
+            )
+            
+            if result and len(result.strip()) > 0:
+                return {
+                    "success": True,
+                    "data": {
+                        "generated_content": result[:500] + "..." if len(result) > 500 else result,
+                        "content_length": len(result),
+                        "model_working": True
+                    },
+                    "message": "习题生成测试成功"
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "生成的内容为空",
+                    "message": "模型生成的内容为空，请检查模型状态"
+                }
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"习题生成测试失败: {str(e)}"
+            }
+        
+    except Exception as e:
+        print(f"测试习题生成时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "data": {
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            },
+            "message": "测试习题生成失败"
         }

@@ -38,7 +38,8 @@ async def search_knowledge(request: SearchRequest):
             userId=request.user_id,
             isTeacher=request.is_teacher,
             courseID=request.course_id,
-            lessonNum=request.lesson_num
+            lessonNum=request.lesson_num,
+            isAsk=request.is_ask
         )
         
         if not chroma_manager:

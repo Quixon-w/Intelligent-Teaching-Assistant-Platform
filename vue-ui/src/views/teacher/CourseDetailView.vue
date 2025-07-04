@@ -17,8 +17,8 @@
         </div>
       </template>
       
-      <!-- 课程状态提示 -->
-      <div v-if="courseInfo" class="course-status">
+      <!-- 课程状态提示（仅课程教师可见） -->
+      <div v-if="courseInfo && isCurrentUserTeacher" class="course-status">
         <el-alert
           :title="courseInfo.isOver === 0 ? '课程进行中' : '课程已结束'"
           :type="courseInfo.isOver === 0 ? 'success' : 'info'"
@@ -257,7 +257,6 @@
               <el-table :data="studentsList" v-loading="studentsLoading" style="width: 100%">
                 <el-table-column prop="id" label="学生ID" width="80" />
                 <el-table-column prop="username" label="学生姓名" />
-                <el-table-column prop="userAccount" label="学号" />
                 <el-table-column prop="email" label="邮箱" />
                 <el-table-column prop="phone" label="联系电话" width="120" />
                 <el-table-column label="操作" width="150">
@@ -292,7 +291,7 @@
                     <el-option
                       v-for="student in studentsList"
                       :key="student.id"
-                      :label="`${student.username} (${student.userAccount})`"
+                      :label="student.username"
                       :value="student.id"
                     />
                   </el-select>
@@ -345,7 +344,6 @@
                 <!-- 详细成绩表 -->
                   <el-table :data="scoresList" v-loading="scoresLoading" style="width: 100%; margin-top: 20px;">
                   <el-table-column prop="studentName" label="学生姓名" />
-                  <el-table-column prop="studentAccount" label="学号" />
                   <el-table-column prop="finalScore" label="总成绩" width="120">
                     <template #default="scope">
                       <el-tag :type="scope.row.finalScore >= 60 ? 'success' : 'danger'">
@@ -381,11 +379,6 @@
           <el-descriptions-item label="课程ID">{{ courseInfo.id }}</el-descriptions-item>
           <el-descriptions-item label="课程名称">{{ courseInfo.name || courseInfo.courseName }}</el-descriptions-item>
           <el-descriptions-item label="教师姓名">{{ courseInfo.teacherName }}</el-descriptions-item>
-          <el-descriptions-item label="课程状态">
-            <el-tag :type="courseInfo.isOver === 0 ? 'success' : 'danger'">
-              {{ courseInfo.isOver === 0 ? '进行中' : '已结束' }}
-            </el-tag>
-          </el-descriptions-item>
           <el-descriptions-item label="课程描述" :span="2">{{ courseInfo.comment || '暂无描述' }}</el-descriptions-item>
           <el-descriptions-item label="创建时间" :span="2">{{ courseInfo.createTime }}</el-descriptions-item>
         </el-descriptions>
@@ -858,7 +851,6 @@
         <div class="student-info">
           <el-descriptions :column="2" border>
             <el-descriptions-item label="学生姓名">{{ currentStudent.username }}</el-descriptions-item>
-            <el-descriptions-item label="学号">{{ currentStudent.userAccount }}</el-descriptions-item>
             <el-descriptions-item label="邮箱">{{ currentStudent.email }}</el-descriptions-item>
             <el-descriptions-item label="联系电话">{{ currentStudent.phone }}</el-descriptions-item>
           </el-descriptions>
@@ -3086,7 +3078,6 @@ const loadAllScores = async () => {
           return {
             studentId: student.id,
             studentName: student.username,
-            studentAccount: student.userAccount,
             finalScore: score || 0
           }
         } catch (error) {
@@ -3094,7 +3085,6 @@ const loadAllScores = async () => {
           return {
             studentId: student.id,
             studentName: student.username,
-            studentAccount: student.userAccount,
             finalScore: 0
           }
         }

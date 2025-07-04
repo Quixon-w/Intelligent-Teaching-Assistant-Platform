@@ -74,11 +74,12 @@ def search_knowledge_db(user_id, session_id, query, is_teacher=False, course_id=
             chroma_manager = load_vector_db(
                 userId=user_id,
                 isTeacher=is_teacher,
-                courseID="ask",  # 使用ask作为courseID
-                lessonNum="uploaded"  # 使用uploaded作为lessonNum
+                courseID=None,  # ask文件不需要courseID
+                lessonNum=None,  # ask文件不需要lessonNum
+                isAsk=True       # 标记为ask文件
             )
-            # 生成collection名称
-            collection_name = f"kb_{user_id}_ask_uploaded"
+            # 生成collection名称 - 与upload.py保持一致
+            collection_name = f"kb_{user_id}_student_default_ask"
         else:
             # 已有文件查询模式 - 从用户路径下的课程/课时中搜索
             if not course_id:
@@ -92,7 +93,8 @@ def search_knowledge_db(user_id, session_id, query, is_teacher=False, course_id=
                 userId=user_id,
                 isTeacher=is_teacher,
                 courseID=course_id,
-                lessonNum=lesson_num
+                lessonNum=lesson_num,
+                isAsk=False      # 不是ask文件
             )
             # 生成collection名称
             collection_name = f"kb_{user_id}_{course_id}_{lesson_num}"
@@ -105,15 +107,17 @@ def search_knowledge_db(user_id, session_id, query, is_teacher=False, course_id=
         
         # 使用search_knowledge_db函数进行搜索
         search_results = search_knowledge_db(
+            query=query,
             chroma_manager=chroma_manager,
             collection_name=collection_name,
-            query=query,
             top_k=top_k
         )
         
         if search_results and len(search_results) > 0:
+            # 提取文档内容
+            documents = [result['document'] for result in search_results]
             # 合并搜索结果
-            combined_content = "\n\n".join(search_results)
+            combined_content = "\n\n".join(documents)
             print(f"成功从ChromaDB获取相关内容，返回 {len(search_results)} 段内容")
             return combined_content
         else:

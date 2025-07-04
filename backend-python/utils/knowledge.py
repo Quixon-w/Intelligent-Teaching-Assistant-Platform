@@ -473,13 +473,14 @@ def update_knowledge_db(userId, isTeacher=False, courseID=None, lessonNum=None, 
         return None
 
 # 加载已存在的向量数据库
-def load_vector_db(userId, isTeacher=False, courseID=None, lessonNum=None):
+def load_vector_db(userId, isTeacher=False, courseID=None, lessonNum=None, isAsk=False):
     """
     加载已存在的向量数据库
     :param userId: 用户ID
     :param isTeacher: 是否为教师模式
     :param courseID: 课程ID（教师模式下必填）
     :param lessonNum: 课时号（教师模式下必填）
+    :param isAsk: 是否为可提问文件
     """
     try:
         # 使用配置管理系统获取ChromaDB配置
@@ -487,6 +488,8 @@ def load_vector_db(userId, isTeacher=False, courseID=None, lessonNum=None):
         
         # 生成collection名称，与update_knowledge_db保持一致
         collection_name = f"kb_{userId}_{courseID or 'student'}_{lessonNum or 'default'}"
+        if isAsk:
+            collection_name += "_ask"
         
         # 初始化ChromaDB管理器
         chroma_manager = ChromaDBManager(

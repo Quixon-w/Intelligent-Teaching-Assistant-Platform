@@ -66,9 +66,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       loading.value = true
       const response = await registerApi(username, password, confirmPassword)
-      
+
       console.log('注册API响应:', response)
-      
+
       if (response.code === 0) {
         // 注册成功，不自动登录，返回成功状态
         return { success: true, message: '注册成功' }
@@ -114,13 +114,13 @@ export const useAuthStore = defineStore('auth', () => {
     const storedUserId = localStorage.getItem('userId')
     const storedAvatar = localStorage.getItem('userAvatar')
     const storedUsername = localStorage.getItem('username')
-    
+
     if (storedToken && storedRole && storedUserId) {
       token.value = storedToken
-      
+
       // 确保角色是字符串格式
       const mappedRole = mapRoleToText(storedRole)
-      
+
       user.value = {
         id: storedUserId,
         username: storedUsername || storedToken,
@@ -136,11 +136,11 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     token,
     loading,
-    
+
     // 计算属性
     isAuthenticated,
     userRole,
-    
+
     // 方法
     login,
     register,
