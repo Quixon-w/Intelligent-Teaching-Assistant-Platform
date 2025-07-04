@@ -408,4 +408,4 @@ onMounted(() => {
 .stat-number[v-loading] {
   min-height: 50px;
 }
-</style>
+</style> 

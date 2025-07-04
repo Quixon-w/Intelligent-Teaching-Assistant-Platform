@@ -12,7 +12,7 @@ export default [
       {
         path: 'home',
         name: 'admin-home',
-        component: () => import('@/views/role/admin/AdminDashboardView.vue'),
+        component: () => import('@/views/admin/AdminDashboardView.vue'),
         meta: { title: '系统概览', role: 'admin' }
       },
       {

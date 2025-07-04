@@ -12,8 +12,7 @@ export default [
       {
         path: 'home',
         name: 'student-home',
-        component: () => import('@/views/role/student/StudentDashboardView.vue'),
-        meta: { title: '学习中心', role: 'student' }
+        redirect: '/dashboard/student/my-courses'
       },
       {
         path: 'courses',
@@ -42,8 +41,7 @@ export default [
       {
         path: ':courseId/questions/:lessonId',
         name: 'student-questions',
-        component: () => import('@/views/role/student/StudentQuestionsView.vue'),
-        meta: { title: '课时练习' }
+        redirect: '/dashboard/student/courses'
       }
     ]
   }

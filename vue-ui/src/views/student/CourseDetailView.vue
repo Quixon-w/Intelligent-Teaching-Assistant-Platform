@@ -151,6 +151,51 @@
           </el-tab-pane>
           
 
+          <!-- 课程资料（仅已选课学生可见） -->
+          <el-tab-pane v-if="isEnrolled" label="课程资料" name="materials">
+            <div class="materials-section">
+              <div class="section-header">
+                <h4>课程资料</h4>
+                <el-button @click="loadCourseMaterials" :loading="courseMaterialsLoading">
+                  刷新资料
+                </el-button>
+              </div>
+              
+              <!-- 课程资料列表 -->
+              <div v-if="courseMaterialsList.length > 0" class="materials-list">
+                <el-table :data="courseMaterialsList" v-loading="courseMaterialsLoading" style="width: 100%">
+                  <el-table-column prop="filename" label="文件名" />
+                  <el-table-column prop="size" label="文件大小" width="120">
+                    <template #default="scope">
+                      {{ formatFileSize(scope.row.size) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="created_time" label="上传时间" width="180" />
+                  <el-table-column label="操作" width="120">
+                    <template #default="scope">
+                      <el-button 
+                        type="primary" 
+                        size="small" 
+                        @click="downloadCourseMaterial(scope.row)"
+                      >
+                        下载
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+              
+              <!-- 空状态 -->
+              <div v-else-if="!courseMaterialsLoading" class="empty-materials">
+                <el-empty description="暂无课程资料">
+                  <template #description>
+                    <span>教师尚未上传课程资料</span>
+                  </template>
+                </el-empty>
+              </div>
+            </div>
+          </el-tab-pane>
+
           <!-- 学习记录（仅已选课学生可见） -->
           <el-tab-pane v-if="isEnrolled" label="学习记录" name="progress">
             <div class="progress-section">
@@ -179,14 +224,86 @@
                 </el-col>
               </el-row>
               
-              <!-- TODO: 详细学习记录表格 -->
-              <el-alert
-                title="学习记录详情"
-                description="详细的学习记录和成绩分析功能正在开发中"
-                      type="info" 
-                :closable="false"
-                show-icon
-              />
+              <!-- 成绩趋势图 -->
+              <div class="score-trend-section">
+                <div class="section-header">
+                  <h5>课时成绩变化趋势</h5>
+                  <el-button 
+                    @click="loadScoreTrend" 
+                    :loading="scoreTrendLoading"
+                    size="small"
+                  >
+                    刷新数据
+                  </el-button>
+                </div>
+                
+                <!-- 成绩趋势图 -->
+                <div v-if="scoreTrendData.length > 0" class="trend-chart-container">
+                  <div ref="scoreTrendChart" style="width: 100%; height: 400px;"></div>
+                </div>
+                
+                <!-- 空状态 -->
+                <div v-else-if="!scoreTrendLoading" class="empty-trend">
+                  <el-empty description="暂无成绩数据">
+                    <template #description>
+                      <span>您还没有完成任何测试，完成测试后可查看成绩趋势</span>
+                    </template>
+                  </el-empty>
+                </div>
+                
+                <!-- 加载状态 -->
+                <div v-else class="trend-loading">
+                  <el-skeleton :rows="3" animated />
+                </div>
+              </div>
+              
+              <!-- 详细成绩记录 -->
+              <div class="score-records-section">
+                <div class="section-header">
+                  <h5>详细成绩记录</h5>
+                </div>
+                
+                <el-table 
+                  :data="scoreTrendData" 
+                  v-loading="scoreTrendLoading"
+                  style="width: 100%"
+                >
+                  <el-table-column prop="lessonId" label="课时编号" width="100" />
+                  <el-table-column label="课时名称" min-width="200">
+                    <template #default="scope">
+                      {{ getLessonName(scope.row.lessonId) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="score" label="成绩" width="100" align="center">
+                    <template #default="scope">
+                      <el-tag 
+                        :type="getScoreType(scope.row.score)"
+                        size="large"
+                      >
+                        {{ scope.row.score }}分
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="等级" width="100" align="center">
+                    <template #default="scope">
+                      <el-tag 
+                        :type="getGradeType(scope.row.score)"
+                        size="large"
+                      >
+                        {{ getGrade(scope.row.score) }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="updateTime" label="提交时间" width="180" />
+                </el-table>
+                
+                <!-- 空状态 -->
+                <el-empty 
+                  v-if="!scoreTrendLoading && scoreTrendData.length === 0"
+                  description="暂无成绩记录"
+                  :image-size="100"
+                />
+              </div>
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -352,13 +469,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Check, Close } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import axios from 'axios'
 import { dismissCourse as dismissCourseAPI } from '@/api/course'
+import * as echarts from 'echarts'
 
 const route = useRoute()
 const router = useRouter()
@@ -385,6 +504,15 @@ const studyProgress = ref(0)
 // 测试结果对话框
 const showTestResultDialog = ref(false)
 const currentTestResult = ref(null)
+
+// 课程资料相关
+const courseMaterialsList = ref([])
+const courseMaterialsLoading = ref(false)
+
+// 成绩趋势相关
+const scoreTrendData = ref([])
+const scoreTrendLoading = ref(false)
+const scoreTrendChart = ref(null)
 
 // 计算属性
 const getStatusTitle = () => {
@@ -445,7 +573,7 @@ const getCourseById = async (courseId) => {
       params: { courseId }
     })
     
-    console.log('获取课程详情API响应:', res)
+
     
     if (res.code === 0) {
       return res.data
@@ -528,7 +656,7 @@ const loadCourseInfo = async () => {
       return
     }
     
-    console.log('正在加载课程信息, 课程ID:', courseId)
+
     
     // 并行加载课程信息、选课状态、选课人数
     const [courseData, enrolledStatus, stuCount] = await Promise.all([
@@ -548,18 +676,16 @@ const loadCourseInfo = async () => {
     isEnrolled.value = enrolledStatus
     studentCount.value = stuCount
     
-    console.log('课程信息加载成功:', {
-      courseId,
-      courseName: courseData.name || courseData.courseName,
-      isEnrolled: enrolledStatus
-    })
+
     
     // 加载课时列表
     await getLessonsList(courseId)
     
-    // 如果已选课，加载学习进度数据
+    // 如果已选课，加载学习进度数据和课程资料
     if (isEnrolled.value) {
       await loadStudyProgress()
+      await loadCourseMaterials()
+      await loadScoreTrend()
     }
     
   } catch (error) {
@@ -585,21 +711,11 @@ const loadStudyProgress = async () => {
     
     // 只有在课程已结课时才获取课程总成绩
     if (courseInfo.value?.isOver === 1 && authStore.user?.id && courseInfo.value?.id) {
-      console.log('课程已结课，获取课程成绩')
       const courseScore = await getStudentCourseScore(courseInfo.value.id, authStore.user.id)
       averageScore.value = courseScore
     } else {
-      console.log('课程未结课，不获取成绩')
       averageScore.value = 0
     }
-    
-    console.log('学习进度统计:', {
-      completedTests: completedTests.value,
-      pendingTests: pendingTests.value,
-      averageScore: averageScore.value,
-      studyProgress: studyProgress.value,
-      courseIsOver: courseInfo.value?.isOver
-    })
     
   } catch (error) {
     console.error('加载学习进度失败:', error)
@@ -631,10 +747,11 @@ const enrollCourse = async () => {
       isEnrolled.value = true
       studentCount.value += 1
       
-      // 重新加载课时完成状态和学习进度
+      // 重新加载课时完成状态、学习进度和课程资料
       if (lessonsList.value.length > 0) {
         await loadLessonsCompletionStatus()
         await loadStudyProgress()
+        await loadCourseMaterials()
       }
     } else {
       ElMessage.error(res.message || '选课失败')
@@ -661,22 +778,19 @@ const dismissCourse = async () => {
       }
     )
     
-    console.log('正在退选课程，参数:', { studentId: authStore.user?.id, courseId: courseInfo.value.id })
-    
     const res = await dismissCourseAPI(authStore.user?.id, courseInfo.value.id)
-    
-    console.log('退选课程API响应:', res)
     
     if (res.code === 0) {
       ElMessage.success('退选成功')
       isEnrolled.value = false
       studentCount.value = Math.max(0, studentCount.value - 1)
       
-      // 清空学习进度数据
+      // 清空学习进度数据和课程资料
       completedTests.value = 0
       pendingTests.value = 0
       averageScore.value = 0
       studyProgress.value = 0
+      courseMaterialsList.value = []
     } else {
       ElMessage.error(res.message || '退选失败')
     }
@@ -714,10 +828,6 @@ const takeTest = (lesson) => {
   }
   
   // 跳转到学生做题页面
-  const testUrl = `/dashboard/student/${courseId}/questions/${lessonId}`;
-  console.log('构建的跳转路径:', testUrl);
-  
-  // 使用路由名称跳转可能更可靠
   const routeConfig = {
     name: 'student-questions',
     params: {
@@ -726,11 +836,7 @@ const takeTest = (lesson) => {
     }
   };
   
-  console.log('路由配置:', routeConfig);
-  
-  router.push(routeConfig).then(() => {
-    console.log('路由跳转成功');
-  }).catch(error => {
+  router.push(routeConfig).catch(error => {
     console.error('路由跳转失败:', error);
     ElMessage.error(`跳转失败: ${error.message}`);
   });
@@ -756,25 +862,101 @@ const getStudentRecords = async (lessonId, studentId) => {
 // 获取学生课程成绩
 const getStudentCourseScore = async (courseId, studentId) => {
   try {
-    console.log('正在获取课程成绩, 参数:', { courseId, studentId })
-    
     const res = await request.get('/api/course/score', {
       params: { courseId, studentId }
     })
     
-    console.log('课程成绩API响应:', res)
-    
     if (res.code === 0) {
       const score = res.data || 0
-      console.log('解析出的成绩:', score, '类型:', typeof score)
       return Number(score) // 确保返回数字类型
     }
-    console.warn('获取课程成绩失败，响应码:', res.code, '消息:', res.message)
     return 0
   } catch (error) {
     console.error('获取课程成绩失败:', error)
     return 0
   }
+}
+
+// 加载课程资料列表
+const loadCourseMaterials = async () => {
+  try {
+    courseMaterialsLoading.value = true
+    
+    const courseId = route.params.id
+    
+    // 检查参数是否有效
+    if (!courseId) {
+      ElMessage.error('课程信息获取失败')
+      return
+    }
+    
+    if (!courseInfo.value?.teacherId) {
+      ElMessage.error('教师信息获取失败')
+      return
+    }
+    
+    // 学生端使用教师的用户ID来访问课程资料，因为文件是教师上传的
+    const teacherId = courseInfo.value.teacherId
+    
+    // 调用AI端API获取课程资料列表，使用教师ID并设置 is_teacher=true
+    const response = await axios.get(`/ai/v1/list/resources/${teacherId}/${courseId}?is_teacher=true`)
+    
+    const result = response.data
+    
+    if (result.files) {
+      courseMaterialsList.value = result.files
+    } else {
+      courseMaterialsList.value = []
+    }
+  } catch (error) {
+    console.error('加载课程资料列表失败:', error)
+    courseMaterialsList.value = []
+    ElMessage.error('加载课程资料列表失败')
+  } finally {
+    courseMaterialsLoading.value = false
+  }
+}
+
+// 下载课程资料
+const downloadCourseMaterial = async (file) => {
+  try {
+    // 学生端使用教师的用户ID来下载课程资料，因为文件是教师上传的
+    const teacherId = courseInfo.value?.teacherId
+    const courseId = route.params.id
+    
+    if (!teacherId) {
+      ElMessage.error('教师信息获取失败')
+      return
+    }
+    
+    // 使用教师ID下载，设置 is_teacher=true
+    const downloadUrl = `/ai/v1/download/resource/${teacherId}/${courseId}/${file.filename}?is_teacher=true`
+    
+
+    
+    // 创建一个隐藏的a标签来下载文件
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = file.filename
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('开始下载文件')
+  } catch (error) {
+    console.error('下载课程资料失败:', error)
+    ElMessage.error('下载失败，请重试')
+  }
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 // 加载所有课时的完成状态
@@ -809,12 +991,7 @@ const loadLessonsCompletionStatus = async () => {
       }
     })
     
-    console.log('课时完成状态已更新:', lessonsList.value.map(l => ({
-      lessonId: l.lessonId,
-      lessonName: l.lessonName,
-      hasQuestion: l.hasQuestion,
-      isCompleted: l.isCompleted
-    })))
+
     
   } catch (error) {
     console.error('加载课时完成状态失败:', error)
@@ -836,7 +1013,7 @@ const viewTestResult = (lesson) => {
       : 0
     currentTestResult.value.score = score
     
-    console.log('查看测试结果:', currentTestResult.value)
+
   } else {
     ElMessage.warning('未找到测试记录')
   }
@@ -911,6 +1088,177 @@ const getQuestionOptions = (question) => {
   return options
 }
 
+// 成绩趋势相关方法
+const loadScoreTrend = async () => {
+  if (!isEnrolled.value || !authStore.user?.id || !courseInfo.value?.id) {
+    scoreTrendData.value = []
+    return
+  }
+  
+  try {
+    scoreTrendLoading.value = true
+    
+    const result = await request.get('/api/course/scoreList', {
+      params: {
+        courseId: courseInfo.value.id,
+        studentId: authStore.user.id
+      }
+    })
+    
+    if (result.code === 0 && result.data) {
+      scoreTrendData.value = result.data
+      // 如果当前在学习记录标签页，渲染折线图
+      if (activeTab.value === 'progress') {
+        nextTick(() => {
+          renderScoreChart()
+        })
+      }
+    } else {
+      scoreTrendData.value = []
+    }
+  } catch (error) {
+    console.error('获取学生成绩趋势失败:', error)
+    scoreTrendData.value = []
+  } finally {
+    scoreTrendLoading.value = false
+  }
+}
+
+// 渲染成绩趋势折线图
+const renderScoreChart = () => {
+  if (!scoreTrendChart.value || scoreTrendData.value.length === 0) {
+    return
+  }
+  
+  // 准备图表数据
+  const chartData = scoreTrendData.value.map(item => ({
+    lessonId: item.lessonId,
+    score: item.score || 0,
+    updateTime: item.updateTime
+  }))
+  
+  // 按课时ID排序
+  chartData.sort((a, b) => a.lessonId - b.lessonId)
+  
+  // 获取课时名称映射
+  const lessonNames = lessonsList.value.reduce((map, lesson) => {
+    map[lesson.lessonId] = lesson.lessonName
+    return map
+  }, {})
+  
+  // 构建图表配置
+  const option = {
+    title: {
+      text: '我的课时成绩趋势',
+      left: 'center',
+      textStyle: {
+        fontSize: 16,
+        fontWeight: 'bold'
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(params) {
+        const data = params[0]
+        return `课时: ${lessonNames[data.dataIndex] || data.dataIndex}<br/>成绩: ${data.value}分`
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: chartData.map(item => lessonNames[item.lessonId] || `课时${item.lessonId}`),
+      axisLabel: {
+        rotate: 45
+      }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: 100,
+      name: '成绩(分)'
+    },
+    series: [{
+      name: '成绩',
+      type: 'line',
+      data: chartData.map(item => item.score),
+      smooth: true,
+      lineStyle: {
+        color: '#409EFF',
+        width: 3
+      },
+      itemStyle: {
+        color: '#409EFF',
+        borderWidth: 2,
+        borderColor: '#fff'
+      },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [{
+            offset: 0, color: 'rgba(64, 158, 255, 0.3)'
+          }, {
+            offset: 1, color: 'rgba(64, 158, 255, 0.1)'
+          }]
+        }
+      }
+    }]
+  }
+  
+  // 使用ECharts渲染图表
+  const chart = echarts.init(scoreTrendChart.value)
+  chart.setOption(option)
+  
+  // 监听窗口大小变化
+  window.addEventListener('resize', () => {
+    chart.resize()
+  })
+}
+
+// 获取课时名称
+const getLessonName = (lessonId) => {
+  const lesson = lessonsList.value.find(l => l.lessonId === lessonId)
+  return lesson ? lesson.lessonName : `课时${lessonId}`
+}
+
+// 获取成绩等级
+const getGrade = (score) => {
+  if (score >= 90) return '优秀'
+  if (score >= 80) return '良好'
+  if (score >= 70) return '中等'
+  if (score >= 60) return '及格'
+  return '不及格'
+}
+
+// 获取成绩等级类型
+const getGradeType = (score) => {
+  if (score >= 90) return 'success'
+  if (score >= 80) return 'success'
+  if (score >= 70) return 'warning'
+  if (score >= 60) return 'info'
+  return 'danger'
+}
+
+// 获取成绩标签类型
+const getScoreType = (score) => {
+  if (score >= 90) return 'success'
+  if (score >= 80) return 'success'
+  if (score >= 70) return 'warning'
+  if (score >= 60) return 'info'
+  return 'danger'
+}
+
+// 监听标签页切换，重新渲染图表
+watch(activeTab, (newTab) => {
+  if (newTab === 'progress' && scoreTrendData.value.length > 0) {
+    nextTick(() => {
+      renderScoreChart()
+    })
+  }
+})
+
 // 页面初始化
 onMounted(() => {
   loadCourseInfo()
@@ -966,7 +1314,8 @@ onMounted(() => {
 }
 
 .lessons-section,
-.progress-section {
+.progress-section,
+.materials-section {
   padding: 20px 0;
 }
 
@@ -1169,6 +1518,77 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   gap: 12px;
+}
+
+/* 课程资料样式 */
+.materials-list {
+  margin-top: 20px;
+}
+
+.empty-materials {
+  margin-top: 20px;
+  padding: 40px;
+  text-align: center;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+}
+
+/* 成绩趋势样式 */
+.score-trend-section {
+  margin: 30px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+}
+
+.score-trend-section .section-header {
+  margin-bottom: 20px;
+}
+
+.score-trend-section .section-header h5 {
+  margin: 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.trend-chart-container {
+  margin-top: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.empty-trend {
+  margin-top: 20px;
+  padding: 40px;
+  text-align: center;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+}
+
+.trend-loading {
+  margin-top: 20px;
+  padding: 20px;
+}
+
+.score-records-section {
+  margin-top: 30px;
+}
+
+.score-records-section .section-header {
+  margin-bottom: 20px;
+}
+
+.score-records-section .section-header h5 {
+  margin: 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 /* 响应式设计 */

@@ -25,7 +25,7 @@
             size="small" 
             type="danger" 
             text
-            @click.stop="deleteSession(session.id)"
+            @click.stop="deleteSessionHandler(session.id)"
             :loading="deletingSession === session.id"
           >
             <el-icon><Delete /></el-icon>
@@ -123,7 +123,9 @@ import {
   getAllSessions, 
   getSessionHistory, 
   clearSessionHistory,
-  saveSessionHistory
+  saveSessionHistory,
+  getSessionContext,
+  deleteSession
 } from '@/api/ai'
 
 // 响应式数据
@@ -136,6 +138,7 @@ const creatingSession = ref(false)
 const clearingHistory = ref(false)
 const deletingSession = ref('')
 const messagesContainer = ref()
+
 
 // 计算属性
 const currentSessionName = computed(() => {
@@ -182,14 +185,54 @@ const scrollToBottom = () => {
 // 加载会话列表
 const loadSessions = async () => {
   try {
-    console.log('🔄 尝试加载会话列表...')
     const sessionIds = await getAllSessions()
-    console.log('✅ 获取到会话列表:', sessionIds)
-    sessions.value = sessionIds.map(id => ({
-      id: id,
-      name: `会话 ${id}`,
+    const sessionsWithContext = []
+    
+    // 为每个会话加载上下文以获取最后一次AI回复
+    for (const sessionId of sessionIds) {
+      try {
+        const context = await getSessionContext(sessionId, 5) // 只获取最近5条消息
+        let sessionName = `会话 ${sessionId.split('_').slice(-1)[0]}`
+        
+        // 查找最后一次AI回复
+        if (context && context.length > 0) {
+          const lastAIMessage = context
+            .filter(msg => msg.role === 'assistant')
+            .pop()
+          
+          if (lastAIMessage && lastAIMessage.content) {
+            // 取AI回复内容的前20个字符作为会话名称
+            const preview = lastAIMessage.content.trim()
+            sessionName = preview.length > 20 ? preview.substring(0, 20) + '...' : preview
+          } else {
+            // 如果没有AI回复，查找用户最后一条消息
+            const lastUserMessage = context
+              .filter(msg => msg.role === 'user')
+              .pop()
+            
+            if (lastUserMessage && lastUserMessage.content) {
+              const preview = lastUserMessage.content.trim()
+              sessionName = '问：' + (preview.length > 15 ? preview.substring(0, 15) + '...' : preview)
+            }
+          }
+        }
+        
+        sessionsWithContext.push({
+          id: sessionId,
+          name: sessionName,
+          lastActive: new Date()
+        })
+      } catch (error) {
+        // 如果获取上下文失败，使用默认名称
+        sessionsWithContext.push({
+          id: sessionId,
+          name: `会话 ${sessionId.split('_').slice(-1)[0]}`,
       lastActive: new Date()
-    }))
+        })
+      }
+    }
+    
+    sessions.value = sessionsWithContext
   } catch (error) {
     console.error('❌ 加载会话失败:', error)
     sessions.value = []
@@ -203,13 +246,11 @@ const createNewSession = async () => {
     const newSessionId = generateSessionId()
     const newSession = {
       id: newSessionId,
-      name: `会话 ${newSessionId.split('_').slice(-1)[0]}`,  // 显示最后的随机部分
+      name: '新对话', // 使用更友好的默认名称
       lastActive: new Date()
     }
     
-    console.log('✨ 创建新会话:', newSession)
     sessions.value.unshift(newSession)
-    
     await switchSession(newSessionId)
     
     ElMessage.success('新会话创建成功')
@@ -225,23 +266,19 @@ const createNewSession = async () => {
 const switchSession = async (sessionId) => {
   if (currentSessionId.value === sessionId) return
   
-  console.log('🔄 切换到会话:', sessionId)
   currentSessionId.value = sessionId
   messages.value = []
   
   try {
-    console.log('🔄 尝试加载会话历史...')
-    const history = await getSessionHistory(sessionId, 50)
-    console.log('📋 获取到历史消息:', history)
+    const context = await getSessionContext(sessionId, 20)
     
-    if (history && history.length > 0) {
-      messages.value = history.map(msg => ({
+    if (context && context.length > 0) {
+      messages.value = context.map(msg => ({
         id: msg.id || Date.now() + Math.random(),
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date()
       }))
-      console.log('✅ 成功加载历史消息:', messages.value.length, '条')
     } else {
       // 添加欢迎消息
       messages.value = [{
@@ -250,12 +287,11 @@ const switchSession = async (sessionId) => {
         content: '您好！我是您的AI智能助手。我可以帮助您解答各种问题，请随时向我提问。',
         timestamp: new Date()
       }]
-      console.log('📝 创建欢迎消息')
     }
     
     scrollToBottom()
   } catch (error) {
-    console.warn('⚠️ 加载会话历史失败:', error)
+    console.warn('⚠️ 加载会话上下文失败:', error)
     
     // 如果失败，创建一个新的干净会话
     messages.value = [{
@@ -264,13 +300,12 @@ const switchSession = async (sessionId) => {
       content: '您好！我是您的AI智能助手。我可以帮助您解答各种问题，请随时向我提问。',
       timestamp: new Date()
     }]
-    console.log('📝 创建新的干净会话')
     scrollToBottom()
   }
 }
 
 // 删除会话
-const deleteSession = async (sessionId) => {
+const deleteSessionHandler = async (sessionId) => {
   try {
     await ElMessageBox.confirm('确定要删除这个会话吗？删除后无法恢复。', '确认删除', {
       confirmButtonText: '确定',
@@ -279,6 +314,9 @@ const deleteSession = async (sessionId) => {
     })
     
     deletingSession.value = sessionId
+    
+    // 调用删除会话API
+    await deleteSession(sessionId)
     
     // 从列表中移除
     const index = sessions.value.findIndex(s => s.id === sessionId)
@@ -342,6 +380,18 @@ const clearCurrentSession = async () => {
   }
 }
 
+// 更新当前会话名称
+const updateCurrentSessionName = (aiContent) => {
+  if (!currentSessionId.value || !aiContent) return
+  
+  const currentSession = sessions.value.find(s => s.id === currentSessionId.value)
+  if (currentSession) {
+    // 取AI回复内容的前20个字符作为会话名称
+    const preview = aiContent.trim()
+    currentSession.name = preview.length > 20 ? preview.substring(0, 20) + '...' : preview
+  }
+}
+
 // 发送消息
 const sendMessage = async () => {
   if (!inputMessage.value.trim() || loading.value || !currentSessionId.value) return
@@ -361,20 +411,12 @@ const sendMessage = async () => {
   scrollToBottom()
   
   try {
-    console.log('🚀 发送消息给AI:')
-    console.log('当前会话ID:', currentSessionId.value)
-    console.log('用户输入的消息:', currentMessage)
-    
     // 调用AI API - 发送当前消息（后端会自动管理历史记录上下文）
     const result = await chatCompletions(currentSessionId.value, currentMessage)
     
-    console.log('📦 AI API 完整响应:', result)
-    
     const aiContent = result?.choices?.[0]?.message?.content
-    console.log('💬 提取到的AI内容:', aiContent)
     
     if (!aiContent) {
-      console.error('❌ 无法从响应中提取content字段')
       throw new Error('AI回复内容为空')
     }
     
@@ -389,7 +431,8 @@ const sendMessage = async () => {
     messages.value.push(aiMessage)
     scrollToBottom()
     
-    console.log('✅ 消息发送成功')
+    // 更新当前会话的名称
+    updateCurrentSessionName(aiContent.trim())
     
   } catch (error) {
     console.error('发送消息失败:', error)
@@ -413,22 +456,15 @@ const sendMessage = async () => {
 
 // 组件挂载时初始化
 onMounted(async () => {
-  console.log('🚀 AI聊天组件初始化...')
-  
   await loadSessions()
-  console.log('📋 当前会话数量:', sessions.value.length)
   
   // 如果没有会话，创建一个新会话
   if (sessions.value.length === 0) {
-    console.log('💡 没有现有会话，创建新会话')
     await createNewSession()
   } else {
     // 切换到第一个会话
-    console.log('🔄 切换到第一个会话:', sessions.value[0].id)
     await switchSession(sessions.value[0].id)
   }
-  
-  console.log('✅ AI聊天组件初始化完成')
 })
 </script>
 
@@ -587,6 +623,8 @@ onMounted(async () => {
   border-top: 1px solid #e5e7eb;
   background: #f8f9fa;
 }
+
+
 
 .input-controls {
   display: flex;

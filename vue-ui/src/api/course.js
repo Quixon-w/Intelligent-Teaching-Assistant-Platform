@@ -197,8 +197,9 @@ export function getCourseScore(courseId, studentId) {
       studentId: studentId
     }
   }).then(res => {
-    return res.data.data
+    return res.data
   }).catch(err => {
+    console.error('getCourseScore API错误:', err)
     return err
   })
 }

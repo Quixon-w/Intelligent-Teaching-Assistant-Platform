@@ -1,5 +1,5 @@
 import request from '@/utils/request.js'
-import {lessonOutlineDownload, lessonOutlineStatus} from "@/api/ai/ai.js";
+import {lessonOutlineDownload, lessonOutlineStatus} from "@/api/ai.js";
 import qs from "qs";
 export function getLessons(courseId) {
   return request.get('/api/lesson/list',{

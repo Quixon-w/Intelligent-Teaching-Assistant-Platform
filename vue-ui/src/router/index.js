@@ -36,6 +36,18 @@ const routes = [
         meta: { title: '首页'}
         },
         {
+        path: 'main',
+        name: 'main',
+        component: () => import('@/views/dashboard/MainView.vue'),
+        meta: { title: '项目介绍'}
+        },
+        {
+        path: 'find-courses',
+        name: 'find-courses',
+        component: () => import('@/views/dashboard/FindCoursesView.vue'),
+        meta: { title: '课程查找'}
+        },
+        {
         path: 'profile',
         name: 'profile',
         component: () => import('@/views/dashboard/ProfileView.vue'),
@@ -78,14 +90,6 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   
-  console.log('路由守卫:', {
-    to: to.path,
-    from: from.path,
-    toMeta: to.meta,
-    authStoreUserRole: authStore.userRole,
-    isAuthenticated: authStore.isAuthenticated
-  })
-  
   // 设置页面标题
   if (to.meta.title) {
     document.title = `${to.meta.title} - 智能教学辅助平台`
@@ -93,17 +97,12 @@ router.beforeEach((to, from, next) => {
   
   // 检查是否需要认证
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    console.log('需要认证但未登录，重定向到登录页')
     next('/login')
     return
   }
   
   // 检查角色权限
   if (to.meta.role !== undefined && authStore.userRole !== to.meta.role) {
-    console.log('角色权限不匹配:', {
-      requiredRole: to.meta.role,
-      userRole: authStore.userRole
-    })
     next('/dashboard/home')
     return
   }
@@ -114,7 +113,6 @@ router.beforeEach((to, from, next) => {
     return
   }
   
-  console.log('路由守卫通过，允许访问:', to.path)
   next()
 })
 

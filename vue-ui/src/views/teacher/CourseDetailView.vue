@@ -92,14 +92,18 @@
                   v-if="courseInfo.isOver === 0"
                   class="upload-demo"
                   action="/ai/v1/upload"
-                  :data="uploadData"
-                  :on-success="handleUploadSuccess"
-                  :on-error="handleUploadError"
-                  :file-list="materialsList"
+                  :data="courseUploadData"
+                  :on-success="handleCourseUploadSuccess"
+                  :on-error="handleCourseUploadError"
+                  :on-progress="handleCourseUploadProgress"
+                  :before-upload="beforeCourseUpload"
+                  :file-list="courseMaterialsList"
                   multiple
                   accept=".pdf,.doc,.docx,.txt,.md"
                 >
-                  <el-button type="primary">上传课程资料</el-button>
+                  <el-button type="primary" :loading="courseUploading">
+                    {{ courseUploading ? '上传中...' : '上传课程资料' }}
+                  </el-button>
                   <template #tip>
                     <div class="el-upload__tip">
                       支持 PDF、Word、TXT、MD 格式文件，学生可以下载学习
@@ -108,30 +112,31 @@
                 </el-upload>
                 
                 <!-- 已上传的资料列表 -->
-                <div v-if="materialsList.length > 0" class="materials-list">
-                  <el-table :data="materialsList" style="width: 100%">
-                    <el-table-column prop="name" label="文件名" />
-                    <el-table-column prop="uploadTime" label="上传时间" width="180" />
-                    <el-table-column label="操作" width="150">
+                <div v-if="courseMaterialsList.length > 0" class="materials-list">
+                  <el-table :data="courseMaterialsList" v-loading="courseMaterialsLoading" style="width: 100%">
+                    <el-table-column prop="filename" label="文件名" />
+                    <el-table-column prop="size" label="文件大小" width="120">
+                      <template #default="scope">
+                        {{ formatFileSize(scope.row.size) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="120">
                       <template #default="scope">
                         <el-button 
                           type="primary" 
                           size="small" 
-                          @click="downloadMaterial(scope.row)"
+                          @click="downloadCourseMaterial(scope.row)"
                         >
                           下载
-                        </el-button>
-                        <el-button 
-                          v-if="courseInfo.isOver === 0"
-                          type="danger" 
-                          size="small" 
-                          @click="deleteMaterial(scope.row)"
-                        >
-                          删除
                         </el-button>
                       </template>
                     </el-table-column>
                   </el-table>
+                </div>
+                
+                <!-- 空状态 -->
+                <div v-else-if="!courseMaterialsLoading" class="empty-materials">
+                  <el-empty description="暂无课程资料" />
                 </div>
               </div>
             </div>
@@ -258,9 +263,44 @@
           <el-tab-pane label="成绩管理" name="scores">
             <div class="scores-section">
               <div class="section-header">
-                <h4>成绩统计</h4>
-                <el-button @click="exportScores">导出成绩</el-button>
+                <h4>成绩管理</h4>
+                <div class="action-buttons">
+                  <el-button @click="loadAllScores">刷新成绩</el-button>
+                </div>
               </div>
+              
+              <!-- 学生成绩趋势图 -->
+              <div class="score-trend-section">
+                <h5>学生成绩趋势</h5>
+                <div class="student-selector">
+                  <el-select 
+                    v-model="selectedStudentId" 
+                    placeholder="选择学生查看成绩趋势" 
+                    @change="loadStudentScoreTrend"
+                    style="width: 300px;"
+                  >
+                    <el-option
+                      v-for="student in studentsList"
+                      :key="student.id"
+                      :label="`${student.username} (${student.userAccount})`"
+                      :value="student.id"
+                    />
+                  </el-select>
+                </div>
+                
+                <!-- 折线图 -->
+                <div v-if="selectedStudentId && scoreTrendData.length > 0" class="chart-container">
+                  <div ref="scoreChartRef" style="width: 100%; height: 400px;"></div>
+                </div>
+                
+                <div v-else-if="selectedStudentId && !scoreTrendLoading" class="no-data">
+                  <el-empty description="该学生暂无成绩数据" />
+                </div>
+              </div>
+              
+              <!-- 课程总成绩统计 -->
+              <div class="course-score-section">
+                <h5>课程总成绩统计</h5>
               
               <!-- 仅显示结课后的总成绩 -->
               <div v-if="courseInfo.isOver === 0" class="course-ongoing-notice">
@@ -293,7 +333,7 @@
                 </div>
                 
                 <!-- 详细成绩表 -->
-                <el-table :data="scoresList" v-loading="scoresLoading" style="width: 100%">
+                  <el-table :data="scoresList" v-loading="scoresLoading" style="width: 100%; margin-top: 20px;">
                   <el-table-column prop="studentName" label="学生姓名" />
                   <el-table-column prop="studentAccount" label="学号" />
                   <el-table-column prop="finalScore" label="总成绩" width="120">
@@ -310,7 +350,15 @@
                       </el-tag>
                     </template>
                   </el-table-column>
+                    <el-table-column label="操作" width="120">
+                      <template #default="scope">
+                        <el-button size="small" @click="viewStudentDetailScore(scope.row)">
+                          查看详情
+                        </el-button>
+                    </template>
+                  </el-table-column>
                 </el-table>
+                </div>
               </div>
             </div>
           </el-tab-pane>
@@ -353,7 +401,7 @@
     </el-dialog>
     
     <!-- 文件管理对话框 -->
-    <el-dialog v-model="showFileDialog" title="课时文件管理" width="800px">
+    <el-dialog v-model="showFileDialog" title="课时文件管理" width="1000px">
       <div v-if="currentLesson">
         <h4>{{ currentLesson.lessonName }} - 文件管理</h4>
         
@@ -363,16 +411,21 @@
           <el-upload
             class="upload-demo"
             action="/ai/v1/upload"
-            :data="getUploadData(currentLesson.lessonId)"
-            :on-success="handleFileUploadSuccess"
-            :on-error="handleUploadError"
+            :data="getLessonUploadData(currentLesson.lessonId)"
+            :on-success="handleLessonFileUploadSuccess"
+            :on-error="handleLessonFileUploadError"
+            :on-progress="handleLessonFileUploadProgress"
+            :before-upload="beforeLessonFileUpload"
+            :file-list="lessonFilesList"
             multiple
             accept=".pdf,.doc,.docx,.txt,.md"
           >
-            <el-button type="primary">上传文件</el-button>
+            <el-button type="primary" :loading="lessonFileUploading">
+              {{ lessonFileUploading ? '上传中...' : '上传文件' }}
+            </el-button>
             <template #tip>
               <div class="el-upload__tip">
-                上传后可生成教学大纲和习题
+                上传后可生成教学大纲和习题，支持PDF、Word、TXT、MD格式
               </div>
             </template>
           </el-upload>
@@ -381,15 +434,122 @@
         <!-- AI功能 -->
         <div class="ai-functions">
           <h5>AI智能生成</h5>
-          <el-button type="success" @click="generateOutline(currentLesson)">生成教学大纲</el-button>
-          <el-button type="warning" @click="generateQuestions(currentLesson)">生成习题</el-button>
+          <div class="ai-buttons">
+            <el-button 
+              type="success" 
+              @click="generateOutline(currentLesson)"
+              :loading="outlineGenerating"
+              :disabled="!hasLessonFiles"
+            >
+              {{ outlineGenerating ? '生成中...' : '生成教学大纲' }}
+            </el-button>
+            <el-button 
+              type="warning" 
+              @click="generateExercises(currentLesson)"
+              :loading="exercisesGenerating"
+              :disabled="!hasLessonFiles"
+            >
+              {{ exercisesGenerating ? '生成中...' : '生成习题' }}
+            </el-button>
+          </div>
+          
+          <!-- 生成状态提示 -->
+          <div v-if="outlineGenerating || exercisesGenerating" class="generation-status">
+            <el-alert
+              :title="getGenerationStatusTitle()"
+              :description="getGenerationStatusDescription()"
+              type="info"
+              :closable="false"
+              show-icon
+            />
+          </div>
         </div>
         
         <!-- 文件下载 -->
         <div class="file-downloads">
           <h5>文件下载</h5>
-          <el-button @click="downloadOutline(currentLesson)">下载教学大纲</el-button>
-          <el-button @click="downloadLessonQuestions(currentLesson)">下载习题</el-button>
+          <div class="download-buttons">
+            <el-button 
+              @click="downloadOutline(currentLesson)"
+              :disabled="!hasOutline"
+            >
+              下载教学大纲
+            </el-button>
+            <el-button 
+              @click="downloadExercises(currentLesson)"
+              :disabled="!hasExercises"
+            >
+              下载习题
+            </el-button>
+          </div>
+          
+          <!-- 文件状态显示 -->
+          <div class="file-status">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="教学大纲">
+                <el-tag :type="hasOutline ? 'success' : 'info'">
+                  {{ hasOutline ? '已生成' : '未生成' }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="习题">
+                <el-tag :type="hasExercises ? 'success' : 'info'">
+                  {{ hasExercises ? '已生成' : '未生成' }}
+                </el-tag>
+              </el-descriptions-item>
+            </el-descriptions>
+          </div>
+          
+          <!-- 教学大纲文件列表 -->
+          <div v-if="hasOutline" class="outline-files">
+            <h6>教学大纲文件</h6>
+            <el-table :data="lessonOutlineStatus.files" style="width: 100%" size="small">
+              <el-table-column prop="filename" label="文件名" />
+              <el-table-column prop="size" label="文件大小" width="120">
+                <template #default="scope">
+                  {{ formatFileSize(scope.row.size) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="created_time" label="创建时间" width="180" />
+              <el-table-column label="操作" width="120">
+                <template #default="scope">
+                  <el-button 
+                    type="primary" 
+                    size="small" 
+                    @click="downloadOutlineFile(scope.row)"
+                  >
+                    下载
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+          
+
+          
+          <!-- 习题文件列表 -->
+          <div v-if="hasExercises" class="exercise-files">
+            <h6>习题文件</h6>
+            <el-table :data="lessonExercisesStatus.files" style="width: 100%" size="small">
+              <el-table-column prop="filename" label="文件名" />
+              <el-table-column prop="size" label="文件大小" width="120">
+                <template #default="scope">
+                  {{ formatFileSize(scope.row.size) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="created_time" label="创建时间" width="180" />
+              <el-table-column label="操作" width="120">
+                <template #default="scope">
+                  <el-button 
+                    type="primary" 
+                    size="small" 
+                    @click="downloadExerciseFile(scope.row)"
+                  >
+                    下载
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
       </div>
     </el-dialog>
@@ -671,6 +831,86 @@
       </template>
     </el-dialog>
     
+    <!-- 学生成绩查看对话框 -->
+    <el-dialog v-model="showStudentScoreDialog" title="学生成绩详情" width="600px">
+      <div v-if="currentStudent" class="student-score-dialog">
+        <div class="student-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="学生姓名">{{ currentStudent.username }}</el-descriptions-item>
+            <el-descriptions-item label="学号">{{ currentStudent.userAccount }}</el-descriptions-item>
+            <el-descriptions-item label="邮箱">{{ currentStudent.email }}</el-descriptions-item>
+            <el-descriptions-item label="联系电话">{{ currentStudent.phone }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        
+        <div class="score-info" style="margin-top: 20px;">
+          <el-card>
+            <template #header>
+              <div class="score-header">
+                <span>课程成绩</span>
+                <el-tag 
+                  v-if="studentScore !== null" 
+                  :type="studentScore >= 60 ? 'success' : 'danger'"
+                  size="large"
+                >
+                  {{ studentScore }} 分
+                </el-tag>
+              </div>
+            </template>
+            
+            <div v-if="studentScoreLoading" class="loading-score">
+              <el-skeleton :rows="3" animated />
+            </div>
+            
+            <div v-else-if="studentScore !== null" class="score-details">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <div class="score-item">
+                    <div class="score-label">成绩等级</div>
+                    <div class="score-value">
+                      <el-tag :type="getGradeType(studentScore)">
+                        {{ getGrade(studentScore) }}
+                      </el-tag>
+                    </div>
+                  </div>
+                </el-col>
+                <el-col :span="12">
+                  <div class="score-item">
+                    <div class="score-label">是否及格</div>
+                    <div class="score-value">
+                      <el-tag :type="studentScore >= 60 ? 'success' : 'danger'">
+                        {{ studentScore >= 60 ? '及格' : '不及格' }}
+                      </el-tag>
+                    </div>
+                  </div>
+                </el-col>
+              </el-row>
+              
+              <div class="score-description" style="margin-top: 20px;">
+                <el-alert
+                  :title="getScoreDescription(studentScore)"
+                  :type="studentScore >= 60 ? 'success' : 'warning'"
+                  :closable="false"
+                  show-icon
+                />
+              </div>
+            </div>
+            
+            <div v-else class="no-score">
+              <el-empty description="暂无成绩数据">
+                <template #description>
+                  <span>该学生在此课程中暂无成绩记录</span>
+                </template>
+              </el-empty>
+            </div>
+          </el-card>
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="showStudentScoreDialog = false">关闭</el-button>
+      </template>
+    </el-dialog>
 
   </div>
 </template>
@@ -681,8 +921,11 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
+import axios from 'axios'
 import { addLesson as addLessonApi } from '@/api/course/lesson'
+import { getCourseScore } from '@/api/course'
 import { showError, showDetailedError, showSuccess, showWarning, handleApiResponse, handleException } from '@/utils/errorHandler'
+import * as echarts from 'echarts'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -708,6 +951,30 @@ const uploadData = computed(() => ({
   is_resource: true,
   is_ask: false
 }))
+
+// 课程资料管理
+const courseMaterialsList = ref([])
+const courseMaterialsLoading = ref(false)
+const courseUploading = ref(false)
+const courseUploadData = computed(() => ({
+  session_id: Date.now().toString(),
+  user_id: authStore.user?.id || '',
+  is_teacher: true,
+  course_id: route.params.id,
+  lesson_num: 'course', // 课程资料使用course标识
+  file_encoding: 'utf-8',
+  is_resource: true,
+  is_ask: false
+}))
+
+// 课时文件管理
+const lessonFilesList = ref([]) // 用于el-upload组件的文件列表
+const lessonUploadedFiles = ref([]) // 用于跟踪实际上传的文件
+const lessonFileUploading = ref(false)
+const outlineGenerating = ref(false)
+const exercisesGenerating = ref(false)
+const lessonOutlineStatus = ref(null)
+const lessonExercisesStatus = ref(null)
 
 // 课时管理
 const lessonsList = ref([])
@@ -835,6 +1102,12 @@ const averageScore = ref(0)
 const passRate = ref(0)
 const maxScore = ref(0)
 
+// 学生成绩趋势图相关
+const selectedStudentId = ref(null)
+const scoreTrendData = ref([])
+const scoreTrendLoading = ref(false)
+const scoreChartRef = ref(null)
+
 // 计算属性：判断当前用户是否为课程教师
 const isCurrentUserTeacher = computed(() => {
   if (!courseInfo.value || !authStore.user?.id) {
@@ -852,6 +1125,19 @@ const dialogTitle = computed(() => {
 const dialogSubTitle = computed(() => {
   if (!currentLesson.value) return '题目管理'
   return currentLesson.value.hasQuestion === 1 ? '题目管理' : '创建测试'
+})
+
+// 课时文件管理计算属性
+const hasLessonFiles = computed(() => {
+  return lessonUploadedFiles.value.length > 0
+})
+
+const hasOutline = computed(() => {
+  return lessonOutlineStatus.value !== null && lessonOutlineStatus.value.files && lessonOutlineStatus.value.files.length > 0
+})
+
+const hasExercises = computed(() => {
+  return lessonExercisesStatus.value !== null && lessonExercisesStatus.value.files && lessonExercisesStatus.value.files.length > 0
 })
 
 // 测试状态判断方法
@@ -1022,10 +1308,29 @@ const loadLessons = async () => {
       // 为每个有测试的课时加载完成人数
       for (const lesson of lessonsList.value) {
         if (lesson.hasQuestion === 1) {
-          // TODO: 调用API获取完成测试的学生数量
-          // 这里应该调用类似 /api/lesson/completedCount?lessonId=${lessonId} 的接口
-          // 现在先设置模拟数据
-          lesson.completedCount = Math.floor(Math.random() * (studentsList.value.length + 1))
+          try {
+            // 调用 /api/lesson/getListScores 接口获取该课时的所有学生成绩
+            const scoresResult = await request.get('/api/lesson/getListScores', {
+              params: {
+                lessonId: lesson.lessonId
+              }
+            })
+            
+            if (scoresResult.code === 0 && scoresResult.data) {
+              // 统计有成绩的学生数量（score不为null的学生）
+              const completedCount = scoresResult.data.filter(item => item.score !== null).length
+              lesson.completedCount = completedCount
+              console.log(`课时 ${lesson.lessonName} 完成测试人数: ${completedCount}`)
+            } else {
+              lesson.completedCount = 0
+              console.warn(`获取课时 ${lesson.lessonName} 成绩列表失败:`, scoresResult.message)
+            }
+          } catch (error) {
+            console.error(`获取课时 ${lesson.lessonName} 完成人数失败:`, error)
+            lesson.completedCount = 0
+          }
+        } else {
+          lesson.completedCount = 0
         }
       }
     } else {
@@ -1128,6 +1433,138 @@ const handleFileUploadSuccess = (response) => {
   ElMessage.success('课时文件上传成功')
 }
 
+// 课程资料上传相关方法
+const beforeCourseUpload = (file) => {
+  // 检查文件大小（限制为50MB）
+  const isLt50M = file.size / 1024 / 1024 < 50
+  if (!isLt50M) {
+    ElMessage.error('文件大小不能超过50MB!')
+    return false
+  }
+  
+  // 检查文件类型
+  const allowedTypes = ['.pdf', '.doc', '.docx', '.txt', '.md']
+  const fileName = file.name.toLowerCase()
+  const isValidType = allowedTypes.some(type => fileName.endsWith(type))
+  
+  if (!isValidType) {
+    ElMessage.error('只支持PDF、Word、TXT、MD格式文件!')
+    return false
+  }
+  
+  return true
+}
+
+const handleCourseUploadProgress = (event, file, fileList) => {
+  courseUploading.value = true
+  console.log('课程资料上传进度:', event.percent)
+}
+
+const handleCourseUploadSuccess = (response, file, fileList) => {
+  courseUploading.value = false
+  console.log('课程资料上传成功:', response)
+  
+  // AI端API直接返回数据，response就是响应数据
+  if (response.message) {
+    ElMessage.success(response.message)
+  } else {
+    ElMessage.success('课程资料上传成功')
+  }
+  
+  // 重新加载课程资料列表
+  loadCourseMaterials()
+}
+
+const handleCourseUploadError = (error, file, fileList) => {
+  courseUploading.value = false
+  console.error('课程资料上传失败:', error)
+  ElMessage.error('课程资料上传失败，请重试')
+}
+
+// 加载课程资料列表
+const loadCourseMaterials = async () => {
+  try {
+    courseMaterialsLoading.value = true
+    
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    
+    console.log('loadCourseMaterials 参数:', {
+      userId,
+      courseId,
+      userIdType: typeof userId,
+      courseIdType: typeof courseId,
+      authStoreUser: authStore.user
+    })
+    
+    // 检查参数是否有效
+    if (!userId) {
+      console.error('用户ID为空')
+      ElMessage.error('用户信息获取失败')
+      return
+    }
+    
+    if (!courseId) {
+      console.error('课程ID为空')
+      ElMessage.error('课程信息获取失败')
+      return
+    }
+    
+    // AI端API直接返回数据，不使用request拦截器
+    const response = await axios.get(`/ai/v1/list/resources/${userId}/${courseId}`)
+    
+    console.log('loadCourseMaterials API响应:', response.data)
+    
+    const result = response.data
+    
+    if (result.files) {
+      courseMaterialsList.value = result.files
+      console.log('课程资料列表加载成功:', result.files)
+    } else {
+      courseMaterialsList.value = []
+      console.warn('课程资料列表为空')
+    }
+  } catch (error) {
+    console.error('加载课程资料列表失败:', error)
+    courseMaterialsList.value = []
+    ElMessage.error('加载课程资料列表失败')
+  } finally {
+    courseMaterialsLoading.value = false
+  }
+}
+
+// 下载课程资料
+const downloadCourseMaterial = async (file) => {
+  try {
+    const downloadUrl = `/ai/v1/download/resource/${authStore.user?.id}/${route.params.id}/${file.filename}`
+    
+    // 创建一个隐藏的a标签来下载文件
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = file.filename
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('开始下载文件')
+  } catch (error) {
+    console.error('下载课程资料失败:', error)
+    ElMessage.error('下载失败，请重试')
+  }
+}
+
+
+
+// 格式化文件大小
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
 const downloadMaterial = (file) => {
   // TODO: 实现文件下载
   ElMessage.info('文件下载功能开发中...')
@@ -1200,8 +1637,424 @@ const deleteLesson = async (lesson) => {
 }
 
 const manageLessonFiles = (lesson) => {
+  console.log('manageLessonFiles 被调用，课时数据:', lesson)
   currentLesson.value = lesson
   showFileDialog.value = true
+  
+  // 重置文件列表
+  lessonFilesList.value = []
+  lessonUploadedFiles.value = []
+  
+  // 加载课时文件列表和状态
+  loadLessonFiles()
+  loadLessonOutlineStatus()
+  loadLessonExercisesStatus()
+}
+
+// 课时文件管理相关方法
+const getLessonUploadData = (lessonId) => ({
+  session_id: Date.now().toString(),
+  user_id: authStore.user?.id || '',
+  is_teacher: true,
+  course_id: route.params.id,
+  lesson_num: `lesson${lessonId}`,
+  file_encoding: 'utf-8',
+  is_resource: true,
+  is_ask: false
+})
+
+const beforeLessonFileUpload = (file) => {
+  // 检查文件大小（限制为50MB）
+  const isLt50M = file.size / 1024 / 1024 < 50
+  if (!isLt50M) {
+    ElMessage.error('文件大小不能超过50MB!')
+    return false
+  }
+  
+  // 检查文件类型
+  const allowedTypes = ['.pdf', '.doc', '.docx', '.txt', '.md']
+  const fileName = file.name.toLowerCase()
+  const isValidType = allowedTypes.some(type => fileName.endsWith(type))
+  
+  if (!isValidType) {
+    ElMessage.error('只支持PDF、Word、TXT、MD格式文件!')
+    return false
+  }
+  
+  return true
+}
+
+const handleLessonFileUploadProgress = (event, file, fileList) => {
+  lessonFileUploading.value = true
+  console.log('课时文件上传进度:', event.percent)
+}
+
+const handleLessonFileUploadSuccess = (response, file, fileList) => {
+  lessonFileUploading.value = false
+  console.log('课时文件上传成功:', response)
+  
+  if (response.message) {
+    ElMessage.success(response.message)
+  } else {
+    ElMessage.success('课时文件上传成功')
+  }
+  
+  // 将上传成功的文件添加到实际上传文件列表
+  lessonUploadedFiles.value.push({
+    name: file.name,
+    url: response.url || file.url,
+    status: 'success'
+  })
+  
+  console.log('实际上传文件列表:', lessonUploadedFiles.value)
+  console.log('hasLessonFiles:', hasLessonFiles.value)
+  
+  // 延迟重新加载课时文件列表，确保服务器文件已保存
+  setTimeout(() => {
+    loadLessonFiles()
+  }, 1000)
+}
+
+const handleLessonFileUploadError = (error, file, fileList) => {
+  lessonFileUploading.value = false
+  console.error('课时文件上传失败:', error)
+  ElMessage.error('课时文件上传失败，请重试')
+}
+
+// 加载课时文件列表
+const loadLessonFiles = async () => {
+  if (!currentLesson.value) return
+  
+  try {
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${currentLesson.value.lessonId}`
+    
+    console.log('loadLessonFiles 参数:', { userId, courseId, lessonNum })
+    
+    const response = await axios.get(`/ai/v1/list/resources/${userId}/${courseId}`)
+    const result = response.data
+    
+    console.log('loadLessonFiles 原始文件列表:', result.files)
+    
+    if (result.files) {
+      // 过滤出当前课时的文件 - 修改过滤逻辑
+      const filteredFiles = result.files.filter(file => {
+        // 检查文件名是否包含课时编号，或者检查文件是否属于当前课时
+        const filename = file.filename.toLowerCase()
+        const lessonNumLower = lessonNum.toLowerCase()
+        
+        // 如果文件名包含课时编号，或者文件属于当前课时的资源
+        return filename.includes(lessonNumLower) || 
+               filename.includes(`lesson${currentLesson.value.lessonId}`) ||
+               // 如果是当前课时的资源文件，也包含在内
+               (file.course_id === courseId && file.lesson_num === lessonNum)
+      })
+      
+      lessonFilesList.value = filteredFiles
+      
+      // 同时更新实际上传文件列表，但保留已上传的文件
+      const serverFiles = filteredFiles.map(file => ({
+        name: file.filename,
+        url: file.url || file.download_url,
+        status: 'success'
+      }))
+      
+      // 合并服务器文件和已上传文件，避免重复
+      const existingFiles = lessonUploadedFiles.value || []
+      const mergedFiles = [...existingFiles]
+      
+      serverFiles.forEach(serverFile => {
+        const exists = mergedFiles.find(f => f.name === serverFile.name)
+        if (!exists) {
+          mergedFiles.push(serverFile)
+        }
+      })
+      
+      lessonUploadedFiles.value = mergedFiles
+      
+      console.log('loadLessonFiles 过滤后文件列表:', filteredFiles)
+      console.log('实际上传文件列表:', lessonUploadedFiles.value)
+    } else {
+      lessonFilesList.value = []
+      lessonUploadedFiles.value = []
+      console.log('loadLessonFiles 没有文件')
+    }
+  } catch (error) {
+    console.error('加载课时文件列表失败:', error)
+    lessonFilesList.value = []
+    lessonUploadedFiles.value = []
+  }
+}
+
+// 生成教学大纲
+const generateOutline = async (lesson) => {
+  try {
+    outlineGenerating.value = true
+    
+    const requestData = {
+      user_id: authStore.user?.id,
+      session_id: Date.now().toString(),
+      course_id: route.params.id,
+      lesson_num: `lesson${lesson.lessonId}`,
+      is_teacher: true,
+      max_words: 1000
+    }
+    
+    console.log('生成教学大纲请求:', requestData)
+    
+    const response = await axios.post('/ai/v1/create/outline', requestData)
+    const result = response.data
+    
+    console.log('教学大纲生成响应:', result)
+    
+    if (result.success) {
+      ElMessage.success(result.message || '教学大纲生成成功')
+      // 延迟加载状态，确保文件已生成
+      setTimeout(() => {
+        loadLessonOutlineStatus()
+      }, 2000)
+    } else {
+      ElMessage.error(result.message || '教学大纲生成失败')
+    }
+  } catch (error) {
+    console.error('生成教学大纲失败:', error)
+    ElMessage.error('生成教学大纲失败，请重试')
+  } finally {
+    outlineGenerating.value = false
+  }
+}
+
+// 生成习题
+const generateExercises = async (lesson) => {
+  try {
+    exercisesGenerating.value = true
+    
+    const requestData = {
+      user_id: authStore.user?.id,
+      session_id: Date.now().toString(),
+      course_id: route.params.id,
+      lesson_num: `lesson${lesson.lessonId}`,
+      is_teacher: true,
+      question_count: 5,
+      difficulty: 'medium',
+      max_tokens: 2000,
+      temperature: 0.7,
+      generation_mode: 'block'
+    }
+    
+    console.log('生成习题请求:', requestData)
+    
+    const response = await axios.post('/ai/v1/exercise/generate', requestData)
+    const result = response.data
+    
+    console.log('习题生成响应:', result)
+    
+    if (result.success) {
+      ElMessage.success(result.message || '习题生成成功')
+      // 延迟加载状态，确保文件已生成
+      setTimeout(() => {
+        loadLessonExercisesStatus()
+      }, 2000)
+    } else {
+      ElMessage.error(result.message || '习题生成失败')
+    }
+  } catch (error) {
+    console.error('生成习题失败:', error)
+    ElMessage.error('生成习题失败，请重试')
+  } finally {
+    exercisesGenerating.value = false
+  }
+}
+
+// 加载教学大纲状态
+const loadLessonOutlineStatus = async () => {
+  if (!currentLesson.value) return
+  
+  try {
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${currentLesson.value.lessonId}`
+    
+    const response = await axios.get(`/ai/v1/list/outlines/${userId}/${courseId}/${lessonNum}`)
+    console.log('教学大纲列表响应:', response.data)
+    
+    if (response.data && response.data.files && response.data.files.length > 0) {
+      lessonOutlineStatus.value = response.data
+    } else {
+      lessonOutlineStatus.value = null
+    }
+  } catch (error) {
+    console.error('加载教学大纲状态失败:', error)
+    lessonOutlineStatus.value = null
+  }
+}
+
+// 加载习题状态
+const loadLessonExercisesStatus = async () => {
+  if (!currentLesson.value) return
+  
+  try {
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${currentLesson.value.lessonId}`
+    
+    console.log('loadLessonExercisesStatus 参数:', { userId, courseId, lessonNum })
+    
+    // 使用正确的习题列表API路径
+    const response = await axios.get(`/ai/v1/exercise/list/${userId}/${courseId}/${lessonNum}?is_teacher=true`)
+    console.log('习题列表响应:', response.data)
+    
+    // 检查响应格式并处理 - 习题API返回格式：{ success: true, data: [...], total: 2, message: "..." }
+    if (response.data && response.data.success && response.data.data && response.data.data.length > 0) {
+      // 转换为前端期望的格式，与教学大纲保持一致
+      lessonExercisesStatus.value = {
+        files: response.data.data.map(file => ({
+          filename: file.filename,
+          size: 0, // 习题文件大小暂时设为0
+          created_time: file.metadata?.generated_at || '',
+          download_url: `/ai/v1/exercise/${userId}/${courseId}/${lessonNum}/${file.filename}`
+        })),
+        total_files: response.data.total,
+        course_id: courseId,
+        lesson_num: lessonNum,
+        user_id: userId,
+        is_teacher: true
+      }
+      console.log('习题状态已更新:', lessonExercisesStatus.value)
+    } else {
+      lessonExercisesStatus.value = null
+      console.log('没有找到习题文件')
+    }
+    
+    console.log('hasExercises 计算属性值:', hasExercises.value)
+  } catch (error) {
+    console.error('加载习题状态失败:', error)
+    lessonExercisesStatus.value = null
+  }
+}
+
+// 下载教学大纲
+const downloadOutline = async (lesson) => {
+  try {
+    if (!lessonOutlineStatus.value?.files || lessonOutlineStatus.value.files.length === 0) {
+      ElMessage.warning('教学大纲尚未生成')
+      return
+    }
+    
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${lesson.lessonId}`
+    const filename = lessonOutlineStatus.value.files[0].filename
+    
+    const downloadUrl = `/ai/v1/download/outline/${userId}/${courseId}/${lessonNum}/${filename}`
+    
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = filename
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('开始下载教学大纲')
+  } catch (error) {
+    console.error('下载教学大纲失败:', error)
+    ElMessage.error('下载失败，请重试')
+  }
+}
+
+// 下载习题
+const downloadExercises = async (lesson) => {
+  try {
+    if (!lessonExercisesStatus.value?.files || lessonExercisesStatus.value.files.length === 0) {
+      ElMessage.warning('习题尚未生成')
+      return
+    }
+    
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${lesson.lessonId}`
+    const filename = lessonExercisesStatus.value.files[0].filename
+    
+    // 使用正确的习题下载接口
+    const downloadUrl = `/ai/v1/exercise/${userId}/${courseId}/${lessonNum}/${filename}?is_teacher=true`
+    
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = filename
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('开始下载习题')
+  } catch (error) {
+    console.error('下载习题失败:', error)
+    ElMessage.error('下载失败，请重试')
+  }
+}
+
+// 下载单个教学大纲文件
+const downloadOutlineFile = async (file) => {
+  try {
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${currentLesson.value.lessonId}`
+    
+    const downloadUrl = `/ai/v1/download/outline/${userId}/${courseId}/${lessonNum}/${file.filename}`
+    
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = file.filename
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('开始下载教学大纲文件')
+  } catch (error) {
+    console.error('下载教学大纲文件失败:', error)
+    ElMessage.error('下载失败，请重试')
+  }
+}
+
+// 下载单个习题文件
+const downloadExerciseFile = async (file) => {
+  try {
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${currentLesson.value.lessonId}`
+    
+    // 使用正确的习题下载接口
+    const downloadUrl = `/ai/v1/exercise/${userId}/${courseId}/${lessonNum}/${file.filename}?is_teacher=true`
+    
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = file.filename
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('开始下载习题文件')
+  } catch (error) {
+    console.error('下载习题文件失败:', error)
+    ElMessage.error('下载失败，请重试')
+  }
+}
+
+// 生成状态相关方法
+const getGenerationStatusTitle = () => {
+  if (outlineGenerating.value) return '正在生成教学大纲'
+  if (exercisesGenerating.value) return '正在生成习题'
+  return '生成状态'
+}
+
+const getGenerationStatusDescription = () => {
+  if (outlineGenerating.value) return 'AI正在分析课时文件并生成教学大纲，请稍候...'
+  if (exercisesGenerating.value) return 'AI正在基于课时内容生成习题，请稍候...'
+  return ''
 }
 
 // 更新课时的题目状态
@@ -1375,25 +2228,7 @@ const getUploadData = (lessonId) => ({
   is_ask: false
 })
 
-const generateOutline = (lesson) => {
-  // TODO: 调用AI生成大纲API
-  ElMessage.info('正在生成教学大纲...')
-}
 
-const generateQuestions = (lesson) => {
-  // TODO: 调用AI生成习题API
-  ElMessage.info('正在生成习题...')
-}
-
-const downloadOutline = (lesson) => {
-  // TODO: 下载教学大纲
-  ElMessage.info('下载教学大纲功能开发中...')
-}
-
-const downloadLessonQuestions = (lesson) => {
-  // TODO: 下载习题
-  ElMessage.info('下载习题功能开发中...')
-}
 
 // 安全解析选项的函数
 const parseOptions = (options) => {
@@ -1986,18 +2821,234 @@ const publishTest = async () => {
 }
 
 // 学生管理
-const viewStudentScore = (student) => {
-  // TODO: 查看学生成绩
-  ElMessage.info('查看学生成绩功能开发中...')
+const showStudentScoreDialog = ref(false)
+const currentStudent = ref(null)
+const studentScore = ref(null)
+const studentScoreLoading = ref(false)
+
+const viewStudentScore = async (student) => {
+  currentStudent.value = student
+  studentScore.value = null
+  showStudentScoreDialog.value = true
+  studentScoreLoading.value = true
+  
+  try {
+    console.log('查看学生成绩，参数:', {
+      courseId: route.params.id,
+      studentId: student.id,
+      courseIdType: typeof route.params.id,
+      studentIdType: typeof student.id
+    })
+    
+    // 确保参数类型正确
+    const courseId = parseInt(route.params.id)
+    const studentId = parseInt(student.id)
+    
+    const score = await getCourseScore(courseId, studentId)
+    console.log('获取到的成绩:', score)
+    studentScore.value = score
+  } catch (error) {
+    console.error('获取学生成绩失败:', error)
+    ElMessage.error('获取学生成绩失败')
+  } finally {
+    studentScoreLoading.value = false
+  }
 }
 
 
 
 // 成绩管理
-const exportScores = () => {
-  // TODO: 导出成绩
-  ElMessage.info('导出成绩功能开发中...')
+const loadAllScores = async () => {
+  try {
+    scoresLoading.value = true
+    
+    if (courseInfo.value.isOver === 1) {
+      // 获取所有学生的总成绩
+      const promises = studentsList.value.map(async (student) => {
+        try {
+          const score = await getCourseScore(courseInfo.value.id, student.id)
+          return {
+            studentId: student.id,
+            studentName: student.username,
+            studentAccount: student.userAccount,
+            finalScore: score || 0
+          }
+        } catch (error) {
+          console.error(`获取学生 ${student.username} 成绩失败:`, error)
+          return {
+            studentId: student.id,
+            studentName: student.username,
+            studentAccount: student.userAccount,
+            finalScore: 0
+          }
+        }
+      })
+      
+      const results = await Promise.all(promises)
+      scoresList.value = results
+      
+      // 计算统计数据
+      if (scoresList.value.length > 0) {
+        const scores = scoresList.value.map(item => item.finalScore || 0)
+        averageScore.value = scores.reduce((sum, score) => sum + score, 0) / scores.length
+        passRate.value = (scores.filter(score => score >= 60).length / scores.length) * 100
+        maxScore.value = Math.max(...scores)
+      }
+      
+      console.log('成绩统计完成:', {
+        totalStudents: scoresList.value.length,
+        averageScore: averageScore.value,
+        passRate: passRate.value,
+        maxScore: maxScore.value
+      })
+    }
+  } catch (error) {
+    console.error('加载成绩失败:', error)
+    ElMessage.error('加载成绩失败')
+  } finally {
+    scoresLoading.value = false
+  }
 }
+
+// 加载学生成绩趋势
+const loadStudentScoreTrend = async () => {
+  if (!selectedStudentId.value) {
+    scoreTrendData.value = []
+    return
+  }
+  
+  try {
+    scoreTrendLoading.value = true
+    
+    const result = await request.get('/api/course/scoreList', {
+      params: {
+        courseId: route.params.id,
+        studentId: selectedStudentId.value
+      }
+    })
+    
+    if (result.code === 0 && result.data) {
+      scoreTrendData.value = result.data
+      console.log('学生成绩趋势数据:', scoreTrendData.value)
+      
+      // 渲染折线图
+      nextTick(() => {
+        renderScoreChart()
+      })
+    } else {
+      scoreTrendData.value = []
+      console.warn('获取学生成绩趋势失败:', result.message)
+    }
+  } catch (error) {
+    console.error('获取学生成绩趋势失败:', error)
+    scoreTrendData.value = []
+  } finally {
+    scoreTrendLoading.value = false
+  }
+}
+
+// 渲染成绩趋势折线图
+const renderScoreChart = () => {
+  if (!scoreChartRef.value || scoreTrendData.value.length === 0) return
+  
+  // 准备图表数据
+  const chartData = scoreTrendData.value.map(item => ({
+    lessonId: item.lessonId,
+    score: item.score || 0,
+    updateTime: item.updateTime
+  }))
+  
+  // 按课时ID排序
+  chartData.sort((a, b) => a.lessonId - b.lessonId)
+  
+  // 获取课时名称映射
+  const lessonNames = lessonsList.value.reduce((map, lesson) => {
+    map[lesson.lessonId] = lesson.lessonName
+    return map
+  }, {})
+  
+  // 构建图表配置
+  const option = {
+    title: {
+      text: '学生成绩趋势',
+      left: 'center'
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(params) {
+        const data = params[0]
+        return `课时: ${lessonNames[data.dataIndex] || data.dataIndex}<br/>成绩: ${data.value}分`
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: chartData.map(item => lessonNames[item.lessonId] || `课时${item.lessonId}`),
+      axisLabel: {
+        rotate: 45
+      }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: 100,
+      name: '成绩(分)'
+    },
+    series: [{
+      name: '成绩',
+      type: 'line',
+      data: chartData.map(item => item.score),
+      smooth: true,
+      lineStyle: {
+        color: '#409EFF'
+      },
+      itemStyle: {
+        color: '#409EFF'
+      },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [{
+            offset: 0, color: 'rgba(64, 158, 255, 0.3)'
+          }, {
+            offset: 1, color: 'rgba(64, 158, 255, 0.1)'
+          }]
+        }
+      }
+    }]
+  }
+  
+  // 使用ECharts渲染图表
+  const chart = echarts.init(scoreChartRef.value)
+  chart.setOption(option)
+  
+  // 监听窗口大小变化
+  window.addEventListener('resize', () => {
+    chart.resize()
+  })
+}
+
+// 查看学生详细成绩
+const viewStudentDetailScore = async (student) => {
+  try {
+    // 设置选中的学生并加载趋势图
+    selectedStudentId.value = student.studentId
+    await loadStudentScoreTrend()
+    
+    // 切换到成绩管理标签页
+    activeTab.value = 'scores'
+    
+    ElMessage.success(`已加载 ${student.studentName} 的成绩趋势图`)
+  } catch (error) {
+    console.error('查看学生详细成绩失败:', error)
+    ElMessage.error('查看学生详细成绩失败')
+  }
+}
+
+
 
 const getGrade = (score) => {
   if (score >= 90) return '优秀'
@@ -2013,6 +3064,14 @@ const getGradeType = (score) => {
   if (score >= 70) return 'warning'
   if (score >= 60) return 'info'
   return 'danger'
+}
+
+const getScoreDescription = (score) => {
+  if (score >= 90) return '优秀！学生表现非常出色，对课程内容掌握得很好。'
+  if (score >= 80) return '良好！学生对课程内容有较好的理解和掌握。'
+  if (score >= 70) return '中等！学生对课程内容有一定掌握，但还有提升空间。'
+  if (score >= 60) return '及格！学生基本掌握了课程内容，建议加强薄弱环节。'
+  return '不及格！学生需要重新学习课程内容，建议提供额外辅导。'
 }
 
 // 结束课程
@@ -2043,10 +3102,18 @@ const endCourse = async () => {
 }
 
 // 生命周期
-onMounted(() => {
-  loadCourseInfo()
-  loadLessons()
-  loadStudents()
+onMounted(async () => {
+  await loadCourseInfo()
+  await loadLessons()
+  await loadStudents()
+  
+  // 加载课程资料列表
+  await loadCourseMaterials()
+  
+  // 如果课程已结课，自动加载成绩数据
+  if (courseInfo.value?.isOver === 1) {
+    await loadAllScores()
+  }
 })
 </script>
 
@@ -2274,5 +3341,189 @@ onMounted(() => {
 
 .course-ongoing-notice {
   margin-bottom: 20px;
+}
+
+/* 学生成绩对话框样式 */
+.student-score-dialog {
+  padding: 10px;
+}
+
+.student-info {
+  margin-bottom: 20px;
+}
+
+.score-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.score-header span {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.score-details {
+  padding: 10px 0;
+}
+
+.score-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.score-item:last-child {
+  border-bottom: none;
+}
+
+.score-label {
+  font-weight: 500;
+  color: #606266;
+}
+
+.score-value {
+  font-weight: bold;
+}
+
+.loading-score {
+  padding: 20px;
+  text-align: center;
+}
+
+.no-score {
+  padding: 40px;
+  text-align: center;
+}
+
+.score-description {
+  margin-top: 20px;
+}
+
+/* 成绩管理页面样式 */
+.score-trend-section {
+  margin-bottom: 40px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.score-trend-section h5 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #303133;
+  font-size: 16px;
+}
+
+.student-selector {
+  margin-bottom: 20px;
+}
+
+.chart-container {
+  margin-top: 20px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  padding: 20px;
+  background: white;
+}
+
+.no-data {
+  margin-top: 20px;
+  padding: 40px;
+  text-align: center;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+}
+
+.course-score-section {
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.course-score-section h5 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #303133;
+  font-size: 16px;
+}
+
+/* 课程资料样式 */
+.course-materials {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.course-materials h4 {
+  margin-bottom: 15px;
+  color: #303133;
+}
+
+.materials-list {
+  margin-top: 20px;
+}
+
+.empty-materials {
+  margin-top: 20px;
+  padding: 40px;
+  text-align: center;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+}
+
+.upload-demo {
+  margin-bottom: 20px;
+}
+
+.el-upload__tip {
+  color: #909399;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* 课时文件管理样式 */
+.file-upload-section,
+.ai-functions,
+.file-downloads {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.file-upload-section h5,
+.ai-functions h5,
+.file-downloads h5 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #303133;
+  font-size: 16px;
+}
+
+.ai-buttons {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.download-buttons {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.generation-status {
+  margin-top: 15px;
+}
+
+.file-status {
+  margin-top: 15px;
 }
 </style> 
