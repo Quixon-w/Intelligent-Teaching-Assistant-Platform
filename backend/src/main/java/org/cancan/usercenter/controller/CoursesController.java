@@ -107,7 +107,7 @@ public class CoursesController {
         if (currentUser.getUserRole() != TEACHER_ROLE) {
             throw new BusinessException(ErrorCode.NO_AUTH, "不是老师不可开课");
         }
-        return ResultUtils.success(coursesService.addCourse(courseName, comment, currentUser.getId()));
+        return ResultUtils.success(coursesService.addCourse(courseName, comment, currentUser));
     }
 
     @PostMapping("/delete")

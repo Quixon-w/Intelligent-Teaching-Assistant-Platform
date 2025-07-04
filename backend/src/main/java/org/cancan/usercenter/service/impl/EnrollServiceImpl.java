@@ -13,6 +13,7 @@ import org.cancan.usercenter.service.ScoresService;
 import org.cancan.usercenter.utils.RedisUtil;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.function.Function;
@@ -51,6 +52,7 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
      * @return 是否删除成功
      */
     @Override
+    @Transactional
     public Boolean dismiss(Long courseId, Long studentId) {
         // 删除学生做题记录和课时成绩
         List<Lessons> lessons = lessonsService.listLessons(courseId);

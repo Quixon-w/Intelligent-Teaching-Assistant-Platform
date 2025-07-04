@@ -10,6 +10,7 @@ import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.service.LessonsService;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -99,6 +100,7 @@ public class LessonsServiceImpl extends ServiceImpl<LessonsMapper, Lessons> impl
      * @return 删除结果
      */
     @Override
+    @Transactional
     public Boolean deleteLesson(Long lessonId) {
         // 删除课时答题记录
         QueryWrapper<QuestionRecords> queryWrapperR = new QueryWrapper<>();

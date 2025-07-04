@@ -3,6 +3,7 @@ package org.cancan.usercenter.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.cancan.usercenter.model.domain.Courses;
+import org.cancan.usercenter.model.domain.User;
 
 import java.util.List;
 
@@ -17,10 +18,10 @@ public interface CoursesService extends IService<Courses> {
      * 添加课程
      *
      * @param courseName 课程名
-     * @param teacherId  老师id
+     * @param teacher    老师
      * @return 课程
      */
-    Courses addCourse(String courseName, String comment, Long teacherId);
+    Courses addCourse(String courseName, String comment, User teacher);
 
     /**
      * 判断是否是本老师在操作

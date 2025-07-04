@@ -12,6 +12,7 @@ import org.cancan.usercenter.service.CoursesService;
 import org.cancan.usercenter.service.EnrollService;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
@@ -44,14 +45,14 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
 
     /**
      * @param courseName 课程名
-     * @param teacherId  老师id
+     * @param teacher    老师
      * @param comment    课程描述
      * @return 课程
      */
     @Override
-    public Courses addCourse(String courseName, String comment, Long teacherId) {
+    public Courses addCourse(String courseName, String comment, User teacher) {
         // 参数校验
-        if (courseName == null || teacherId == null) {
+        if (courseName == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
         }
         SpecialCode.validateCode(courseName);
@@ -62,7 +63,8 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
         // 插入数据
         Courses courses = new Courses();
         courses.setName(courseName);
-        courses.setTeacherId(teacherId);
+        courses.setTeacherId(teacher.getId());
+        courses.setTeacherName(teacher.getUsername());
         courses.setComment(Objects.requireNonNullElse(comment, "暂无简介"));
         boolean result = this.save(courses);
         if (!result) {
@@ -104,6 +106,7 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
      * @return 是否修改成功
      */
     @Override
+    @Transactional
     public Boolean editComment(Long courseId, String comment) {
         Courses courses = this.getById(courseId);
         courses.setComment(comment);
@@ -144,6 +147,7 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
      * @return 是否成功
      */
     @Override
+    @Transactional
     public Boolean over(Courses course) {
         if (course.getIsOver() == 1) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "课程已结束");
@@ -171,6 +175,7 @@ public class CoursesServiceImpl extends ServiceImpl<CoursesMapper, Courses> impl
      * @return 是否成功
      */
     @Override
+    @Transactional
     public Boolean deleteCourse(Long courseId) {
         QueryWrapper<Lessons> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("course_id", courseId);

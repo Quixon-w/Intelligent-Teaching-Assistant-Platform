@@ -73,6 +73,10 @@ public class LessonQuestionMapController {
 
     @PostMapping("/addByIds")
     @Operation(summary = "批量添加某课时的预发布习题", description = "传入教师个人习题集中的习题，只需要习题id")
+    @Parameters({
+            @Parameter(name = "lessonId", description = "课时ID", required = true),
+            @Parameter(name = "questionIds", description = "习题ID列表", required = true)
+    })
     public BaseResponse<Boolean> addByIds(@RequestParam Long lessonId, @RequestParam List<Long> questionIds, HttpServletRequest request) {
         // 校验有效性与权限
         Lessons lessons = lessonsService.getValidLessonById(lessonId);

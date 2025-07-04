@@ -16,6 +16,7 @@ import org.cancan.usercenter.service.UserService;
 import org.cancan.usercenter.utils.RedisUtil;
 import org.cancan.usercenter.utils.SpecialCode;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -279,6 +280,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * @return 头像地址
      */
     @Override
+    @Transactional
     public String updateAvatar(MultipartFile file, HttpServletRequest request) {
         // 生成唯一文件名
         String originalName = file.getOriginalFilename();
