@@ -137,14 +137,23 @@
         <el-card>
           <template #header>
             <div class="card-header">
-              <h3>系统公告</h3>
+              <h3>项目简介</h3>
             </div>
           </template>
-          <div class="announcements">
-            <div v-for="announcement in announcements" :key="announcement.id" class="announcement-item">
-              <h4>{{ announcement.title }}</h4>
-              <p>{{ announcement.content }}</p>
-              <span class="announcement-date">{{ announcement.date }}</span>
+          <div class="project-intro">
+            <div class="intro-item">
+              <h4>🎓 智能教学助手平台</h4>
+              <p>本项目旨在开发一个基于开源大语言模型的智能教学助手平台，聚焦于教学过程的备课设计自动化、学生个性化练习辅导以及教学数据分析可视化，助力教育数字化转型，提升实训教学效率与个性化水平。</p>
+            </div>
+            <div class="intro-item">
+              <h4>🎯 核心功能</h4>
+              <p><strong>教师端：</strong>智能备课设计、自动生成考核题目、学情分析与建议、教学资源导出与管理</p>
+              <p><strong>学生端：</strong>在线练习与错题反馈、智能问答助手、随机题目生成与评测建议</p>
+              <p><strong>管理端：</strong>用户管理、教学资源管理、可视化大屏分析</p>
+            </div>
+            <div class="intro-item">
+              <h4>💡 技术特色</h4>
+              <p>采用前后端分离架构，整合本地知识库与大模型能力，实现从"教师教"到"AI辅助教"，从"学生练"到"AI智能练"的智能化教学生态。</p>
             </div>
           </div>
         </el-card>
@@ -178,20 +187,7 @@ const stats = ref({
   overallProgress: 0
 })
 
-const announcements = ref([
-  {
-    id: 1,
-    title: '系统更新通知',
-    content: '系统已更新到最新版本，新增多项功能优化用户体验。',
-    date: '2024-01-15'
-  },
-  {
-    id: 2,
-    title: 'AI助手功能上线',
-    content: '智能AI助手功能正式上线，支持文件问答和智能对话。',
-    date: '2024-01-10'
-  }
-])
+
 
 // 计算属性
 const username = computed(() => authStore.user?.username || '用户')
@@ -648,29 +644,40 @@ onMounted(() => {
   justify-content: center;
 }
 
-.announcement-item {
+.project-intro {
+  padding: 10px 0;
+}
+
+.intro-item {
   padding: 15px 0;
   border-bottom: 1px solid #ebeef5;
 }
 
-.announcement-item:last-child {
+.intro-item:last-child {
   border-bottom: none;
 }
 
-.announcement-item h4 {
-  margin: 0 0 8px 0;
+.intro-item h4 {
+  margin: 0 0 12px 0;
   color: #303133;
+  font-size: 16px;
+  font-weight: 600;
 }
 
-.announcement-item p {
+.intro-item p {
   margin: 0 0 8px 0;
   color: #606266;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-size: 14px;
 }
 
-.announcement-date {
-  font-size: 12px;
-  color: #909399;
+.intro-item p:last-child {
+  margin-bottom: 0;
+}
+
+.intro-item strong {
+  color: #409eff;
+  font-weight: 600;
 }
 
 /* 学生端统计卡片样式 */

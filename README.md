@@ -40,10 +40,10 @@ Intelligent Teaching Assistant Platform (ITAP) 是一个融合人工智能与教
 
 | 模块    | 技术                                                  |
 | ----- | --------------------------------------------------- |
-| 前端    | Vue.js / React + ECharts                            |
-| 后端    | Java + Spring Boot + MySQL                          |
-| 大模型服务 | RWKV（云端部署）+ 云端知识库（FAISS） |
-| 知识库构建 | 文档向量化 + 嵌入模型                          |
+| 前端    | Vue 3 + Vite + Element Plus + ECharts + Pinia      |
+| 后端    | Java 17 + Spring Boot 3.4.3 + MyBatis Plus + MySQL + Redis |
+| 大模型服务 | Python + FastAPI + RWKV + ChromaDB + LangChain |
+| 知识库构建 | BGE-M3嵌入模型 + 文档向量化 + 重排序模型 |
 
 ---
 
