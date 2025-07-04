@@ -485,8 +485,8 @@ def load_vector_db(userId, isTeacher=False, courseID=None, lessonNum=None):
         # 使用配置管理系统获取ChromaDB配置
         settings = get_settings()
         
-        # 生成collection名称
-        collection_name = f"kb_{userId}_{'student'}_{'default'}_{'ask'}"
+        # 生成collection名称，与update_knowledge_db保持一致
+        collection_name = f"kb_{userId}_{courseID or 'student'}_{lessonNum or 'default'}"
         
         # 初始化ChromaDB管理器
         chroma_manager = ChromaDBManager(

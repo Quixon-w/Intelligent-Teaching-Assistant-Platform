@@ -62,20 +62,18 @@ def get_lesson_content_from_chromadb(user_id: str, course_id: str, lesson_num: s
     print(f"正在从ChromaDB获取课时内容: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, isTeacher={is_teacher}")
     
     try:
-        # 加载向量数据库
-        chroma_manager = load_vector_db(
-            userId=user_id,
-            isTeacher=is_teacher,
-            courseID=course_id,
-            lessonNum=lesson_num
-        )
-        
-        if not chroma_manager:
-            print("ChromaDB知识库不存在")
-            return None
-        
-        # 生成collection名称
+        # 生成collection名称，与update_knowledge_db保持一致
         collection_name = f"kb_{user_id}_{course_id}_{lesson_num}"
+        
+        # 初始化ChromaDB管理器
+        from utils.knowledge import ChromaDBManager
+        from config.settings import get_settings
+        
+        settings = get_settings()
+        chroma_manager = ChromaDBManager(
+            host=settings.CHROMADB_HOST,
+            port=settings.CHROMADB_PORT
+        )
         
         # 获取collection中的所有文档
         try:

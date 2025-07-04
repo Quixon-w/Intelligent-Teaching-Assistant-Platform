@@ -1036,7 +1036,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 import axios from 'axios'
-import { addLesson as addLessonApi } from '@/api/course/lesson'
+import { addLesson as addLessonApi, commitQuestion } from '@/api/course/lesson'
 import { getCourseScore } from '@/api/course'
 import { showError, showDetailedError, showSuccess, showWarning, handleApiResponse, handleException } from '@/utils/errorHandler'
 import * as echarts from 'echarts'
@@ -2968,17 +2968,13 @@ const publishTest = async () => {
     // 获取当前测试的所有题目ID
     const questionIds = questionsList.value.map(q => q.questionId)
     
-    // 构建URL参数
-    const params = new URLSearchParams()
-    params.append('lessonId', currentLesson.value.lessonId)
-    questionIds.forEach(id => {
-      params.append('questionIds', id)
+    console.log('构建的发布参数:', {
+      lessonId: currentLesson.value.lessonId,
+      questionIds: questionIds
     })
     
-    console.log('构建的发布参数:', params.toString())
-    
     // 调用发布测试API
-    const result = await request.post(`/api/map/commit?${params.toString()}`)
+    const result = await commitQuestion(questionsList.value, currentLesson.value.lessonId)
     
     console.log('发布测试API响应:', result)
     

@@ -91,8 +91,8 @@
         </el-table-column>
         <el-table-column property="gender" label="性别" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.gender === 1 ? 'primary' : 'success'">
-              {{ row.gender === 1 ? '男' : '女' }}
+            <el-tag :type="getGenderTagType(row.gender)">
+              {{ getGenderText(row.gender) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -168,8 +168,8 @@
         </el-table-column>
         <el-table-column property="gender" label="性别" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.gender === 1 ? 'primary' : 'success'">
-              {{ row.gender === 1 ? '男' : '女' }}
+            <el-tag :type="getGenderTagType(row.gender)">
+              {{ getGenderText(row.gender) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -480,6 +480,18 @@ const getRowStyle = ({ row }) => {
     }
   }
   return {}
+}
+
+// 性别辅助方法
+function getGenderText(gender) {
+  if (gender === 1) return '男';
+  if (gender === 2) return '女';
+  return '未知';
+}
+function getGenderTagType(gender) {
+  if (gender === 1) return 'primary';
+  if (gender === 2) return 'success';
+  return 'info';
 }
 
 onMounted(() => {

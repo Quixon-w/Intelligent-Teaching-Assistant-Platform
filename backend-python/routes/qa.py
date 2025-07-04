@@ -77,6 +77,8 @@ def search_knowledge_db(user_id, session_id, query, is_teacher=False, course_id=
                 courseID="ask",  # 使用ask作为courseID
                 lessonNum="uploaded"  # 使用uploaded作为lessonNum
             )
+            # 生成collection名称
+            collection_name = f"kb_{user_id}_ask_uploaded"
         else:
             # 已有文件查询模式 - 从用户路径下的课程/课时中搜索
             if not course_id:
@@ -92,16 +94,12 @@ def search_knowledge_db(user_id, session_id, query, is_teacher=False, course_id=
                 courseID=course_id,
                 lessonNum=lesson_num
             )
+            # 生成collection名称
+            collection_name = f"kb_{user_id}_{course_id}_{lesson_num}"
         
         if not chroma_manager:
             print("ChromaDB知识库不存在")
             return None
-        
-        # 生成collection名称
-        if search_mode == "uploaded":
-            collection_name = f"kb_{user_id}_student_default_ask"
-        else:
-            collection_name = f"kb_{user_id}_{course_id}_{lesson_num}"
         
         print(f"使用collection: {collection_name}")
         

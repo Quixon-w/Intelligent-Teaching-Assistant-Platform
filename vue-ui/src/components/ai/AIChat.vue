@@ -60,9 +60,8 @@
             :class="['message', message.role]"
           >
             <div class="message-avatar">
-              <el-avatar :size="36">
-                {{ message.role === 'user' ? 'U' : 'AI' }}
-              </el-avatar>
+              <el-avatar v-if="message.role === 'user'" :src="userAvatar" :size="36" />
+              <el-avatar v-else :size="36">AI</el-avatar>
             </div>
             <div class="message-content">
               <div class="message-text">{{ message.content }}</div>
@@ -127,6 +126,10 @@ import {
   getSessionContext,
   deleteSession
 } from '@/api/ai'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
+const userAvatar = computed(() => authStore.user?.avatar || '')
 
 // 响应式数据
 const sessions = ref([])
