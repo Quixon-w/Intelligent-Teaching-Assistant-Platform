@@ -3,8 +3,6 @@ package org.cancan.usercenter.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.cancan.usercenter.model.domain.Questions;
 
-import java.util.List;
-
 /**
  * @author 洪
  * {@code @description} 针对表【questions】的数据库操作Mapper
@@ -13,7 +11,7 @@ import java.util.List;
  */
 public interface QuestionsMapper extends BaseMapper<Questions> {
 
-    List<Questions> selectMatchedQuestions(String father, Long teacherId);
+//    List<Questions> selectMatchedQuestions(String father, Long teacherId);
 
 }
 

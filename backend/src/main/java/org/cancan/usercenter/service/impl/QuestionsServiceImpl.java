@@ -38,17 +38,17 @@ public class QuestionsServiceImpl extends ServiceImpl<QuestionsMapper, Questions
     @Resource
     private LessonsMapper lessonsMapper;
 
-    /**
-     * @param father 父级知识点
-     * @return 问题集
-     */
-    @Override
-    public List<Questions> selectByFather(String father, Long teacherId) {
-        if (father == null || teacherId == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "父级知识点为空或教师ID为空");
-        }
-        return questionsMapper.selectMatchedQuestions(father, teacherId);
-    }
+//    /**
+//     * @param father 父级知识点
+//     * @return 问题集
+//     */
+//    @Override
+//    public List<Questions> selectByFather(String father, Long teacherId) {
+//        if (father == null || teacherId == null) {
+//            throw new BusinessException(ErrorCode.NULL_ERROR, "父级知识点为空或教师ID为空");
+//        }
+//        return questionsMapper.selectMatchedQuestions(father, teacherId);
+//    }
 
     /**
      * @param question 习题

@@ -13,14 +13,14 @@ import java.util.List;
  */
 public interface QuestionsService extends IService<Questions> {
 
-    /**
-     * 根据父级知识点查询问题集
-     *
-     * @param father    父级知识点
-     * @param teacherId 教师ID
-     * @return 问题集
-     */
-    List<Questions> selectByFather(String father, Long teacherId);
+//    /**
+//     * 根据父级知识点查询问题集
+//     *
+//     * @param father    父级知识点
+//     * @param teacherId 教师ID
+//     * @return 问题集
+//     */
+//    List<Questions> selectByFather(String father, Long teacherId);
 
     /**
      * 添加问题

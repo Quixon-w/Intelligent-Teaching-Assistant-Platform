@@ -1,13 +1,16 @@
 package org.cancan.usercenter.model.domain;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
  * 用户
  * {@code @TableName} user
  */
-@TableName(value ="users")
+@TableName(value = "users")
 @Data
 public class User {
     /**
@@ -50,11 +53,6 @@ public class User {
      * 邮箱
      */
     private String email;
-
-    /**
-     *  状态 0 - 正常
-     */
-    private Integer userStatus;
 
     /**
      * 是否删除

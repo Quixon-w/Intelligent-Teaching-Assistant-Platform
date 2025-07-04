@@ -105,9 +105,6 @@ public class UserController {
         User currentUser = userService.getCurrentUser(request);
         long userId = currentUser.getId();
         User user = userService.getById(userId);
-        if (user.getUserStatus() == 1) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户状态失效");
-        }
         return ResultUtils.success(userService.getSafetyUser(user));
     }
 

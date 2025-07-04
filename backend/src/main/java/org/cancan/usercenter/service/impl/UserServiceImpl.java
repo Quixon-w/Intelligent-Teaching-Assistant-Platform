@@ -170,7 +170,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         safetyUser.setPhone(originUser.getPhone());
         safetyUser.setEmail(originUser.getEmail());
         safetyUser.setUserRole(originUser.getUserRole());
-        safetyUser.setUserStatus(originUser.getUserStatus());
         return safetyUser;
     }
 

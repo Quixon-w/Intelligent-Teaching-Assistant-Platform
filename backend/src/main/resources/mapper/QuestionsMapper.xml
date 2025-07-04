@@ -18,11 +18,11 @@
     <!--        question_id,knowledge,question,options,answer,explanation,teacher_id-->
     <!--    </sql>-->
 
-    <select id="selectMatchedQuestions" resultType="org.cancan.usercenter.model.domain.Questions">
-        SELECT *
-        FROM questions
-        WHERE questions.teacher_id = #{teacherId}
-          AND questions.knowledge LIKE CONCAT(#{father}, '/%')
-    </select>
+    <!--    <select id="selectMatchedQuestions" resultType="org.cancan.usercenter.model.domain.Questions">-->
+    <!--        SELECT *-->
+    <!--        FROM questions-->
+    <!--        WHERE questions.teacher_id = #{teacherId}-->
+    <!--          AND questions.knowledge LIKE CONCAT(#{father}, '/%')-->
+    <!--    </select>-->
 
 </mapper>

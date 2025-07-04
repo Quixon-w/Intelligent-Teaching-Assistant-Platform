@@ -1,3 +1,4 @@
+# spring 配置设置
 spring:
   servlet:
     multipart:
@@ -20,23 +21,7 @@ spring:
           max-idle: 16
           min-idle: 4
           max-wait: 2000ms
-springdoc:
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui
-    tags-sorter: alpha
-    operations-sorter: alpha
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  group-configs:
-    - group: 'default'
-      paths-to-match: '/**'
-      packages-to-scan: org.cancan.usercenter
-knife4j:
-  enable: true
-  setting:
-    language: zh_cn
+# web 服务设置
 server:
   compression:
     mime-types: application/json,application/xml,text/html,text/xml,text/plain
@@ -54,6 +39,25 @@ server:
         same-site: None
         secure: true
     context-path: /api
+# 接口文档
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: org.cancan.usercenter
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+# mybatis-plus
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
@@ -62,6 +66,16 @@ mybatis-plus:
       logic-delete-field: isDelete # 全局逻辑删除字段名
       logic-delete-value: 1 # 逻辑已删除值
       logic-not-delete-value: 0 # 逻辑未删除值
+# 日志
 logging:
   pattern:
     level: DEBUG
+# 压力测试
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus
+  metrics:
+    enable:
+      all: true
