@@ -501,9 +501,6 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
         # 添加分隔线
         doc.add_paragraph('=' * 50)
         
-        # 简化内容处理逻辑 - 直接保存所有内容
-        print("正在添加习题内容到文档...")
-        
         # 确保内容不为空
         if exercise_content and len(exercise_content.strip()) > 0:
             # 按行分割内容
@@ -514,15 +511,19 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
                 line = line.strip()
                 if line:  # 只添加非空行
                     # 简单的内容分类
-                    if line.startswith('题目') or line.startswith('第') and '题' in line:
+                    if line.startswith('题目') or (line.startswith('第') and '题' in line):
                         doc.add_heading(line, level=1)
+                        print(f"添加标题: {line[:50]}...")
                     elif line.startswith(('A.', 'B.', 'C.', 'D.')):
                         doc.add_paragraph(line)
+                        print(f"添加选项: {line[:50]}...")
                     elif line.startswith('正确答案：') or line.startswith('解析：') or line.startswith('知识点：'):
                         p = doc.add_paragraph(line)
                         p.runs[0].bold = True
+                        print(f"添加加粗内容: {line[:50]}...")
                     else:
                         doc.add_paragraph(line)
+                        print(f"添加普通内容: {line[:50]}...")
             
             print(f"已添加 {len(lines)} 行内容到文档")
         else:
@@ -531,7 +532,12 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
         
         # 保存文档
         print(f"正在保存文档到: {file_path}")
-        doc.save(file_path)
+        try:
+            doc.save(file_path)
+            print("文档保存成功")
+        except Exception as save_error:
+            print(f"保存文档时出错: {save_error}")
+            raise save_error
         
         # 验证文件是否成功保存且不为空
         if os.path.exists(file_path):
@@ -1333,6 +1339,8 @@ async def download_exercise_file(user_id: str, course_id: str, lesson_num: str, 
     下载指定的习题文件
     """
     try:
+        print(f"开始下载文件: userID={user_id}, courseId={course_id}, lessonNum={lesson_num}, filename={filename}")
+        
         # 获取用户路径
         user_path = get_user_path(user_id, is_teacher)
         
@@ -1341,21 +1349,55 @@ async def download_exercise_file(user_id: str, course_id: str, lesson_num: str, 
         exercises_dir = os.path.join(lesson_path, "exercises")
         file_path = os.path.join(exercises_dir, filename)
         
+        print(f"文件完整路径: {file_path}")
+        
         if not os.path.exists(file_path):
+            print(f"文件不存在: {file_path}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="习题文件不存在"
             )
         
+        # 检查文件大小
+        file_size = os.path.getsize(file_path)
+        print(f"文件大小: {file_size} 字节")
+        
+        if file_size == 0:
+            print("⚠️ 警告：文件大小为0字节")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="文件为空，无法下载"
+            )
+        
         # 读取文件内容
-        with open(file_path, 'rb') as f:
-            file_content = f.read()
+        try:
+            with open(file_path, 'rb') as f:
+                file_content = f.read()
+            print(f"成功读取文件内容，大小: {len(file_content)} 字节")
+        except Exception as read_error:
+            print(f"读取文件失败: {read_error}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"读取文件失败: {str(read_error)}"
+            )
+        
+        # 验证读取的内容大小
+        if len(file_content) != file_size:
+            print(f"⚠️ 警告：读取的内容大小({len(file_content)})与文件大小({file_size})不匹配")
+        
+        # 处理文件名编码
+        import urllib.parse
+        encoded_filename = urllib.parse.quote(filename)
         
         # 设置响应头
         headers = {
-            "Content-Disposition": f"attachment; filename={filename}",
-            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "Content-Length": str(len(file_content))
         }
+        
+        print(f"响应头: {headers}")
+        print(f"文件内容前100字节: {file_content[:100]}")
         
         return Response(
             content=file_content,
@@ -1367,6 +1409,8 @@ async def download_exercise_file(user_id: str, course_id: str, lesson_num: str, 
         raise
     except Exception as e:
         print(f"下载习题文件时出错: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"下载习题文件失败: {str(e)}"
@@ -1620,4 +1664,79 @@ D. 线程比进程更重
             "success": False,
             "error": str(e),
             "message": f"调试保存失败: {str(e)}"
+        }
+
+
+@router.get("/v1/exercise/test-docx/{user_id}/{course_id}/{lesson_num}/{filename}", tags=["Exercise"])
+async def test_docx_file(user_id: str, course_id: str, lesson_num: str, filename: str, is_teacher: bool = False):
+    """
+    测试docx文件是否可以正常打开
+    """
+    try:
+        # 获取用户路径
+        user_path = get_user_path(user_id, is_teacher)
+        
+        # 构建文件路径
+        lesson_path = os.path.join(user_path, course_id, lesson_num)
+        exercises_dir = os.path.join(lesson_path, "exercises")
+        file_path = os.path.join(exercises_dir, filename)
+        
+        print(f"测试文件路径: {file_path}")
+        
+        if not os.path.exists(file_path):
+            return {
+                "success": False,
+                "error": "文件不存在",
+                "file_path": file_path
+            }
+        
+        # 检查文件大小
+        file_size = os.path.getsize(file_path)
+        print(f"文件大小: {file_size} 字节")
+        
+        # 尝试读取文件内容
+        try:
+            with open(file_path, 'rb') as f:
+                content = f.read(1000)  # 读取前1000字节
+            content_readable = True
+            content_length = len(content)
+            print(f"文件可读，读取了 {content_length} 字节")
+        except Exception as read_error:
+            content_readable = False
+            content_length = 0
+            print(f"文件读取失败: {read_error}")
+        
+        # 尝试用python-docx打开文件
+        try:
+            test_doc = Document(file_path)
+            paragraphs = len(test_doc.paragraphs)
+            print(f"docx文件可以正常打开，包含 {paragraphs} 个段落")
+            docx_readable = True
+        except Exception as docx_error:
+            print(f"docx文件无法打开: {docx_error}")
+            docx_readable = False
+            paragraphs = 0
+        
+        return {
+            "success": True,
+            "data": {
+                "filename": filename,
+                "file_path": file_path,
+                "file_size": file_size,
+                "content_readable": content_readable,
+                "content_length": content_length,
+                "docx_readable": docx_readable,
+                "paragraphs": paragraphs
+            },
+            "message": "文件测试完成"
+        }
+        
+    except Exception as e:
+        print(f"测试docx文件时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "error": str(e),
+            "message": f"测试docx文件失败: {str(e)}"
         }

@@ -2146,7 +2146,15 @@ const downloadExerciseFile = async (file) => {
     const lessonNum = `lesson${currentLesson.value.lessonId}`
     
     // 使用正确的习题下载接口
-    const downloadUrl = `/ai/v1/exercise/${userId}/${courseId}/${lessonNum}/${file.filename}?is_teacher=true`
+    const downloadUrl = `/ai/v1/exercise/download/${userId}/${courseId}/${lessonNum}/${file.filename}?is_teacher=true`
+    
+    console.log('下载习题文件:', {
+      userId,
+      courseId,
+      lessonNum,
+      filename: file.filename,
+      downloadUrl
+    })
     
     const link = document.createElement('a')
     link.href = downloadUrl
