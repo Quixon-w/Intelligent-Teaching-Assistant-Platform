@@ -1,5 +1,20 @@
 <template>
   <div class="home-container">
+    <!-- 错误信息展示区域 -->
+    <div v-if="errorMessages.length > 0" class="error-section">
+      <el-alert
+        v-for="(error, index) in errorMessages"
+        :key="index"
+        :title="error.title"
+        :description="error.description"
+        type="error"
+        :closable="true"
+        @close="removeError(index)"
+        show-icon
+        style="margin-bottom: 16px;"
+      />
+    </div>
+
     <el-row :gutter="20">
       <el-col :span="24">
         <el-card class="welcome-card">
@@ -174,6 +189,7 @@ import {
 } from '@element-plus/icons-vue'
 import { getRoleCenterName } from '@/utils/roleMapper'
 import request from '@/utils/request'
+import { showDetailedError, handleException } from '@/utils/errorHandler'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -187,7 +203,27 @@ const stats = ref({
   overallProgress: 0
 })
 
+// 错误信息管理
+const errorMessages = ref([])
 
+// 添加错误信息
+const addError = (title, description) => {
+  errorMessages.value.push({
+    title,
+    description,
+    timestamp: Date.now()
+  })
+}
+
+// 移除错误信息
+const removeError = (index) => {
+  errorMessages.value.splice(index, 1)
+}
+
+// 清除所有错误信息
+const clearErrors = () => {
+  errorMessages.value = []
+}
 
 // 计算属性
 const username = computed(() => authStore.user?.username || '用户')
@@ -293,11 +329,27 @@ const quickActions = computed(() => {
 
 // 方法
 const handleQuickAction = (route) => {
-  router.push(route)
+  try {
+    if (!route) {
+      addError('操作失败', '无效的操作路径')
+      return
+    }
+    
+    router.push(route).catch(error => {
+      console.error('路由跳转失败:', error)
+      addError('页面跳转失败', `无法跳转到 ${route}，请稍后重试`)
+    })
+  } catch (error) {
+    console.error('快速操作执行失败:', error)
+    addError('操作执行失败', error.message || '操作执行时发生错误')
+  }
 }
 
 const loadStats = async () => {
   try {
+    // 清除之前的错误信息
+    clearErrors()
+    
     if (userRole.value === 'teacher') {
       await loadTeacherStats()
     } else if (userRole.value === 'admin') {
@@ -314,6 +366,23 @@ const loadStats = async () => {
     }
   } catch (error) {
     console.error('加载统计数据失败:', error)
+    
+    // 添加错误信息到界面
+    const errorTitle = '统计数据加载失败'
+    let errorDescription = '无法获取统计数据，请稍后重试'
+    
+    if (error.response?.data) {
+      // 后端返回的错误信息
+      errorDescription = error.response.data.description || 
+                       error.response.data.message || 
+                       errorDescription
+    } else if (error.message) {
+      errorDescription = error.message
+    }
+    
+    addError(errorTitle, errorDescription)
+    
+    // 设置默认值
     stats.value = {
       courses: 0,
       users: 0,
@@ -369,6 +438,21 @@ const loadTeacherStats = async () => {
     }
   } catch (error) {
     console.error('获取教师统计数据失败:', error)
+    
+    // 添加错误信息到界面
+    const errorTitle = '教师统计数据加载失败'
+    let errorDescription = '无法获取教师统计数据，请稍后重试'
+    
+    if (error.response?.data) {
+      errorDescription = error.response.data.description || 
+                       error.response.data.message || 
+                       errorDescription
+    } else if (error.message) {
+      errorDescription = error.message
+    }
+    
+    addError(errorTitle, errorDescription)
+    
     stats.value = {
       courses: 0,
       users: 0,
@@ -409,6 +493,7 @@ const loadAdminStats = async () => {
       console.log('课程数量:', coursesCount)
     } else {
       console.warn('获取课程数量失败:', courseResult.message)
+      addError('课程数据获取失败', courseResult.message || '无法获取课程数量')
     }
     
     // 处理教师数量
@@ -417,6 +502,7 @@ const loadAdminStats = async () => {
       console.log('教师数量:', teachersCount)
     } else {
       console.warn('获取教师数量失败:', teacherResult.message)
+      addError('教师数据获取失败', teacherResult.message || '无法获取教师数量')
     }
     
     // 处理学生数量
@@ -425,6 +511,7 @@ const loadAdminStats = async () => {
       console.log('学生数量:', studentsCount)
     } else {
       console.warn('获取学生数量失败:', studentResult.message)
+      addError('学生数据获取失败', studentResult.message || '无法获取学生数量')
     }
     
     stats.value = {
@@ -438,11 +525,26 @@ const loadAdminStats = async () => {
     
   } catch (error) {
     console.error('获取管理员统计数据失败:', error)
-  stats.value = {
+    
+    // 添加错误信息到界面
+    const errorTitle = '管理员统计数据加载失败'
+    let errorDescription = '无法获取管理员统计数据，请稍后重试'
+    
+    if (error.response?.data) {
+      errorDescription = error.response.data.description || 
+                       error.response.data.message || 
+                       errorDescription
+    } else if (error.message) {
+      errorDescription = error.message
+    }
+    
+    addError(errorTitle, errorDescription)
+    
+    stats.value = {
       courses: 0,
       users: 0,
       tests: 0,
-    overallProgress: 0
+      overallProgress: 0
     }
   }
 }
@@ -454,6 +556,7 @@ const loadStudentStats = async () => {
     const studentId = authStore.user?.id
     if (!studentId) {
       console.error('未找到学生ID')
+      addError('用户信息错误', '无法获取学生ID，请重新登录')
       return
     }
     
@@ -478,6 +581,7 @@ const loadStudentStats = async () => {
       console.log('已选课程数量:', coursesCount)
     } else {
       console.warn('获取已选课程失败:', enrollResult.message)
+      addError('选课数据获取失败', enrollResult.message || '无法获取已选课程信息')
     }
     
     // 处理完成测试数量
@@ -486,6 +590,7 @@ const loadStudentStats = async () => {
       console.log('完成测试数量:', finishedTests)
     } else {
       console.warn('获取完成测试数量失败:', testsResult.message)
+      addError('测试数据获取失败', testsResult.message || '无法获取完成测试数量')
     }
     
     // 3. 计算总体学习进度
@@ -523,6 +628,7 @@ const loadStudentStats = async () => {
                   }
                 } catch (error) {
                   console.error('检查课时完成状态失败:', error)
+                  addError('学习进度计算失败', `课时 ${lesson.lessonName} 进度检查失败: ${error.message}`)
                 }
               } else {
                 // 没有测试的课时默认为已完成
@@ -534,6 +640,7 @@ const loadStudentStats = async () => {
           return totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
         } catch (error) {
           console.error('计算课程进度失败:', error)
+          addError('学习进度计算失败', `课程 ${course?.name || course?.courseName} 进度计算失败: ${error.message}`)
           return 0
         }
       })
@@ -555,6 +662,21 @@ const loadStudentStats = async () => {
     
   } catch (error) {
     console.error('获取学生统计数据失败:', error)
+    
+    // 添加错误信息到界面
+    const errorTitle = '学生统计数据加载失败'
+    let errorDescription = '无法获取学生统计数据，请稍后重试'
+    
+    if (error.response?.data) {
+      errorDescription = error.response.data.description || 
+                       error.response.data.message || 
+                       errorDescription
+    } else if (error.message) {
+      errorDescription = error.message
+    }
+    
+    addError(errorTitle, errorDescription)
+    
     stats.value = {
       courses: 0,
       users: 0,
@@ -740,6 +862,32 @@ onMounted(() => {
   opacity: 0.9;
 }
 
+/* 错误信息展示区域样式 */
+.error-section {
+  margin-bottom: 20px;
+}
+
+.error-section .el-alert {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.error-section .el-alert:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.error-section .el-alert__title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.error-section .el-alert__description {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
 /* 快速操作按钮样式优化 */
 .quick-actions {
   display: flex;
@@ -762,6 +910,10 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+  .error-section {
+    margin-bottom: 16px;
+  }
+  
   .student-stats .el-col {
     margin-bottom: 20px;
   }
