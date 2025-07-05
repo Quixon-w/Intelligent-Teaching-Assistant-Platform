@@ -118,19 +118,9 @@
                           </el-button>
                         </template>
                         
-                        <!-- 课程已结课：未完成的测试只能查看题目，已完成的可以查看结果 -->
+                        <!-- 课程已结课：所有测试都显示查看测试按钮 -->
                         <template v-else-if="courseInfo?.isOver === 1">
                           <el-button 
-                            v-if="!scope.row.isCompleted"
-                            size="small" 
-                            type="info"
-                            @click="viewTestQuestions(scope.row)"
-                          >
-                            查看题目与解析
-                          </el-button>
-                          
-                          <el-button 
-                            v-else
                             size="small" 
                             type="primary"
                             @click="viewTestResult(scope.row)"
@@ -345,136 +335,156 @@
       :before-close="handleCloseDialog"
     >
       <div v-if="currentTestResult">
-        <!-- 测试概要 -->
-        <div class="test-summary">
-          <h4>{{ currentTestResult.lesson.lessonName }} - 测试结果</h4>
-          <el-row :gutter="20" style="margin: 20px 0;">
-            <el-col :span="6">
-              <el-statistic title="总题数" :value="currentTestResult.totalCount" />
-            </el-col>
-            <el-col :span="6">
-              <el-statistic title="正确数" :value="currentTestResult.correctCount" />
-            </el-col>
-            <el-col :span="6">
-              <el-statistic title="正确率" :value="Math.round((currentTestResult.correctCount / currentTestResult.totalCount) * 100)" suffix="%" />
-            </el-col>
-            <el-col :span="6">
-              <el-statistic title="得分" :value="currentTestResult.score" suffix="分" />
-            </el-col>
-          </el-row>
-        </div>
-        
-        <!-- 详细答题记录 -->
-        <div class="test-details">
-          <h5>详细答题记录</h5>
-          <el-table 
-            :data="currentTestResult.records" 
-            style="width: 100%"
-            :row-class-name="getRowClassName"
+        <!-- 未完成测试显示 -->
+        <div v-if="currentTestResult.isNotCompleted" class="test-not-completed">
+          <el-empty 
+            description="您未完成此测试"
+            :image-size="120"
           >
-            <!-- 展开行 -->
-            <el-table-column type="expand" width="50">
-              <template #default="props">
-                <div class="expand-content">
-                  <div class="question-analysis">
-                    <h6>题目解析</h6>
-                    <div class="analysis-content">
-                      <p v-if="props.row.questionDetails?.explanation" class="analysis-text">
-                        {{ props.row.questionDetails.explanation }}
-                      </p>
-                      <p v-else class="no-analysis">暂无解析</p>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </el-table-column>
-            
-            <!-- 题目序号 -->
-            <el-table-column label="题号" width="60" align="center">
-              <template #default="scope">
-                <span class="question-number">{{ scope.$index + 1 }}</span>
-              </template>
-            </el-table-column>
-            
-            <!-- 题目内容 -->
-            <el-table-column label="题目内容" min-width="300">
-              <template #default="scope">
-                <div class="question-content">
-                  <p class="question-text">{{ scope.row.questionDetails?.question || '题目信息加载中...' }}</p>
-                  <div class="question-options" v-if="scope.row.questionDetails?.options && getQuestionOptions(scope.row.questionDetails.options).length > 0">
-                    <div 
-                      class="option-item"
-                      v-for="option in getQuestionOptions(scope.row.questionDetails.options)" 
-                      :key="option.label"
-                    >
-                      <span class="option-label">{{ option.label }}.</span>
-                      <span class="option-text">{{ option.text }}</span>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </el-table-column>
-            
-            <!-- 您的答案 -->
-            <el-table-column label="您的答案" width="100" align="center">
-              <template #default="scope">
-                <el-tag 
-                  :type="scope.row.isCorrect === 1 ? 'success' : 'danger'"
-                  size="large"
-                  class="answer-tag"
-                >
-                  {{ scope.row.selectedOption }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            
-            <!-- 正确答案 -->
-            <el-table-column label="正确答案" width="100" align="center">
-              <template #default="scope">
-                <el-tag 
-                  type="success" 
-                  size="large"
-                  class="answer-tag"
-                >
-                  {{ scope.row.questionDetails?.answer || '未知' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            
-            <!-- 结果 -->
-            <el-table-column label="结果" width="80" align="center">
-              <template #default="scope">
-                <div class="result-indicator">
-                  <el-icon v-if="scope.row.isCorrect === 1" color="#67c23a" size="20">
-                    <Check />
-                  </el-icon>
-                  <el-icon v-else color="#f56c6c" size="20">
-                    <Close />
-                  </el-icon>
-                </div>
-              </template>
-            </el-table-column>
-            
-            <!-- 提交时间 -->
-            <el-table-column label="提交时间" width="150">
-              <template #default="scope">
-                <span class="submit-time">
-                  {{ formatSubmitTime(scope.row.submitTime) }}
-                </span>
-              </template>
-            </el-table-column>
-          </el-table>
+            <template #description>
+              <div class="not-completed-content">
+                <h4>{{ currentTestResult.lesson.lessonName }} - 未完成测试</h4>
+                <p class="not-completed-text">
+                  课程已结课，您未完成此课时的测试。如需查看测试内容，请联系教师。
+                </p>
+              </div>
+            </template>
+          </el-empty>
         </div>
         
-        <!-- 提示信息 -->
-        <div class="test-tip">
-          <el-alert
-            title="提示"
-            description="点击每行左侧的展开按钮可查看题目解析"
-            type="info"
-            :closable="false"
-            show-icon
-          />
+        <!-- 已完成测试显示 -->
+        <div v-else>
+          <!-- 测试概要 -->
+          <div class="test-summary">
+            <h4>{{ currentTestResult.lesson.lessonName }} - 测试结果</h4>
+            <el-row :gutter="20" style="margin: 20px 0;">
+              <el-col :span="6">
+                <el-statistic title="总题数" :value="currentTestResult.totalCount" />
+              </el-col>
+              <el-col :span="6">
+                <el-statistic title="正确数" :value="currentTestResult.correctCount" />
+              </el-col>
+              <el-col :span="6">
+                <el-statistic title="正确率" :value="Math.round((currentTestResult.correctCount / currentTestResult.totalCount) * 100)" suffix="%" />
+              </el-col>
+              <el-col :span="6">
+                <el-statistic title="得分" :value="currentTestResult.score" suffix="分" />
+              </el-col>
+            </el-row>
+          </div>
+        
+          <!-- 详细答题记录 -->
+          <div class="test-details">
+            <h5>详细答题记录</h5>
+            <el-table 
+              :data="currentTestResult.records" 
+              style="width: 100%"
+              :row-class-name="getRowClassName"
+            >
+              <!-- 展开行 -->
+              <el-table-column type="expand" width="50">
+                <template #default="props">
+                  <div class="expand-content">
+                    <div class="question-analysis">
+                      <h6>题目解析</h6>
+                      <div class="analysis-content">
+                        <p v-if="props.row.questionDetails?.explanation" class="analysis-text">
+                          {{ props.row.questionDetails.explanation }}
+                        </p>
+                        <p v-else class="no-analysis">暂无解析</p>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
+              
+              <!-- 题目序号 -->
+              <el-table-column label="题号" width="60" align="center">
+                <template #default="scope">
+                  <span class="question-number">{{ scope.$index + 1 }}</span>
+                </template>
+              </el-table-column>
+              
+              <!-- 题目内容 -->
+              <el-table-column label="题目内容" min-width="300">
+                <template #default="scope">
+                  <div class="question-content">
+                    <p class="question-text">{{ scope.row.questionDetails?.question || '题目信息加载中...' }}</p>
+                    <div class="question-options" v-if="scope.row.questionDetails?.options && getQuestionOptions(scope.row.questionDetails.options).length > 0">
+                      <div 
+                        class="option-item"
+                        v-for="option in getQuestionOptions(scope.row.questionDetails.options)" 
+                        :key="option.label"
+                      >
+                        <span class="option-label">{{ option.label }}.</span>
+                        <span class="option-text">{{ option.text }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
+              
+              <!-- 您的答案 -->
+              <el-table-column label="您的答案" width="100" align="center">
+                <template #default="scope">
+                  <el-tag 
+                    :type="scope.row.isCorrect === 1 ? 'success' : 'danger'"
+                    size="large"
+                    class="answer-tag"
+                  >
+                    {{ scope.row.selectedOption }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              
+              <!-- 正确答案 -->
+              <el-table-column label="正确答案" width="100" align="center">
+                <template #default="scope">
+                  <el-tag 
+                    type="success" 
+                    size="large"
+                    class="answer-tag"
+                  >
+                    {{ scope.row.questionDetails?.answer || '未知' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              
+              <!-- 结果 -->
+              <el-table-column label="结果" width="80" align="center">
+                <template #default="scope">
+                  <div class="result-indicator">
+                    <el-icon v-if="scope.row.isCorrect === 1" color="#67c23a" size="20">
+                      <Check />
+                    </el-icon>
+                    <el-icon v-else color="#f56c6c" size="20">
+                      <Close />
+                    </el-icon>
+                  </div>
+                </template>
+              </el-table-column>
+              
+              <!-- 提交时间 -->
+              <el-table-column label="提交时间" width="150">
+                <template #default="scope">
+                  <span class="submit-time">
+                    {{ formatSubmitTime(scope.row.submitTime) }}
+                  </span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+          
+          <!-- 提示信息 -->
+          <div class="test-tip">
+            <el-alert
+              title="提示"
+              description="点击每行左侧的展开按钮可查看题目解析"
+              type="info"
+              :closable="false"
+              show-icon
+            />
+          </div>
         </div>
       </div>
       
@@ -1037,6 +1047,7 @@ const loadLessonsCompletionStatus = async () => {
 
 const viewTestResult = (lesson) => {
   if (lesson.records && lesson.records.length > 0) {
+    // 有测试记录，显示测试结果
     showTestResultDialog.value = true
     currentTestResult.value = {
       lesson,
@@ -1049,53 +1060,21 @@ const viewTestResult = (lesson) => {
       ? Math.round((currentTestResult.value.correctCount / currentTestResult.value.totalCount) * 100) 
       : 0
     currentTestResult.value.score = score
-    
-
   } else {
-    ElMessage.warning('未找到测试记录')
+    // 没有测试记录，显示未完成信息
+    showTestResultDialog.value = true
+    currentTestResult.value = {
+      lesson,
+      records: [],
+      correctCount: 0,
+      totalCount: 0,
+      score: 0,
+      isNotCompleted: true // 标记为未完成
+    }
   }
 }
 
-const viewTestQuestions = (lesson) => {
-  const courseId = route.params.id;
-  const lessonId = lesson.lessonId;
-  
-  console.log('查看测试题 - 详细信息:', { 
-    courseId, 
-    lessonId, 
-    lesson,
-    routeParams: route.params,
-    currentPath: route.path 
-  });
-  
-  // 检查必要参数
-  if (!courseId) {
-    ElMessage.error('缺少课程ID参数');
-    return;
-  }
-  
-  if (!lessonId) {
-    ElMessage.error('缺少课时ID参数');
-    return;
-  }
-  
-  // 跳转到查看测试题页面（只读模式）
-  const routeConfig = {
-    name: 'student-questions',
-    params: {
-      courseId: courseId,
-      lessonId: lessonId
-    },
-    query: {
-      readonly: 'true' // 添加只读模式参数
-    }
-  };
-  
-  router.push(routeConfig).catch(error => {
-    console.error('路由跳转失败:', error);
-    ElMessage.error(`跳转失败: ${error.message}`);
-  });
-}
+
 
 // 对话框关闭处理
 const handleCloseDialog = (done) => {
@@ -1747,5 +1726,22 @@ onMounted(() => {
   .placeholder-text {
     font-size: 16px;
   }
+}
+
+/* 未完成测试样式 */
+.test-not-completed {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.not-completed-content h4 {
+  color: #909399;
+  margin-bottom: 16px;
+}
+
+.not-completed-text {
+  color: #606266;
+  line-height: 1.6;
+  font-size: 14px;
 }
 </style> 

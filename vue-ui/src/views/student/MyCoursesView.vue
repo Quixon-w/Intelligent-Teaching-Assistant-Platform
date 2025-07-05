@@ -221,16 +221,7 @@
                     参加测试({{ course.pendingTests }})
                   </el-button>
                   
-                  <el-button 
-                    v-if="course.pendingTests > 0 && course.isOver === 1"
-                    type="info" 
-                    size="default"
-                    @click.stop="viewCourse(course)"
-                    class="action-btn info"
-                  >
-                    <el-icon><View /></el-icon>
-                    查看题目与解析({{ course.pendingTests }})
-                  </el-button>
+
                   
                   <el-button 
                     v-if="course.isOver === 0"
