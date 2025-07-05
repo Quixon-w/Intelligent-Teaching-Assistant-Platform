@@ -49,16 +49,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private static final String SALT = "dick";
 
     @Override
-    public long userRegister(String userAccount, String userPassword, String checkPassword) {
+    public long userRegister(String userAccount, String userPassword, String checkPassword, Integer userRole) {
         // 校验
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
-        }
         if (userAccount.length() < 4) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号过短，不少于四位");
         }
         if (userPassword.length() < 8 || checkPassword.length() < 8) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码过短，不少于八位");
+        }
+        if (userRole != STUDENT_ROLE && userRole != TEACHER_ROLE) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户角色参数错误");
         }
         // 账户不能包含特殊字符
         SpecialCode.validateCode(userAccount);
@@ -79,6 +79,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = new User();
         user.setUserAccount(userAccount);
         user.setUserPassword(encryptPassword);
+        user.setUserRole(userRole);
+        user.setUsername(userAccount);
         boolean saveResult = this.save(user);
         if (!saveResult) {
             return -1;

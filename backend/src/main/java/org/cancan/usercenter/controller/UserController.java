@@ -64,10 +64,11 @@ public class UserController {
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        Integer userRole = userRegisterRequest.getUserRole();
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword) || userRole == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "存在参数为空");
         }
-        long result = userService.userRegister(userAccount, userPassword, checkPassword);
+        long result = userService.userRegister(userAccount, userPassword, checkPassword, userRole);
         return ResultUtils.success(result);
     }
 

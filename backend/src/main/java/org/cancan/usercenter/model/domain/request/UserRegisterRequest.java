@@ -19,6 +19,9 @@ public class UserRegisterRequest implements Serializable {
     @Schema(description = "用户账号")
     private String userAccount;
 
+    @Schema(description = "用户身份")
+    private Integer userRole;
+
     @Schema(description = "用户密码")
     private String userPassword;
 
