@@ -1166,6 +1166,35 @@ const viewTestResult = async (lesson) => {
         })
         
         if (questionsRes.code === 0 && questionsRes.data && questionsRes.data.length > 0) {
+          console.log('原始题目数据:', questionsRes.data)
+          
+          // 处理题目数据，解析options字段
+          const processedQuestions = questionsRes.data.map(question => {
+            console.log('处理题目:', question)
+            console.log('options类型:', typeof question.options)
+            console.log('options值:', question.options)
+            
+            let options = {}
+            try {
+              // 如果options是字符串，尝试解析
+              if (typeof question.options === 'string') {
+                options = JSON.parse(question.options)
+              } else if (typeof question.options === 'object') {
+                options = question.options
+              }
+            } catch (e) {
+              console.error('解析options失败:', e)
+              options = {}
+            }
+            
+            console.log('解析后的options:', options)
+            
+            return {
+              ...question,
+              options: options
+            }
+          })
+          
           showTestResultDialog.value = true
           currentTestResult.value = {
             lesson,
@@ -1174,7 +1203,7 @@ const viewTestResult = async (lesson) => {
             totalCount: 0,
             score: 0,
             isNotCompleted: true, // 标记为未完成
-            questions: questionsRes.data // 添加题目信息
+            questions: processedQuestions // 添加处理后的题目信息
           }
         } else {
           ElMessage.error('获取题目信息失败或该课时暂无测试题目')
