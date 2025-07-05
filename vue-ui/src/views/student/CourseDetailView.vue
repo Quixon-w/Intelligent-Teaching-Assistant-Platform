@@ -335,104 +335,116 @@
       :before-close="handleCloseDialog"
     >
       <div v-if="currentTestResult">
-        <!-- 调试信息 -->
-        <div style="background: #f0f0f0; padding: 10px; margin-bottom: 10px; font-size: 12px;">
-          <p>调试信息:</p>
-          <p>isNotCompleted: {{ currentTestResult.isNotCompleted }}</p>
-          <p>questions: {{ currentTestResult.questions ? currentTestResult.questions.length : 'null' }}</p>
-          <p>records: {{ currentTestResult.records ? currentTestResult.records.length : 'null' }}</p>
-        </div>
-        
-        <!-- 未完成测试显示（类似教师端查看） -->
+        <!-- 未完成测试显示 -->
         <div v-if="currentTestResult.isNotCompleted" class="test-not-completed">
-          <div class="not-completed-header">
-            <h4>{{ currentTestResult.lesson.lessonName }} - 测试题目</h4>
-            <el-tag type="warning" size="large">您未完成此测试</el-tag>
-          </div>
-          
-          <!-- 题目列表 -->
-          <div class="questions-list" v-if="currentTestResult.questions">
-            <el-card 
-              v-for="(question, index) in currentTestResult.questions" 
-              :key="question.questionId"
-              class="question-card"
-              shadow="hover"
-            >
-              <template #header>
-                <div class="question-header">
-                  <div class="question-info">
-                    <el-tag type="primary" size="small">第{{ index + 1 }}题</el-tag>
-                    <el-tag v-if="question.questionKonwledge" type="info" size="small">
-                      {{ question.questionKonwledge }}
-                    </el-tag>
+          <!-- 结课课程显示题目 -->
+          <div v-if="courseInfo && courseInfo.isOver === 1 && currentTestResult.questions" class="test-questions">
+            <div class="not-completed-header">
+              <h4>{{ currentTestResult.lesson.lessonName }} - 测试题目</h4>
+              <el-tag type="warning" size="large">您未完成此测试</el-tag>
+            </div>
+            
+            <!-- 题目列表 -->
+            <div class="questions-list">
+              <el-card 
+                v-for="(question, index) in currentTestResult.questions" 
+                :key="question.questionId"
+                class="question-card"
+                shadow="hover"
+              >
+                <template #header>
+                  <div class="question-header">
+                    <div class="question-info">
+                      <el-tag type="primary" size="small">第{{ index + 1 }}题</el-tag>
+                      <el-tag v-if="question.knowledge" type="info" size="small">
+                        {{ question.knowledge }}
+                      </el-tag>
+                    </div>
                   </div>
-                </div>
-              </template>
-              
-              <div class="question-content">
-                <!-- 题目内容 -->
-                <div class="question-text-container">
-                  <p class="question-text">{{ question.questionContent }}</p>
-                </div>
+                </template>
                 
-                <!-- 选项（禁用状态） -->
-                <div class="question-options">
-                  <el-radio-group 
-                    :model-value="question.questionAnswer[0]"
-                    class="options-group"
-                    size="large"
-                    disabled
-                  >
-                    <el-radio value="A" class="option-item">
-                      <span class="option-label">A</span>
-                      <span class="option-text">{{ question.questionAnswer[1] }}</span>
-                    </el-radio>
-                    <el-radio value="B" class="option-item">
-                      <span class="option-label">B</span>
-                      <span class="option-text">{{ question.questionAnswer[2] }}</span>
-                    </el-radio>
-                    <el-radio value="C" class="option-item">
-                      <span class="option-label">C</span>
-                      <span class="option-text">{{ question.questionAnswer[3] }}</span>
-                    </el-radio>
-                    <el-radio value="D" class="option-item">
-                      <span class="option-label">D</span>
-                      <span class="option-text">{{ question.questionAnswer[4] }}</span>
-                    </el-radio>
-                  </el-radio-group>
-                </div>
-                
-                <!-- 正确答案和解析 -->
-                <div class="answer-section">
-                  <el-divider content-position="left">
-                    <el-tag type="success" size="small">正确答案</el-tag>
-                  </el-divider>
-                  <div class="correct-answer">
-                    <el-icon color="#67c23a"><Check /></el-icon>
-                    <span class="answer-text">正确答案：{{ question.questionAnswer[0] }}</span>
+                <div class="question-content">
+                  <!-- 题目内容 -->
+                  <div class="question-text-container">
+                    <p class="question-text">{{ question.question }}</p>
                   </div>
-                  <div v-if="question.questionExplanation" class="explanation">
+                  
+                  <!-- 选项（禁用状态） -->
+                  <div class="question-options">
+                    <el-radio-group 
+                      :model-value="question.answer"
+                      class="options-group"
+                      size="large"
+                      disabled
+                    >
+                      <el-radio value="A" class="option-item">
+                        <span class="option-label">A</span>
+                        <span class="option-text">{{ question.options.A }}</span>
+                      </el-radio>
+                      <el-radio value="B" class="option-item">
+                        <span class="option-label">B</span>
+                        <span class="option-text">{{ question.options.B }}</span>
+                      </el-radio>
+                      <el-radio value="C" class="option-item">
+                        <span class="option-label">C</span>
+                        <span class="option-text">{{ question.options.C }}</span>
+                      </el-radio>
+                      <el-radio value="D" class="option-item">
+                        <span class="option-label">D</span>
+                        <span class="option-text">{{ question.options.D }}</span>
+                      </el-radio>
+                    </el-radio-group>
+                  </div>
+                  
+                  <!-- 正确答案和解析 -->
+                  <div class="answer-section">
                     <el-divider content-position="left">
-                      <el-tag type="info" size="small">答案解析</el-tag>
+                      <el-tag type="success" size="small">正确答案</el-tag>
                     </el-divider>
-                    <div class="explanation-content">
-                      {{ question.questionExplanation }}
+                    <div class="correct-answer">
+                      <el-icon color="#67c23a"><Check /></el-icon>
+                      <span class="answer-text">正确答案：{{ question.answer }}</span>
+                    </div>
+                    <div v-if="question.explanation" class="explanation">
+                      <el-divider content-position="left">
+                        <el-tag type="info" size="small">答案解析</el-tag>
+                      </el-divider>
+                      <div class="explanation-content">
+                        {{ question.explanation }}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </el-card>
+              </el-card>
+            </div>
+            
+            <!-- 提示信息 -->
+            <div class="test-tip">
+              <el-alert
+                title="提示"
+                description="课程已结课，您可以查看题目内容和答案解析，但无法提交答案。"
+                type="info"
+                :closable="false"
+                show-icon
+              />
+            </div>
           </div>
           
-          <!-- 提示信息 -->
-          <div class="test-tip">
-            <el-alert
-              title="提示"
-              description="课程已结课，您可以查看题目内容和答案解析，但无法提交答案。"
-              type="info"
-              :closable="false"
-              show-icon
-            />
+          <!-- 非结课课程显示联系老师信息 -->
+          <div v-else class="contact-teacher">
+            <el-empty 
+              description="您未完成此测试"
+              :image-size="120"
+            >
+              <template #description>
+                <div class="not-completed-content">
+                  <h4>{{ currentTestResult.lesson.lessonName }} - 未完成测试</h4>
+                  <p class="not-completed-text">
+                    您未完成此课时的测试。如需查看测试内容，请联系教师。
+                  </p>
+                </div>
+              </template>
+            </el-empty>
           </div>
         </div>
         
@@ -1130,11 +1142,8 @@ const loadLessonsCompletionStatus = async () => {
 }
 
 const viewTestResult = async (lesson) => {
-  console.log('viewTestResult called with lesson:', lesson)
-  
   if (lesson.records && lesson.records.length > 0) {
     // 有测试记录，显示测试结果
-    console.log('有测试记录，显示测试结果')
     showTestResultDialog.value = true
     currentTestResult.value = {
       lesson,
@@ -1148,33 +1157,43 @@ const viewTestResult = async (lesson) => {
       : 0
     currentTestResult.value.score = score
   } else {
-    // 没有测试记录，获取题目信息并显示（类似教师端查看）
-    console.log('没有测试记录，获取题目信息')
-    try {
-      console.log('调用 getLessonQuestionsList，lessonId:', lesson.lessonId)
-      const questionsRes = await getLessonQuestionsList(lesson.lessonId)
-      console.log('getLessonQuestionsList 响应:', questionsRes)
-      
-      if (questionsRes.code === 0 && questionsRes.data && questionsRes.data.length > 0) {
-        console.log('获取题目成功，题目数量:', questionsRes.data.length)
-        showTestResultDialog.value = true
-        currentTestResult.value = {
-          lesson,
-          records: [],
-          correctCount: 0,
-          totalCount: 0,
-          score: 0,
-          isNotCompleted: true, // 标记为未完成
-          questions: questionsRes.data // 添加题目信息
+    // 没有测试记录，检查是否是结课课程
+    if (courseInfo.value && courseInfo.value.isOver === 1) {
+      // 结课课程，获取题目信息并显示
+      try {
+        const questionsRes = await request.get('/api/map/list', {
+          params: { lessonId: lesson.lessonId }
+        })
+        
+        if (questionsRes.code === 0 && questionsRes.data && questionsRes.data.length > 0) {
+          showTestResultDialog.value = true
+          currentTestResult.value = {
+            lesson,
+            records: [],
+            correctCount: 0,
+            totalCount: 0,
+            score: 0,
+            isNotCompleted: true, // 标记为未完成
+            questions: questionsRes.data // 添加题目信息
+          }
+        } else {
+          ElMessage.error('获取题目信息失败或该课时暂无测试题目')
         }
-        console.log('设置 currentTestResult:', currentTestResult.value)
-      } else {
-        console.log('获取题目失败或题目为空:', questionsRes)
-        ElMessage.error('获取题目信息失败或该课时暂无测试题目')
+      } catch (error) {
+        console.error('获取题目信息失败:', error)
+        ElMessage.error('获取题目信息失败')
       }
-    } catch (error) {
-      console.error('获取题目信息失败:', error)
-      ElMessage.error('获取题目信息失败')
+    } else {
+      // 非结课课程，显示未完成信息
+      showTestResultDialog.value = true
+      currentTestResult.value = {
+        lesson,
+        records: [],
+        correctCount: 0,
+        totalCount: 0,
+        score: 0,
+        isNotCompleted: true
+      }
     }
   }
 }
@@ -1976,5 +1995,26 @@ onMounted(() => {
 .test-tip {
   margin-top: 24px;
   padding: 0 20px;
+}
+
+/* 结课课程题目显示样式 */
+.test-questions {
+  padding: 20px 0;
+}
+
+.contact-teacher {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.not-completed-content h4 {
+  color: #909399;
+  margin-bottom: 16px;
+}
+
+.not-completed-text {
+  color: #606266;
+  line-height: 1.6;
+  font-size: 14px;
 }
 </style> 
