@@ -170,7 +170,9 @@ public class UserController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码校验失败，两次密码不同");
         }
         userService.passwordUpdate(oldPassword, newPassword, userId, currentUser);
-        this.userLogout(request);
+        if (currentUser.getUserRole() != ADMIN_ROLE) {
+            this.userLogout(request);
+        }
         return ResultUtils.success(true);
     }
 
@@ -235,7 +237,6 @@ public class UserController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "该用户不可被删除");
         }
         boolean result = userService.removeById(id);
-        userService.userLogout(request);
         return ResultUtils.success(result);
     }
 
