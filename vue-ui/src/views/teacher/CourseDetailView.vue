@@ -2019,14 +2019,21 @@ const loadLessonExercisesStatus = async () => {
     
     // 检查响应格式并处理 - 习题API返回格式：{ success: true, data: [...], total: 2, message: "..." }
     if (response.data && response.data.success && response.data.data && response.data.data.length > 0) {
+      console.log('原始习题文件数据:', response.data.data)
+      
       // 转换为前端期望的格式，与教学大纲保持一致
       lessonExercisesStatus.value = {
-        files: response.data.data.map(file => ({
-          filename: file.filename,
-          size: 0, // 习题文件大小暂时设为0
-          created_time: file.metadata?.generated_at || '',
-          download_url: `/ai/v1/exercise/${userId}/${courseId}/${lessonNum}/${file.filename}`
-        })),
+        files: response.data.data.map(file => {
+          console.log('处理文件:', file)
+          console.log('文件大小:', file.file_size, '类型:', typeof file.file_size)
+          
+          return {
+            filename: file.filename,
+            size: file.file_size || 0, // 使用后端返回的实际文件大小
+            created_time: file.created_time || file.metadata?.generated_at || '',
+            download_url: `/ai/v1/exercise/download/${userId}/${courseId}/${lessonNum}/${file.filename}?is_teacher=true`
+          }
+        }),
         total_files: response.data.total,
         course_id: courseId,
         lesson_num: lessonNum,

@@ -23,7 +23,7 @@ create_lock = Lock()
 
 
 class CreateOutlineBody(BaseModel):
-    user_id: str = Field(..., description="用户ID，用于确定存储路径")
+    user_id: Union[str, int] = Field(..., description="用户ID，用于确定存储路径")
     session_id: str = Field(..., description="会话ID")
     course_id: str = Field(..., description="课程ID")
     lesson_num: str = Field(..., description="课时号，必填")
@@ -43,6 +43,12 @@ class CreateOutlineBody(BaseModel):
             }
         }
     }
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        # 确保user_id是字符串类型
+        if isinstance(self.user_id, int):
+            self.user_id = str(self.user_id)
 
 
 def get_user_path(user_id: str, is_teacher: bool) -> str:

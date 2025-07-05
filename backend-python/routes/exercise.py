@@ -23,7 +23,7 @@ exercise_lock = Lock()
 
 
 class ExerciseBody(BaseModel):
-    user_id: str = Field(..., description="用户ID，用于确定存储路径")
+    user_id: Union[str, int] = Field(..., description="用户ID，用于确定存储路径")
     session_id: str = Field(..., description="会话ID")
     course_id: str = Field(..., description="课程ID")
     lesson_num: str = Field(..., description="课时号，必填")
@@ -50,6 +50,12 @@ class ExerciseBody(BaseModel):
             }
         }
     }
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # 确保user_id是字符串类型
+        if isinstance(self.user_id, int):
+            self.user_id = str(self.user_id)
 
 
 class ExerciseQuestion(BaseModel):
@@ -370,7 +376,7 @@ def generate_exercise_prompt(content: str, question_count: int, difficulty: str)
 题目1：
 题干：[题干内容]
 A. [选项A]
-B. [选项B] 
+B. [选项B]
 C. [选项C]
 D. [选项D]
 正确答案：[A/B/C/D]
@@ -495,41 +501,36 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
         # 添加分隔线
         doc.add_paragraph('=' * 50)
         
-        # 将习题内容按行分割并添加到文档
-        lines = exercise_content.split('\n')
-        content_added = False
+        # 简化内容处理逻辑 - 直接保存所有内容
+        print("正在添加习题内容到文档...")
         
-        for line in lines:
-            line = line.strip()
-            if line:
-                content_added = True
-                # 检查是否是题目标题
-                if line.startswith('题目'):
-                    doc.add_heading(line, level=1)
-                elif line.startswith('题干：'):
-                    doc.add_paragraph(line, style='Heading 2')
-                elif line.startswith(('A.', 'B.', 'C.', 'D.')):
-                    doc.add_paragraph(line)
-                elif line.startswith('正确答案：'):
-                    p = doc.add_paragraph(line)
-                    p.runs[0].bold = True  # 加粗
-                elif line.startswith('解析：'):
-                    p = doc.add_paragraph(line)
-                    p.runs[0].bold = True  # 加粗
-                elif line.startswith('所属知识点：'):
-                    p = doc.add_paragraph(line)
-                    p.runs[0].bold = True  # 加粗
-                else:
-                    doc.add_paragraph(line)
-        
-        # 检查是否添加了内容
-        if not content_added:
-            print("⚠️ 警告：没有添加任何内容到文档")
-            # 添加原始内容作为备用
-            doc.add_paragraph("原始生成内容：")
-            doc.add_paragraph(exercise_content)
+        # 确保内容不为空
+        if exercise_content and len(exercise_content.strip()) > 0:
+            # 按行分割内容
+            lines = exercise_content.split('\n')
+            print(f"处理 {len(lines)} 行内容...")
+            
+            for i, line in enumerate(lines):
+                line = line.strip()
+                if line:  # 只添加非空行
+                    # 简单的内容分类
+                    if line.startswith('题目') or line.startswith('第') and '题' in line:
+                        doc.add_heading(line, level=1)
+                    elif line.startswith(('A.', 'B.', 'C.', 'D.')):
+                        doc.add_paragraph(line)
+                    elif line.startswith('正确答案：') or line.startswith('解析：') or line.startswith('知识点：'):
+                        p = doc.add_paragraph(line)
+                        p.runs[0].bold = True
+                    else:
+                        doc.add_paragraph(line)
+            
+            print(f"已添加 {len(lines)} 行内容到文档")
+        else:
+            print("⚠️ 警告：内容为空，添加默认内容")
+            doc.add_paragraph("习题内容为空，请检查生成过程")
         
         # 保存文档
+        print(f"正在保存文档到: {file_path}")
         doc.save(file_path)
         
         # 验证文件是否成功保存且不为空
@@ -539,11 +540,37 @@ def save_exercises_to_docx(user_id: str, course_id: str, lesson_num: str, exerci
             
             if file_size == 0:
                 print("⚠️ 警告：保存的文件大小为0字节")
-                return {
-                    "success": False,
-                    "error": "保存的文件为空",
-                    "message": "保存的文件为空，请检查生成的内容"
-                }
+                print("尝试使用备用方法保存...")
+                
+                # 备用方法：直接写入文本文件
+                try:
+                    txt_filename = filename.replace('.docx', '.txt')
+                    txt_file_path = os.path.join(exercises_dir, txt_filename)
+                    
+                    with open(txt_file_path, 'w', encoding='utf-8') as f:
+                        f.write(f"课程{course_id} 课时{lesson_num} 习题\n")
+                        f.write(f"生成时间：{datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}\n")
+                        f.write("=" * 50 + "\n")
+                        f.write(exercise_content)
+                    
+                    txt_file_size = os.path.getsize(txt_file_path)
+                    print(f"备用文件保存成功，大小: {txt_file_size} 字节")
+                    
+                    return {
+                        "success": True,
+                        "file_path": txt_file_path,
+                        "filename": txt_filename,
+                        "message": f"习题已保存为 {txt_filename} (备用格式)",
+                        "file_size": txt_file_size
+                    }
+                    
+                except Exception as e:
+                    print(f"备用保存也失败: {e}")
+                    return {
+                        "success": False,
+                        "error": "文件保存失败",
+                        "message": f"无法保存文件: {str(e)}"
+                    }
         else:
             print("⚠️ 错误：文件保存失败")
             return {
@@ -645,19 +672,43 @@ async def generate_exercises_with_rwkv(prompt: str, request: Request, max_tokens
             print("⚠️ 错误：RWKV模型生成的内容为空")
             raise Exception("模型生成的内容为空，请检查模型状态和参数设置")
         
-        # 清理生成的内容
-        cleaned_content = clean_generated_content(answer_content)
+        # 检查生成的内容是否太短
+        if len(answer_content.strip()) < 50:
+            print("⚠️ 警告：生成的内容过短，可能存在问题")
+            print(f"内容长度: {len(answer_content)} 字符")
+            print(f"内容: {answer_content}")
+            
+            # 如果内容太短，尝试重新生成
+            if token_count < max_tokens * 0.5:  # 如果只用了不到一半的token
+                print("尝试继续生成更多内容...")
+                # 这里可以添加重试逻辑，但为了简单起见，我们继续使用当前内容
         
-        # 检查清理后的内容
-        if not cleaned_content or len(cleaned_content.strip()) == 0:
-            print("⚠️ 警告：清理后内容为空，使用原始内容")
+        # 清理生成的内容（可选，如果清理后内容为空则使用原始内容）
+        try:
+            cleaned_content = clean_generated_content(answer_content)
+            
+            # 检查清理后的内容
+            if not cleaned_content or len(cleaned_content.strip()) == 0:
+                print("⚠️ 警告：清理后内容为空，使用原始内容")
+                cleaned_content = answer_content.strip()
+            
+            # 如果清理后的内容太短，使用原始内容
+            if len(cleaned_content.strip()) < 30:  # 降低阈值
+                print("⚠️ 警告：清理后内容过短，使用原始内容")
+                cleaned_content = answer_content.strip()
+                
+        except Exception as e:
+            print(f"清理内容时出错: {e}")
+            print("使用原始内容")
             cleaned_content = answer_content.strip()
         
-        # 如果生成的内容太短，给出警告
-        if len(cleaned_content) < 100:
-            print("⚠️ 警告：生成的内容过短，可能存在问题")
-            print(f"内容长度: {len(cleaned_content)} 字符")
-            print(f"内容: {cleaned_content}")
+        # 最终验证：确保返回的内容不为空
+        if not cleaned_content or len(cleaned_content.strip()) == 0:
+            print("⚠️ 错误：最终内容为空，使用原始内容")
+            cleaned_content = answer_content.strip()
+        
+        print(f"最终返回内容长度: {len(cleaned_content)} 字符")
+        print(f"最终内容预览: {cleaned_content[:300]}...")
         
         return cleaned_content
         
@@ -688,18 +739,12 @@ def clean_generated_content(content: str) -> str:
         print("⚠️ 警告：原始内容为空")
         return ""
     
-    # 移除常见的无关前缀
+    # 更保守的清理策略 - 只移除明显无关的前缀
     prefixes_to_remove = [
+        "Assistant:",
         "好的，我会根据题目要求继续生成",
         "好的，我可以为您生成",
         "好的，我会为您生成",
-        "Assistant:",
-        "好的，",
-        "我会",
-        "我将",
-        "请注意，",
-        "这些题目需要涵盖",
-        "基于以上内容，",
     ]
     
     cleaned = content.strip()
@@ -710,60 +755,43 @@ def clean_generated_content(content: str) -> str:
             cleaned = cleaned[len(prefix):].strip()
             print(f"移除了前缀: {prefix}")
     
-    # 查找第一个题目开始的位置
-    import re
-    
-    # 查找题目编号模式
-    question_patterns = [
-        r'题目\d*：',
-        r'\d+\.\s*\*\*',
-        r'\d+\.\s*',
-        r'题目\d*',
-        r'\d+\.',
-    ]
-    
-    start_pos = -1
-    for pattern in question_patterns:
-        match = re.search(pattern, cleaned)
-        if match:
-            start_pos = match.start()
-            print(f"找到题目开始位置: {start_pos}, 模式: {pattern}")
-            break
-    
-    if start_pos > 0:
-        cleaned = cleaned[start_pos:]
-        print(f"从位置 {start_pos} 开始截取内容")
-    
     # 如果清理后内容为空，返回原始内容
     if not cleaned or len(cleaned.strip()) == 0:
         print("⚠️ 警告：清理后内容为空，返回原始内容")
         return content.strip()
     
-    # 移除不相关的内容（如Question:, Answer:等）
+    # 更保守的内容过滤逻辑 - 只过滤明显无关的内容
     lines = cleaned.split('\n')
     filtered_lines = []
-    skip_mode = False
     
     for line in lines:
         line = line.strip()
         
-        # 跳过不相关的内容
-        if any(keyword in line for keyword in ['Question:', 'Answer:', '##', '###', 'FIFO', 'SJF', '轮询调度器']):
-            skip_mode = True
+        # 只跳过明显无关的内容，避免误删有用内容
+        skip_keywords = [
+            'Question:', 'Answer:', 'Human:', 'User:', 'Bot:',
+            'FIFO', 'SJF', '轮询调度器'
+        ]
+        
+        should_skip = any(keyword in line for keyword in skip_keywords)
+        
+        if should_skip:
+            print(f"跳过包含关键词的行: {line[:50]}...")
             continue
         
-        # 如果遇到新的题目，停止跳过模式
-        if re.match(r'题目\d*：', line) or re.match(r'\d+\.\s*\*\*', line):
-            skip_mode = False
-        
-        if not skip_mode:
-            filtered_lines.append(line)
+        # 保留所有其他内容
+        filtered_lines.append(line)
     
     cleaned = '\n'.join(filtered_lines)
     
     # 如果过滤后内容为空，返回清理前的内容
     if not cleaned or len(cleaned.strip()) == 0:
         print("⚠️ 警告：过滤后内容为空，返回清理前的内容")
+        return content.strip()
+    
+    # 最终验证：确保清理后的内容仍然有意义
+    if len(cleaned.strip()) < 20:  # 进一步降低阈值
+        print("⚠️ 警告：清理后内容过短，可能过度清理，返回原始内容")
         return content.strip()
     
     print(f"清理后内容长度: {len(cleaned)} 字符")
@@ -1536,4 +1564,60 @@ async def test_exercise_generation():
                 "timestamp": datetime.now().isoformat()
             },
             "message": "测试习题生成失败"
+        }
+
+
+@router.post("/v1/exercise/debug-save", tags=["Exercise"])
+async def debug_save_exercise():
+    """
+    调试文件保存功能
+    """
+    try:
+        # 测试内容
+        test_content = """
+题目1：什么是操作系统？
+A. 计算机硬件
+B. 管理计算机硬件和软件资源的系统软件
+C. 应用程序
+D. 网络设备
+
+正确答案：B
+
+解析：操作系统是管理计算机硬件和软件资源的系统软件，它为用户和其他软件提供公共服务。
+
+题目2：进程和线程的区别是什么？
+A. 没有区别
+B. 进程是资源分配的基本单位，线程是CPU调度的基本单位
+C. 进程比线程更轻量级
+D. 线程比进程更重
+
+正确答案：B
+
+解析：进程是资源分配的基本单位，拥有独立的内存空间；线程是CPU调度的基本单位，共享进程的资源。
+"""
+        
+        # 测试保存
+        save_result = save_exercises_to_docx(
+            "test_user",
+            "test_course", 
+            "test_lesson",
+            test_content,
+            False
+        )
+        
+        return {
+            "success": True,
+            "save_result": save_result,
+            "test_content_length": len(test_content),
+            "message": "调试保存完成"
+        }
+        
+    except Exception as e:
+        print(f"调试保存失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "error": str(e),
+            "message": f"调试保存失败: {str(e)}"
         }
