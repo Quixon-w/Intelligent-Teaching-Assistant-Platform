@@ -59,20 +59,28 @@
                 size="large"
               >
                 <el-radio value="A" class="option-item">
-                  <span class="option-label">A</span>
-                  <span class="option-text">{{ question.options.A }}</span>
+                  <div class="option-content">
+                    <span class="option-label">A</span>
+                    <span class="option-text">{{ question.options.A }}</span>
+                  </div>
                 </el-radio>
                 <el-radio value="B" class="option-item">
-                  <span class="option-label">B</span>
-                  <span class="option-text">{{ question.options.B }}</span>
+                  <div class="option-content">
+                    <span class="option-label">B</span>
+                    <span class="option-text">{{ question.options.B }}</span>
+                  </div>
                 </el-radio>
                 <el-radio value="C" class="option-item">
-                  <span class="option-label">C</span>
-                  <span class="option-text">{{ question.options.C }}</span>
+                  <div class="option-content">
+                    <span class="option-label">C</span>
+                    <span class="option-text">{{ question.options.C }}</span>
+                  </div>
                 </el-radio>
                 <el-radio value="D" class="option-item">
-                  <span class="option-label">D</span>
-                  <span class="option-text">{{ question.options.D }}</span>
+                  <div class="option-content">
+                    <span class="option-label">D</span>
+                    <span class="option-text">{{ question.options.D }}</span>
+                  </div>
                 </el-radio>
               </el-radio-group>
             </div>
@@ -328,43 +336,76 @@ onUnmounted(() => {
 .options-group {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
 }
 
 .option-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  border: 1px solid #dcdfe6;
-  border-radius: 6px;
-  background-color: #fafafa;
-  transition: all 0.3s;
+  width: 100%;
+  margin: 0;
 }
 
-.option-item:hover {
-  background-color: #f0f9ff;
+.option-item :deep(.el-radio__input) {
+  display: none;
+}
+
+.option-item :deep(.el-radio__label) {
+  padding: 0;
+  width: 100%;
+}
+
+.option-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid #e4e7ed;
+  border-radius: 8px;
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  min-height: 60px;
+}
+
+.option-item:hover .option-content {
   border-color: #409eff;
+  background-color: #f0f9ff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+}
+
+.option-item :deep(.el-radio__input.is-checked) + .el-radio__label .option-content {
+  border-color: #409eff;
+  background-color: #f0f9ff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
 }
 
 .option-label {
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  line-height: 24px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #f5f7fa;
+  color: #606266;
+  border-radius: 50%;
+  margin-right: 16px;
+  font-weight: bold;
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.option-item :deep(.el-radio__input.is-checked) + .el-radio__label .option-label {
   background-color: #409eff;
   color: white;
-  border-radius: 50%;
-  margin-right: 12px;
-  font-weight: bold;
-  font-size: 14px;
 }
 
 .option-text {
   flex: 1;
-  font-size: 15px;
-  color: #606266;
+  font-size: 16px;
+  color: #303133;
+  line-height: 1.5;
+  font-weight: 500;
 }
 
 .loading-section {
@@ -402,8 +443,16 @@ onUnmounted(() => {
     font-size: 14px;
   }
   
-  .option-item {
-    padding: 8px 12px;
+  .option-content {
+    padding: 12px 16px;
+    min-height: 50px;
+  }
+  
+  .option-label {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    margin-right: 12px;
   }
   
   .option-text {
