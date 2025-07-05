@@ -223,11 +223,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         String sessionId = request.getSession().getId();
         String userJson = redisUtil.get(sessionId);
         if (userJson == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN);
+            throw new BusinessException(ErrorCode.NOT_LOGIN, "未登录");
         }
         User currentUser = JSON.parseObject(userJson, User.class);
         if (currentUser == null) {
-            throw new BusinessException(ErrorCode.NO_AUTH);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "SESSION解析错误");
         }
         // 续期
         redisUtil.expire(sessionId, EXPIRE_TIME, TimeUnit.SECONDS);

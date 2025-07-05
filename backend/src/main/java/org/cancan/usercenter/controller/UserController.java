@@ -225,7 +225,7 @@ public class UserController {
         User currentUser = userService.getCurrentUser(request);
         // 仅管理员与本用户可删除
         if (currentUser.getId() != id && currentUser.getUserRole() != ADMIN_ROLE) {
-            throw new BusinessException(ErrorCode.NO_AUTH);
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有本用户可删除");
         }
         User deletedUser = userService.getById(id);
         if (deletedUser == null) {
