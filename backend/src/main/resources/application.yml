@@ -9,7 +9,7 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
-    password: 20040326hyc
+    password: your_password
     url: jdbc:mysql://localhost:3306/itap?useSSL=false&rewriteBatchedStatements=true
   data:
     redis:
