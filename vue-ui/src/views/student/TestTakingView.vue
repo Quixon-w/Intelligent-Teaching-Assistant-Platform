@@ -356,7 +356,7 @@ onUnmounted(() => {
 
 .option-content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
   padding: 16px 20px;
   border: 2px solid #e4e7ed;
@@ -393,6 +393,7 @@ onUnmounted(() => {
   font-size: 16px;
   flex-shrink: 0;
   transition: all 0.3s ease;
+  margin-top: 2px;
 }
 
 .option-item :deep(.el-radio__input.is-checked) + .el-radio__label .option-label {
@@ -404,8 +405,9 @@ onUnmounted(() => {
   flex: 1;
   font-size: 16px;
   color: #303133;
-  line-height: 1.5;
+  line-height: 1.6;
   font-weight: 500;
+  padding-top: 2px;
 }
 
 .loading-section {
@@ -453,10 +455,12 @@ onUnmounted(() => {
     height: 28px;
     font-size: 14px;
     margin-right: 12px;
+    margin-top: 1px;
   }
   
   .option-text {
     font-size: 14px;
+    padding-top: 1px;
   }
 }
 </style> 
