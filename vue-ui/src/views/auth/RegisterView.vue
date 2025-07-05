@@ -45,6 +45,25 @@
             />
           </el-form-item>
           
+          <!-- 用户身份选择 -->
+          <el-form-item prop="userRole">
+            <div class="role-selector">
+              <label class="role-label">选择身份：</label>
+              <div class="role-options">
+                <el-radio-group v-model="registerForm.userRole" size="large">
+                  <el-radio :label="0" border>
+                    <el-icon><User /></el-icon>
+                    学生
+                  </el-radio>
+                  <el-radio :label="1" border>
+                    <el-icon><UserFilled /></el-icon>
+                    教师
+                  </el-radio>
+                </el-radio-group>
+              </div>
+            </div>
+          </el-form-item>
+          
           <el-form-item>
             <el-button
               type="primary"
@@ -97,7 +116,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Check } from '@element-plus/icons-vue'
+import { User, Lock, Check, UserFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -109,7 +128,8 @@ const loading = ref(false)
 const registerForm = reactive({
   username: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  userRole: 0
 })
 
 const registerRules = {
@@ -145,7 +165,8 @@ const handleRegister = async () => {
     const result = await authStore.register(
       registerForm.username,
       registerForm.password,
-      registerForm.confirmPassword
+      registerForm.confirmPassword,
+      registerForm.userRole
     )
     
     if (result.success) {
@@ -230,9 +251,57 @@ const goToLogin = () => {
 }
 
 .form-footer p {
-  margin: 0 0 10px 0;
-  color: #909399;
+  margin: 0;
+  color: #666;
+}
+
+/* 用户身份选择器样式 */
+.role-selector {
+  text-align: center;
+}
+
+.role-label {
+  display: block;
+  margin-bottom: 15px;
+  color: #333;
   font-size: 14px;
+  font-weight: 500;
+}
+
+.role-options {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.role-options .el-radio-group {
+  display: flex;
+  gap: 20px;
+}
+
+.role-options .el-radio {
+  margin-right: 0;
+  padding: 12px 20px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.role-options .el-radio:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.role-options .el-radio.is-checked {
+  background: #e8f4fd;
+  border-color: #409eff;
+}
+
+.role-options .el-radio__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .register-banner {

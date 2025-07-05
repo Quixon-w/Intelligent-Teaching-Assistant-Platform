@@ -15,11 +15,12 @@ export function login(username, password) {
 }
 
 // 用户注册
-export function register(username, password, checkPassword) {
+export function register(username, password, checkPassword, userRole = 0) {
   return request.post('/api/user/register', {
     userAccount: username,
     userPassword: password,
-    checkPassword: checkPassword
+    checkPassword: checkPassword,
+    userRole: userRole
   }).then(res => {
     console.log('注册响应:', res)
     return res

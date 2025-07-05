@@ -62,10 +62,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const register = async (username, password, confirmPassword) => {
+  const register = async (username, password, confirmPassword, userRole = 0) => {
     try {
       loading.value = true
-      const response = await registerApi(username, password, confirmPassword)
+      const response = await registerApi(username, password, confirmPassword, userRole)
 
       console.log('注册API响应:', response)
 
