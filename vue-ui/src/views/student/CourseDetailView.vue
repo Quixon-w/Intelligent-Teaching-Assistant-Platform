@@ -97,25 +97,47 @@
                   <template #default="scope">
                       <!-- 已发布的测试 -->
                       <template v-if="scope.row.hasQuestion === 1">
-                        <!-- 未完成的测试 - 可以参加 -->
-                        <el-button 
-                          v-if="!scope.row.isCompleted"
-                          size="small" 
-                          type="success"
-                          @click="takeTest(scope.row)"
-                        >
-                          参加测试
-                        </el-button>
+                        <!-- 课程进行中：未完成的测试可以参加 -->
+                        <template v-if="courseInfo?.isOver === 0">
+                          <el-button 
+                            v-if="!scope.row.isCompleted"
+                            size="small" 
+                            type="success"
+                            @click="takeTest(scope.row)"
+                          >
+                            参加测试
+                          </el-button>
+                          
+                          <el-button 
+                            v-else
+                            size="small" 
+                            type="primary"
+                            @click="viewTestResult(scope.row)"
+                          >
+                            查看测试
+                          </el-button>
+                        </template>
                         
-                        <!-- 已完成的测试 - 只能查看 -->
-                        <el-button 
-                          v-else
-                          size="small" 
-                          type="primary"
-                          @click="viewTestResult(scope.row)"
-                        >
-                          查看测试
-                        </el-button>
+                        <!-- 课程已结课：未完成的测试只能查看题目，已完成的可以查看结果 -->
+                        <template v-else-if="courseInfo?.isOver === 1">
+                          <el-button 
+                            v-if="!scope.row.isCompleted"
+                            size="small" 
+                            type="info"
+                            @click="viewTestQuestions(scope.row)"
+                          >
+                            查看测试题
+                          </el-button>
+                          
+                          <el-button 
+                            v-else
+                            size="small" 
+                            type="primary"
+                            @click="viewTestResult(scope.row)"
+                          >
+                            查看测试
+                          </el-button>
+                        </template>
                       </template>
                       
                       <!-- 没有测试的课时显示提示 -->
@@ -1032,6 +1054,47 @@ const viewTestResult = (lesson) => {
   } else {
     ElMessage.warning('未找到测试记录')
   }
+}
+
+const viewTestQuestions = (lesson) => {
+  const courseId = route.params.id;
+  const lessonId = lesson.lessonId;
+  
+  console.log('查看测试题 - 详细信息:', { 
+    courseId, 
+    lessonId, 
+    lesson,
+    routeParams: route.params,
+    currentPath: route.path 
+  });
+  
+  // 检查必要参数
+  if (!courseId) {
+    ElMessage.error('缺少课程ID参数');
+    return;
+  }
+  
+  if (!lessonId) {
+    ElMessage.error('缺少课时ID参数');
+    return;
+  }
+  
+  // 跳转到查看测试题页面（只读模式）
+  const routeConfig = {
+    name: 'student-questions',
+    params: {
+      courseId: courseId,
+      lessonId: lessonId
+    },
+    query: {
+      readonly: 'true' // 添加只读模式参数
+    }
+  };
+  
+  router.push(routeConfig).catch(error => {
+    console.error('路由跳转失败:', error);
+    ElMessage.error(`跳转失败: ${error.message}`);
+  });
 }
 
 // 对话框关闭处理

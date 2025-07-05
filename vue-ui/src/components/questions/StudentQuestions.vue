@@ -11,6 +11,11 @@ const questions = ref([]);
 const loading = ref(false);
 const submitting = ref(false);
 
+// 只读模式（用于查看测试题）
+const isReadOnly = computed(() => {
+  return route.query.readonly === 'true';
+});
+
 // 计算答题进度
 const progress = computed(() => {
   const answered = questions.value.filter(q => q.selectedAnswer).length;
@@ -170,10 +175,12 @@ onMounted(() => {
     <!-- 答题进度 -->
     <el-card class="progress-card" shadow="never">
       <div class="progress-header">
-        <h3>课时测试</h3>
+        <h3>{{ isReadOnly ? '查看测试题' : '课时测试' }}</h3>
         <div class="progress-info">
-          <span>进度: {{ progress.answered }}/{{ progress.total }}</span>
+          <span v-if="!isReadOnly">进度: {{ progress.answered }}/{{ progress.total }}</span>
+          <span v-else>题目数量: {{ progress.total }}</span>
           <el-progress 
+            v-if="!isReadOnly"
             :percentage="progress.percentage" 
             :color="progress.percentage === 100 ? '#67c23a' : '#409eff'"
             style="margin-left: 16px; flex: 1;"
@@ -226,6 +233,7 @@ onMounted(() => {
               v-model="question.selectedAnswer" 
               class="options-group"
               size="large"
+              :disabled="isReadOnly"
             >
               <el-radio value="A" class="option-item">
                 <span class="option-label">A</span>
@@ -252,7 +260,7 @@ onMounted(() => {
     </div>
 
     <!-- 提交按钮 -->
-    <div class="submit-section">
+    <div v-if="!isReadOnly" class="submit-section">
       <el-button 
         type="primary" 
         size="large"
@@ -268,6 +276,17 @@ onMounted(() => {
         <el-icon><InfoFilled /></el-icon>
         答案提交后将无法修改，请仔细检查后再提交
       </p>
+    </div>
+    
+    <!-- 只读模式提示 -->
+    <div v-if="isReadOnly" class="readonly-section">
+      <el-alert
+        title="只读模式"
+        type="info"
+        description="课程已结课，您只能查看测试题目，无法提交答案。"
+        show-icon
+        :closable="false"
+      />
     </div>
   </div>
 </template>
