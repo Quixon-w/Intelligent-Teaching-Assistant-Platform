@@ -97,25 +97,37 @@
                   <template #default="scope">
                       <!-- 已发布的测试 -->
                       <template v-if="scope.row.hasQuestion === 1">
-                        <!-- 未完成的测试 - 可以参加 -->
-                        <el-button 
-                          v-if="!scope.row.isCompleted"
-                          size="small" 
-                          type="success"
-                          @click="takeTest(scope.row)"
-                        >
-                          参加测试
-                        </el-button>
+                        <!-- 课程进行中：未完成的测试可以参加 -->
+                        <template v-if="courseInfo?.isOver === 0">
+                          <el-button 
+                            v-if="!scope.row.isCompleted"
+                            size="small" 
+                            type="success"
+                            @click="takeTest(scope.row)"
+                          >
+                            参加测试
+                          </el-button>
+                          
+                          <el-button 
+                            v-else
+                            size="small" 
+                            type="primary"
+                            @click="viewTestResult(scope.row)"
+                          >
+                            查看测试
+                          </el-button>
+                        </template>
                         
-                        <!-- 已完成的测试 - 只能查看 -->
-                        <el-button 
-                          v-else
-                          size="small" 
-                          type="primary"
-                          @click="viewTestResult(scope.row)"
-                        >
-                          查看测试
-                        </el-button>
+                        <!-- 课程已结课：所有测试都显示查看测试按钮 -->
+                        <template v-else-if="courseInfo?.isOver === 1">
+                          <el-button 
+                            size="small" 
+                            type="primary"
+                            @click="viewTestResult(scope.row)"
+                          >
+                            查看测试
+                          </el-button>
+                        </template>
                       </template>
                       
                       <!-- 没有测试的课时显示提示 -->
@@ -323,136 +335,252 @@
       :before-close="handleCloseDialog"
     >
       <div v-if="currentTestResult">
-        <!-- 测试概要 -->
-        <div class="test-summary">
-          <h4>{{ currentTestResult.lesson.lessonName }} - 测试结果</h4>
-          <el-row :gutter="20" style="margin: 20px 0;">
-            <el-col :span="6">
-              <el-statistic title="总题数" :value="currentTestResult.totalCount" />
-            </el-col>
-            <el-col :span="6">
-              <el-statistic title="正确数" :value="currentTestResult.correctCount" />
-            </el-col>
-            <el-col :span="6">
-              <el-statistic title="正确率" :value="Math.round((currentTestResult.correctCount / currentTestResult.totalCount) * 100)" suffix="%" />
-            </el-col>
-            <el-col :span="6">
-              <el-statistic title="得分" :value="currentTestResult.score" suffix="分" />
-            </el-col>
-          </el-row>
-        </div>
-        
-        <!-- 详细答题记录 -->
-        <div class="test-details">
-          <h5>详细答题记录</h5>
-          <el-table 
-            :data="currentTestResult.records" 
-            style="width: 100%"
-            :row-class-name="getRowClassName"
-          >
-            <!-- 展开行 -->
-            <el-table-column type="expand" width="50">
-              <template #default="props">
-                <div class="expand-content">
-                  <div class="question-analysis">
-                    <h6>题目解析</h6>
-                    <div class="analysis-content">
-                      <p v-if="props.row.questionDetails?.explanation" class="analysis-text">
-                        {{ props.row.questionDetails.explanation }}
-                      </p>
-                      <p v-else class="no-analysis">暂无解析</p>
+        <!-- 未完成测试显示 -->
+        <div v-if="currentTestResult.isNotCompleted" class="test-not-completed">
+          <!-- 结课课程显示题目 -->
+          <div v-if="courseInfo && courseInfo.isOver === 1 && currentTestResult.questions" class="test-questions">
+            <div class="not-completed-header">
+              <h4>{{ currentTestResult.lesson.lessonName }} - 测试题目</h4>
+              <el-tag type="warning" size="large">您未完成此测试</el-tag>
+            </div>
+            
+            <!-- 题目列表 -->
+            <div class="questions-list">
+              <el-card 
+                v-for="(question, index) in currentTestResult.questions" 
+                :key="question.questionId"
+                class="question-card"
+                shadow="hover"
+              >
+                <template #header>
+                  <div class="question-header">
+                    <div class="question-info">
+                      <el-tag type="primary" size="small">第{{ index + 1 }}题</el-tag>
+                      <el-tag v-if="question.knowledge" type="info" size="small">
+                        {{ question.knowledge }}
+                      </el-tag>
                     </div>
                   </div>
-                </div>
-              </template>
-            </el-table-column>
-            
-            <!-- 题目序号 -->
-            <el-table-column label="题号" width="60" align="center">
-              <template #default="scope">
-                <span class="question-number">{{ scope.$index + 1 }}</span>
-              </template>
-            </el-table-column>
-            
-            <!-- 题目内容 -->
-            <el-table-column label="题目内容" min-width="300">
-              <template #default="scope">
+                </template>
+                
                 <div class="question-content">
-                  <p class="question-text">{{ scope.row.questionDetails?.question || '题目信息加载中...' }}</p>
-                  <div class="question-options" v-if="scope.row.questionDetails?.options && getQuestionOptions(scope.row.questionDetails.options).length > 0">
-                    <div 
-                      class="option-item"
-                      v-for="option in getQuestionOptions(scope.row.questionDetails.options)" 
-                      :key="option.label"
+                  <!-- 题目内容 -->
+                  <div class="question-text-container">
+                    <p class="question-text">{{ question.question }}</p>
+                  </div>
+                  
+                  <!-- 选项（禁用状态） -->
+                  <div class="question-options">
+                    <el-radio-group 
+                      :model-value="question.answer"
+                      class="options-group"
+                      size="large"
+                      disabled
                     >
-                      <span class="option-label">{{ option.label }}.</span>
-                      <span class="option-text">{{ option.text }}</span>
+                      <el-radio value="A" class="option-item">
+                        <span class="option-label">A</span>
+                        <span class="option-text">{{ question.options.A }}</span>
+                      </el-radio>
+                      <el-radio value="B" class="option-item">
+                        <span class="option-label">B</span>
+                        <span class="option-text">{{ question.options.B }}</span>
+                      </el-radio>
+                      <el-radio value="C" class="option-item">
+                        <span class="option-label">C</span>
+                        <span class="option-text">{{ question.options.C }}</span>
+                      </el-radio>
+                      <el-radio value="D" class="option-item">
+                        <span class="option-label">D</span>
+                        <span class="option-text">{{ question.options.D }}</span>
+                      </el-radio>
+                    </el-radio-group>
+                  </div>
+                  
+                  <!-- 正确答案和解析 -->
+                  <div class="answer-section">
+                    <el-divider content-position="left">
+                      <el-tag type="success" size="small">正确答案</el-tag>
+                    </el-divider>
+                    <div class="correct-answer">
+                      <el-icon color="#67c23a"><Check /></el-icon>
+                      <span class="answer-text">正确答案：{{ question.answer }}</span>
+                    </div>
+                    <div v-if="question.explanation" class="explanation">
+                      <el-divider content-position="left">
+                        <el-tag type="info" size="small">答案解析</el-tag>
+                      </el-divider>
+                      <div class="explanation-content">
+                        {{ question.explanation }}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </template>
-            </el-table-column>
+              </el-card>
+            </div>
             
-            <!-- 您的答案 -->
-            <el-table-column label="您的答案" width="100" align="center">
-              <template #default="scope">
-                <el-tag 
-                  :type="scope.row.isCorrect === 1 ? 'success' : 'danger'"
-                  size="large"
-                  class="answer-tag"
-                >
-                  {{ scope.row.selectedOption }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            
-            <!-- 正确答案 -->
-            <el-table-column label="正确答案" width="100" align="center">
-              <template #default="scope">
-                <el-tag 
-                  type="success" 
-                  size="large"
-                  class="answer-tag"
-                >
-                  {{ scope.row.questionDetails?.answer || '未知' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            
-            <!-- 结果 -->
-            <el-table-column label="结果" width="80" align="center">
-              <template #default="scope">
-                <div class="result-indicator">
-                  <el-icon v-if="scope.row.isCorrect === 1" color="#67c23a" size="20">
-                    <Check />
-                  </el-icon>
-                  <el-icon v-else color="#f56c6c" size="20">
-                    <Close />
-                  </el-icon>
+            <!-- 提示信息 -->
+            <div class="test-tip">
+              <el-alert
+                title="提示"
+                description="课程已结课，您可以查看题目内容和答案解析，但无法提交答案。"
+                type="info"
+                :closable="false"
+                show-icon
+              />
+            </div>
+          </div>
+          
+          <!-- 非结课课程显示联系老师信息 -->
+          <div v-else class="contact-teacher">
+            <el-empty 
+              description="您未完成此测试"
+              :image-size="120"
+            >
+              <template #description>
+                <div class="not-completed-content">
+                  <h4>{{ currentTestResult.lesson.lessonName }} - 未完成测试</h4>
+                  <p class="not-completed-text">
+                    您未完成此课时的测试。如需查看测试内容，请联系教师。
+                  </p>
                 </div>
               </template>
-            </el-table-column>
-            
-            <!-- 提交时间 -->
-            <el-table-column label="提交时间" width="150">
-              <template #default="scope">
-                <span class="submit-time">
-                  {{ formatSubmitTime(scope.row.submitTime) }}
-                </span>
-              </template>
-            </el-table-column>
-          </el-table>
+            </el-empty>
+          </div>
         </div>
         
-        <!-- 提示信息 -->
-        <div class="test-tip">
-          <el-alert
-            title="提示"
-            description="点击每行左侧的展开按钮可查看题目解析"
-            type="info"
-            :closable="false"
-            show-icon
-          />
+        <!-- 已完成测试显示 -->
+        <div v-else>
+          <!-- 测试概要 -->
+          <div class="test-summary">
+            <h4>{{ currentTestResult.lesson.lessonName }} - 测试结果</h4>
+            <el-row :gutter="20" style="margin: 20px 0;">
+              <el-col :span="6">
+                <el-statistic title="总题数" :value="currentTestResult.totalCount" />
+              </el-col>
+              <el-col :span="6">
+                <el-statistic title="正确数" :value="currentTestResult.correctCount" />
+              </el-col>
+              <el-col :span="6">
+                <el-statistic title="正确率" :value="Math.round((currentTestResult.correctCount / currentTestResult.totalCount) * 100)" suffix="%" />
+              </el-col>
+              <el-col :span="6">
+                <el-statistic title="得分" :value="currentTestResult.score" suffix="分" />
+              </el-col>
+            </el-row>
+          </div>
+        
+          <!-- 详细答题记录 -->
+          <div class="test-details">
+            <h5>详细答题记录</h5>
+            <el-table 
+              :data="currentTestResult.records" 
+              style="width: 100%"
+              :row-class-name="getRowClassName"
+            >
+              <!-- 展开行 -->
+              <el-table-column type="expand" width="50">
+                <template #default="props">
+                  <div class="expand-content">
+                    <div class="question-analysis">
+                      <h6>题目解析</h6>
+                      <div class="analysis-content">
+                        <p v-if="props.row.questionDetails?.explanation" class="analysis-text">
+                          {{ props.row.questionDetails.explanation }}
+                        </p>
+                        <p v-else class="no-analysis">暂无解析</p>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
+              
+              <!-- 题目序号 -->
+              <el-table-column label="题号" width="60" align="center">
+                <template #default="scope">
+                  <span class="question-number">{{ scope.$index + 1 }}</span>
+                </template>
+              </el-table-column>
+              
+              <!-- 题目内容 -->
+              <el-table-column label="题目内容" min-width="300">
+                <template #default="scope">
+                  <div class="question-content">
+                    <p class="question-text">{{ scope.row.questionDetails?.question || '题目信息加载中...' }}</p>
+                    <div class="question-options" v-if="scope.row.questionDetails?.options && getQuestionOptions(scope.row.questionDetails).length > 0">
+                      <div 
+                        class="option-item"
+                        v-for="option in getQuestionOptions(scope.row.questionDetails)" 
+                        :key="option.label"
+                      >
+                        <span class="option-label">{{ option.label }}.</span>
+                        <span class="option-text">{{ option.text }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
+              
+              <!-- 您的答案 -->
+              <el-table-column label="您的答案" width="100" align="center">
+                <template #default="scope">
+                  <el-tag 
+                    :type="scope.row.isCorrect === 1 ? 'success' : 'danger'"
+                    size="large"
+                    class="answer-tag"
+                  >
+                    {{ scope.row.selectedOption }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              
+              <!-- 正确答案 -->
+              <el-table-column label="正确答案" width="100" align="center">
+                <template #default="scope">
+                  <el-tag 
+                    type="success" 
+                    size="large"
+                    class="answer-tag"
+                  >
+                    {{ scope.row.questionDetails?.answer || '未知' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              
+              <!-- 结果 -->
+              <el-table-column label="结果" width="80" align="center">
+                <template #default="scope">
+                  <div class="result-indicator">
+                    <el-icon v-if="scope.row.isCorrect === 1" color="#67c23a" size="20">
+                      <Check />
+                    </el-icon>
+                    <el-icon v-else color="#f56c6c" size="20">
+                      <Close />
+                    </el-icon>
+                  </div>
+                </template>
+              </el-table-column>
+              
+              <!-- 提交时间 -->
+              <el-table-column label="提交时间" width="150">
+                <template #default="scope">
+                  <span class="submit-time">
+                    {{ formatSubmitTime(scope.row.submitTime) }}
+                  </span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+          
+          <!-- 提示信息 -->
+          <div class="test-tip">
+            <el-alert
+              title="提示"
+              description="点击每行左侧的展开按钮可查看题目解析"
+              type="info"
+              :closable="false"
+              show-icon
+            />
+          </div>
         </div>
       </div>
       
@@ -854,9 +982,30 @@ const getStudentRecords = async (lessonId, studentId) => {
       const questionsRes = await getLessonQuestionsList(lessonId)
       
       if (questionsRes.code === 0 && questionsRes.data) {
+        // 处理题目数据，解析options字段
+        const processedQuestions = questionsRes.data.map(question => {
+          let options = {}
+          try {
+            // 如果options是字符串，尝试解析
+            if (typeof question.options === 'string') {
+              options = JSON.parse(question.options)
+            } else if (typeof question.options === 'object') {
+              options = question.options
+            }
+          } catch (e) {
+            console.error('解析options失败:', e)
+            options = {}
+          }
+          
+          return {
+            ...question,
+            options: options
+          }
+        })
+        
         // 将记录和题目详情合并
         const mergedRecords = recordsRes.data.map(record => {
-          const question = questionsRes.data.find(q => q.questionId === record.questionId)
+          const question = processedQuestions.find(q => q.questionId === record.questionId)
           return {
             ...record,
             questionDetails: question || null
@@ -1013,8 +1162,9 @@ const loadLessonsCompletionStatus = async () => {
   }
 }
 
-const viewTestResult = (lesson) => {
+const viewTestResult = async (lesson) => {
   if (lesson.records && lesson.records.length > 0) {
+    // 有测试记录，显示测试结果
     showTestResultDialog.value = true
     currentTestResult.value = {
       lesson,
@@ -1027,12 +1177,70 @@ const viewTestResult = (lesson) => {
       ? Math.round((currentTestResult.value.correctCount / currentTestResult.value.totalCount) * 100) 
       : 0
     currentTestResult.value.score = score
-    
-
   } else {
-    ElMessage.warning('未找到测试记录')
+    // 没有测试记录，检查是否是结课课程
+    if (courseInfo.value && courseInfo.value.isOver === 1) {
+      // 结课课程，获取题目信息并显示
+      try {
+        const questionsRes = await request.get('/api/map/list', {
+          params: { lessonId: lesson.lessonId }
+        })
+        
+        if (questionsRes.code === 0 && questionsRes.data && questionsRes.data.length > 0) {
+          // 处理题目数据，解析options字段
+          const processedQuestions = questionsRes.data.map(question => {
+            let options = {}
+            try {
+              // 如果options是字符串，尝试解析
+              if (typeof question.options === 'string') {
+                options = JSON.parse(question.options)
+              } else if (typeof question.options === 'object') {
+                options = question.options
+              }
+            } catch (e) {
+              console.error('解析options失败:', e)
+              options = {}
+            }
+            
+            return {
+              ...question,
+              options: options
+            }
+          })
+          
+          showTestResultDialog.value = true
+          currentTestResult.value = {
+            lesson,
+            records: [],
+            correctCount: 0,
+            totalCount: 0,
+            score: 0,
+            isNotCompleted: true, // 标记为未完成
+            questions: processedQuestions // 添加处理后的题目信息
+          }
+        } else {
+          ElMessage.error('获取题目信息失败或该课时暂无测试题目')
+        }
+      } catch (error) {
+        console.error('获取题目信息失败:', error)
+        ElMessage.error('获取题目信息失败')
+      }
+    } else {
+      // 非结课课程，显示未完成信息
+      showTestResultDialog.value = true
+      currentTestResult.value = {
+        lesson,
+        records: [],
+        correctCount: 0,
+        totalCount: 0,
+        score: 0,
+        isNotCompleted: true
+      }
+    }
   }
 }
+
+
 
 // 对话框关闭处理
 const handleCloseDialog = (done) => {
@@ -1068,10 +1276,12 @@ const formatSubmitTime = (timeString) => {
 
 // 获取题目选项（兼容不同的数据格式）
 const getQuestionOptions = (question) => {
+  console.log('getQuestionOptions 接收到的参数:', question)
   const options = []
   
   // 检查新格式：options 对象
   if (question.options && typeof question.options === 'object') {
+    console.log('找到 options 对象:', question.options)
     // 如果 options 是对象，尝试解析
     try {
       let optionsData = question.options
@@ -1081,11 +1291,15 @@ const getQuestionOptions = (question) => {
         optionsData = JSON.parse(optionsData)
       }
       
+      console.log('处理后的 optionsData:', optionsData)
+      
       // 检查是否有 A, B, C, D 属性
       if (optionsData.A) options.push({ label: 'A', text: optionsData.A })
       if (optionsData.B) options.push({ label: 'B', text: optionsData.B })
       if (optionsData.C) options.push({ label: 'C', text: optionsData.C })
       if (optionsData.D) options.push({ label: 'D', text: optionsData.D })
+      
+      console.log('解析出的选项:', options)
       
     } catch (error) {
       console.error('解析选项失败:', error)
@@ -1094,12 +1308,14 @@ const getQuestionOptions = (question) => {
   
   // 如果新格式没有找到选项，检查旧格式：optionA, optionB 等
   if (options.length === 0) {
+    console.log('尝试旧格式选项')
     if (question.optionA) options.push({ label: 'A', text: question.optionA })
     if (question.optionB) options.push({ label: 'B', text: question.optionB })
     if (question.optionC) options.push({ label: 'C', text: question.optionC })
     if (question.optionD) options.push({ label: 'D', text: question.optionD })
   }
   
+  console.log('最终返回的选项:', options)
   return options
 }
 
@@ -1684,5 +1900,171 @@ onMounted(() => {
   .placeholder-text {
     font-size: 16px;
   }
+}
+
+/* 未完成测试样式 */
+.test-not-completed {
+  padding: 20px 0;
+}
+
+.not-completed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 0 20px;
+}
+
+.not-completed-header h4 {
+  margin: 0;
+  color: #303133;
+  font-size: 18px;
+}
+
+.questions-list {
+  margin-bottom: 24px;
+}
+
+.question-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.question-info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.question-content {
+  padding: 16px 0;
+}
+
+.question-text-container {
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #303133;
+  margin: 0;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
+}
+
+.question-options {
+  margin-bottom: 24px;
+}
+
+.options-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  background-color: #fafafa;
+  transition: all 0.3s;
+}
+
+.option-item:hover {
+  background-color: #f0f9ff;
+  border-color: #409eff;
+}
+
+.option-label {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  background-color: #409eff;
+  color: white;
+  border-radius: 50%;
+  margin-right: 12px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.option-text {
+  flex: 1;
+  font-size: 15px;
+  color: #606266;
+}
+
+.answer-section {
+  margin-top: 20px;
+}
+
+.correct-answer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #f0f9ff;
+  border: 1px solid #b3d8ff;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.answer-text {
+  font-size: 15px;
+  color: #67c23a;
+  font-weight: 500;
+}
+
+.explanation {
+  margin-top: 16px;
+}
+
+.explanation-content {
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #67c23a;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #606266;
+}
+
+.test-tip {
+  margin-top: 24px;
+  padding: 0 20px;
+}
+
+/* 结课课程题目显示样式 */
+.test-questions {
+  padding: 20px 0;
+}
+
+.contact-teacher {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.not-completed-content h4 {
+  color: #909399;
+  margin-bottom: 16px;
+}
+
+.not-completed-text {
+  color: #606266;
+  line-height: 1.6;
+  font-size: 14px;
 }
 </style> 

@@ -211,7 +211,7 @@
                   </el-button>
                   
                   <el-button 
-                    v-if="course.pendingTests > 0"
+                    v-if="course.pendingTests > 0 && course.isOver === 0"
                     type="warning" 
                     size="default"
                     @click.stop="takeTest(course)"
@@ -220,6 +220,8 @@
                     <el-icon><EditPen /></el-icon>
                     参加测试({{ course.pendingTests }})
                   </el-button>
+                  
+
                   
                   <el-button 
                     v-if="course.isOver === 0"
