@@ -57,9 +57,9 @@ const getQuestions = async (lessonId) => {
       optionC: question.questionAnswer[3],
       optionD: question.questionAnswer[4],
       selectedAnswer: '', // 学生选择的答案
-      // 不在前端保存正确答案和解析，避免意外暴露
-      // correctAnswer: question.questionAnswer[0], // 隐藏
-      // questionExplanation: question.questionExplanation, // 隐藏
+      // 在只读模式下显示正确答案和解析
+      correctAnswer: isReadOnly.value ? question.questionAnswer[0] : null,
+      questionExplanation: isReadOnly.value ? question.questionExplanation : null,
     }));
     
     if (questions.value.length === 0) {
@@ -175,7 +175,7 @@ onMounted(() => {
     <!-- 答题进度 -->
     <el-card class="progress-card" shadow="never">
       <div class="progress-header">
-        <h3>{{ isReadOnly ? '查看测试题' : '课时测试' }}</h3>
+        <h3>{{ isReadOnly ? '查看测试题与解析' : '课时测试' }}</h3>
         <div class="progress-info">
           <span v-if="!isReadOnly">进度: {{ progress.answered }}/{{ progress.total }}</span>
           <span v-else>题目数量: {{ progress.total }}</span>
@@ -254,7 +254,24 @@ onMounted(() => {
             </el-radio-group>
           </div>
 
-          <!-- 做题阶段不显示解析，解析应该在提交后的结果页面显示 -->
+          <!-- 只读模式下显示正确答案和解析 -->
+          <div v-if="isReadOnly && question.correctAnswer" class="answer-section">
+            <el-divider content-position="left">
+              <el-tag type="success" size="small">正确答案</el-tag>
+            </el-divider>
+            <div class="correct-answer">
+              <el-icon color="#67c23a"><Check /></el-icon>
+              <span class="answer-text">正确答案：{{ question.correctAnswer }}</span>
+            </div>
+            <div v-if="question.questionExplanation" class="explanation">
+              <el-divider content-position="left">
+                <el-tag type="info" size="small">答案解析</el-tag>
+              </el-divider>
+              <div class="explanation-content">
+                {{ question.questionExplanation }}
+              </div>
+            </div>
+          </div>
         </div>
       </el-card>
     </div>
@@ -281,9 +298,9 @@ onMounted(() => {
     <!-- 只读模式提示 -->
     <div v-if="isReadOnly" class="readonly-section">
       <el-alert
-        title="只读模式"
+        title="查看模式"
         type="info"
-        description="课程已结课，您只能查看测试题目，无法提交答案。"
+        description="课程已结课，您可以查看测试题目和答案解析，但无法提交答案。"
         show-icon
         :closable="false"
       />
@@ -416,6 +433,42 @@ onMounted(() => {
   transition: all 0.3s ease;
   cursor: pointer;
   /* 确保选项容器不限制高度 */
+}
+
+.answer-section {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #67c23a;
+}
+
+.correct-answer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.answer-text {
+  font-weight: 500;
+  color: #67c23a;
+  font-size: 16px;
+}
+
+.explanation {
+  margin-top: 16px;
+}
+
+.explanation-content {
+  padding: 12px;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  line-height: 1.6;
+  color: #606266;
+  font-size: 14px;
+}
   height: auto !important;
   max-height: none !important;
   overflow: visible !important;

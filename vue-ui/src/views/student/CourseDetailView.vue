@@ -126,7 +126,7 @@
                             type="info"
                             @click="viewTestQuestions(scope.row)"
                           >
-                            查看测试题
+                            查看题目与解析
                           </el-button>
                           
                           <el-button 

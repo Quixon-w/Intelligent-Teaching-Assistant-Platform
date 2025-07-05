@@ -229,7 +229,7 @@
                     class="action-btn info"
                   >
                     <el-icon><View /></el-icon>
-                    查看未完成测试({{ course.pendingTests }})
+                    查看题目与解析({{ course.pendingTests }})
                   </el-button>
                   
                   <el-button 
