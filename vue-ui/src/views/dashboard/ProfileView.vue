@@ -63,11 +63,20 @@
                   </el-select>
                 </el-form-item>
                 <el-form-item label="身份" prop="userRole">
-                  <el-select v-model="form.userRole" placeholder="请选择">
-                    <el-option label="学生" :value="0" />
-                    <el-option label="教师" :value="1" />
-                    <el-option label="管理员" :value="2" />
+                  <el-select v-model="form.userRole" placeholder="请选择" :disabled="!canChangeRole">
+                    <el-option 
+                      v-for="role in availableRoles" 
+                      :key="role.value" 
+                      :label="role.label" 
+                      :value="role.value"
+                      :disabled="role.disabled"
+                    />
                   </el-select>
+                  <div v-if="!canChangeRole" class="role-change-tip">
+                    <el-text type="info" size="small">
+                      {{ roleChangeTip }}
+                    </el-text>
+                  </div>
                 </el-form-item>
                 <el-form-item>
                   <el-button type="primary" @click="onSubmit">保存</el-button>
@@ -201,6 +210,45 @@ const roleText = computed(() => {
     student: '学生'
   }
   return roleMap[userInfo.value.role] || '用户'
+})
+
+// 角色更改权限控制
+const canChangeRole = computed(() => {
+  const currentRole = userInfo.value.role
+  // 管理员不能更改身份
+  if (currentRole === 'admin') {
+    return false
+  }
+  // 学生和教师可以更改身份，但不能改为管理员
+  return currentRole === 'student' || currentRole === 'teacher'
+})
+
+const availableRoles = computed(() => {
+  const currentRole = userInfo.value.role
+  const roles = [
+    { label: '学生', value: 0, disabled: false },
+    { label: '教师', value: 1, disabled: false },
+    { label: '管理员', value: 2, disabled: true } // 普通用户不能选择管理员
+  ]
+  
+  // 如果是管理员，所有选项都禁用
+  if (currentRole === 'admin') {
+    roles.forEach(role => {
+      role.disabled = true
+    })
+  }
+  
+  return roles
+})
+
+const roleChangeTip = computed(() => {
+  const currentRole = userInfo.value.role
+  if (currentRole === 'admin') {
+    return '管理员身份不可更改'
+  } else if (currentRole === 'student' || currentRole === 'teacher') {
+    return '您可以在学生和教师身份之间切换，但不能更改为管理员身份'
+  }
+  return ''
 })
 
 // 上传头像相关
@@ -340,6 +388,19 @@ const loadUserInfo = async () => {
 const onSubmit = async () => {
   try {
     await formRef.value.validate()
+    
+    // 额外的权限验证
+    const currentRole = userInfo.value.role
+    if (currentRole === 'admin') {
+      ElMessage.error('管理员身份不可更改')
+      return
+    }
+    
+    // 防止普通用户更改为管理员身份
+    if (form.userRole === 2 && currentRole !== 'admin') {
+      ElMessage.error('普通用户不能更改为管理员身份')
+      return
+    }
     
     console.log('提交的表单数据:', form)
     
@@ -528,5 +589,13 @@ onMounted(() => {
 .el-form {
   max-width: 400px;
   min-width: 260px;
+}
+
+.role-change-tip {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
+  border-left: 3px solid #409eff;
 }
 </style> 
