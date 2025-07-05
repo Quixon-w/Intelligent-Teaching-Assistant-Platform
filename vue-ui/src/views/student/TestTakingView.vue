@@ -53,36 +53,32 @@
             
             <!-- 选项 -->
             <div class="question-options">
-              <el-radio-group 
-                v-model="question.answer"
-                class="options-group"
-                size="large"
-              >
-                <el-radio value="A" class="option-item">
-                  <div class="option-content">
+              <div class="options-container">
+                <div class="option-item" @click="question.answer = 'A'">
+                  <div class="option-content" :class="{ 'selected': question.answer === 'A' }">
                     <span class="option-label">A</span>
                     <span class="option-text">{{ question.options.A }}</span>
                   </div>
-                </el-radio>
-                <el-radio value="B" class="option-item">
-                  <div class="option-content">
+                </div>
+                <div class="option-item" @click="question.answer = 'B'">
+                  <div class="option-content" :class="{ 'selected': question.answer === 'B' }">
                     <span class="option-label">B</span>
                     <span class="option-text">{{ question.options.B }}</span>
                   </div>
-                </el-radio>
-                <el-radio value="C" class="option-item">
-                  <div class="option-content">
+                </div>
+                <div class="option-item" @click="question.answer = 'C'">
+                  <div class="option-content" :class="{ 'selected': question.answer === 'C' }">
                     <span class="option-label">C</span>
                     <span class="option-text">{{ question.options.C }}</span>
                   </div>
-                </el-radio>
-                <el-radio value="D" class="option-item">
-                  <div class="option-content">
+                </div>
+                <div class="option-item" @click="question.answer = 'D'">
+                  <div class="option-content" :class="{ 'selected': question.answer === 'D' }">
                     <span class="option-label">D</span>
                     <span class="option-text">{{ question.options.D }}</span>
                   </div>
-                </el-radio>
-              </el-radio-group>
+                </div>
+              </div>
             </div>
           </div>
         </el-card>
@@ -333,25 +329,16 @@ onUnmounted(() => {
   margin-bottom: 24px;
 }
 
-.options-group {
+.options-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
 }
 
 .option-item {
   width: 100%;
-  margin: 0;
-}
-
-.option-item :deep(.el-radio__input) {
-  display: none;
-}
-
-.option-item :deep(.el-radio__label) {
-  padding: 0;
-  width: 100%;
+  cursor: pointer;
 }
 
 .option-content {
@@ -363,17 +350,17 @@ onUnmounted(() => {
   border-radius: 8px;
   background-color: #ffffff;
   transition: all 0.3s ease;
-  cursor: pointer;
   min-height: 60px;
+  box-sizing: border-box;
 }
 
-.option-item:hover .option-content {
+.option-content:hover {
   border-color: #409eff;
   background-color: #f0f9ff;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
 }
 
-.option-item :deep(.el-radio__input.is-checked) + .el-radio__label .option-content {
+.option-content.selected {
   border-color: #409eff;
   background-color: #f0f9ff;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
@@ -396,7 +383,7 @@ onUnmounted(() => {
   margin-top: 2px;
 }
 
-.option-item :deep(.el-radio__input.is-checked) + .el-radio__label .option-label {
+.option-content.selected .option-label {
   background-color: #409eff;
   color: white;
 }
@@ -443,6 +430,10 @@ onUnmounted(() => {
   
   .question-text {
     font-size: 14px;
+  }
+  
+  .options-container {
+    gap: 10px;
   }
   
   .option-content {
