@@ -273,8 +273,8 @@ const deleteCourseById = (id) => {
 }
 
 const endCourseById = (id) => {
-  return request.post('/api/course/end', null, {
-    params: { id }
+  return request.post('/api/course/over', null, {
+    params: { courseId: id }
   })
 }
 
