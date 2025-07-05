@@ -16,6 +16,13 @@
           <el-form-item label="课程名称">
             <el-input v-model="searchForm.courseName" placeholder="请输入课程名称" @keyup.enter="searchCourses" />
           </el-form-item>
+          <el-form-item label="课程状态">
+            <el-select v-model="searchForm.courseStatus" placeholder="请选择课程状态" @change="searchCourses">
+              <el-option label="全部" value="all" />
+              <el-option label="进行中" value="ongoing" />
+              <el-option label="已结束" value="completed" />
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="searchCourses">搜索</el-button>
             <el-button @click="resetSearch">重置</el-button>
@@ -125,9 +132,24 @@
         </el-table-column>
       </el-table>
       
-      <div class="empty-state" v-if="!loading && courseList.length === 0">
-        <el-empty description="暂无课程数据">
-          <el-button type="primary" @click="showAddCourseDialog = true">创建第一个课程</el-button>
+      <div class="empty-state" v-if="!loading && filteredCourseList.length === 0">
+        <el-empty 
+          :description="getEmptyStateDescription()"
+        >
+          <el-button 
+            v-if="courseList.length > 0"
+            type="primary" 
+            @click="resetSearch"
+          >
+            清空筛选条件
+          </el-button>
+          <el-button 
+            v-else
+            type="primary" 
+            @click="showAddCourseDialog = true"
+          >
+            创建第一个课程
+          </el-button>
         </el-empty>
       </div>
     </el-card>
@@ -177,7 +199,8 @@ const editingCourse = ref(null)
 const courseFormRef = ref()
 
 const searchForm = reactive({
-  courseName: ''
+  courseName: '',
+  courseStatus: 'all'
 })
 
 const courseForm = reactive({
@@ -199,12 +222,28 @@ const courseList = ref([])
 
 // 计算属性：根据搜索条件过滤课程列表
 const filteredCourseList = computed(() => {
-  if (!searchForm.courseName) {
-    return courseList.value
+  let filtered = courseList.value
+  
+  // 按课程名称筛选
+  if (searchForm.courseName) {
+    filtered = filtered.filter(course => 
+      course.name.toLowerCase().includes(searchForm.courseName.toLowerCase())
+    )
   }
-  return courseList.value.filter(course => 
-    course.name.toLowerCase().includes(searchForm.courseName.toLowerCase())
-  )
+  
+  // 按课程状态筛选
+  if (searchForm.courseStatus !== 'all') {
+    filtered = filtered.filter(course => {
+      if (searchForm.courseStatus === 'ongoing') {
+        return course.isOver === 0
+      } else if (searchForm.courseStatus === 'completed') {
+        return course.isOver === 1
+      }
+      return true
+    })
+  }
+  
+  return filtered
 })
 
 // API方法
@@ -269,6 +308,7 @@ const searchCourses = () => {
 
 const resetSearch = () => {
   searchForm.courseName = ''
+  searchForm.courseStatus = 'all'
 }
 
 const viewCourse = (course) => {
@@ -283,10 +323,6 @@ const editCourse = (course) => {
   })
   showAddCourseDialog.value = true
 }
-
-
-
-
 
 const saveCourse = async () => {
   try {
@@ -423,6 +459,26 @@ const resetCourseForm = () => {
 const cancelEdit = () => {
   showAddCourseDialog.value = false
   resetCourseForm()
+}
+
+const getEmptyStateDescription = () => {
+  if (courseList.value.length === 0) {
+    return '暂无课程数据'
+  }
+  
+  if (searchForm.courseName || searchForm.courseStatus !== 'all') {
+    let description = '暂无符合条件的课程'
+    if (searchForm.courseName) {
+      description += `（搜索："${searchForm.courseName}"）`
+    }
+    if (searchForm.courseStatus !== 'all') {
+      const statusText = searchForm.courseStatus === 'ongoing' ? '进行中' : '已结束'
+      description += `（状态：${statusText}）`
+    }
+    return description
+  }
+  
+  return '暂无课程数据'
 }
 
 onMounted(() => {

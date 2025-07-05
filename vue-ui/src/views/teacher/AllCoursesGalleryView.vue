@@ -34,6 +34,17 @@
         style="width: 200px; margin-right: 10px;"
         @keyup.enter="handleSearch"
       />
+      <!-- 课程状态筛选 -->
+      <el-select 
+        v-model="courseStatus" 
+        placeholder="课程状态" 
+        style="width: 120px; margin-right: 10px;"
+        @change="handleSearch"
+      >
+        <el-option label="全部" value="all" />
+        <el-option label="进行中" value="ongoing" />
+        <el-option label="已结束" value="completed" />
+      </el-select>
       <el-button type="primary" @click="handleSearch">搜索</el-button>
       <el-button @click="handleReset">重置</el-button>
     </div>
@@ -115,6 +126,7 @@ const pageNum = ref(1)
 const pageSize = ref(12)
 const courseName = ref('')
 const teacherName = ref('')
+const courseStatus = ref('all')
 const loading = ref(false)
 const showHotCourses = ref(false)
 const router = useRouter()
@@ -153,7 +165,21 @@ const fetchCourses = async () => {
         teacherName.value
       )
       if (res.code === 0 && res.data && Array.isArray(res.data.records)) {
-        courses.value = res.data.records
+        let filteredCourses = res.data.records
+        
+        // 根据课程状态进行筛选
+        if (courseStatus.value !== 'all') {
+          filteredCourses = res.data.records.filter(course => {
+            if (courseStatus.value === 'ongoing') {
+              return course.isOver === 0
+            } else if (courseStatus.value === 'completed') {
+              return course.isOver === 1
+            }
+            return true
+          })
+        }
+        
+        courses.value = filteredCourses
         total.value = res.data.total
       } else {
         ElMessage.error(res.message || '获取课程失败')
@@ -190,6 +216,7 @@ const handleSearch = () => {
 const handleReset = () => {
   courseName.value = ''
   teacherName.value = ''
+  courseStatus.value = 'all'
   pageNum.value = 1
   fetchCourses()
 }

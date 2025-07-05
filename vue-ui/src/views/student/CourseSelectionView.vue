@@ -34,6 +34,17 @@
         style="width: 200px; margin-right: 10px;"
         @keyup.enter="handleSearch"
       />
+      <!-- 课程状态筛选 -->
+      <el-select 
+        v-model="courseStatus" 
+        placeholder="课程状态" 
+        style="width: 120px; margin-right: 10px;"
+        @change="handleSearch"
+      >
+        <el-option label="全部" value="all" />
+        <el-option label="进行中" value="ongoing" />
+        <el-option label="已结束" value="completed" />
+      </el-select>
       <el-button type="primary" @click="handleSearch">搜索</el-button>
       <el-button @click="handleReset">重置</el-button>
     </div>
@@ -163,6 +174,7 @@ const teacherName = ref('')
 const loading = ref(false)
 const showHotCourses = ref(false)
 const enrolledCourseIds = ref(new Set()) // 存储已选课程ID
+const courseStatus = ref('all')
 
 // 获取所有课程（学生可选的课程）
 const getAllCourses = async (pageNum = 1, pageSize = 12, courseName = '', teacherName = '') => {
@@ -285,7 +297,21 @@ const fetchCourses = async () => {
     
     // 获取每个课程的选课人数
     const coursesWithEnrollmentCount = await fetchCoursesEnrollmentCount(coursesWithStatus)
-    courses.value = coursesWithEnrollmentCount
+    
+    // 根据课程状态进行筛选
+    let filteredCourses = coursesWithEnrollmentCount
+    if (!showHotCourses.value && courseStatus.value !== 'all') {
+      filteredCourses = coursesWithEnrollmentCount.filter(course => {
+        if (courseStatus.value === 'ongoing') {
+          return course.isOver === 0
+        } else if (courseStatus.value === 'completed') {
+          return course.isOver === 1
+        }
+        return true
+      })
+    }
+    
+    courses.value = filteredCourses
     
   } catch (error) {
     console.error('获取课程失败:', error)
@@ -379,6 +405,7 @@ const handleSearch = () => {
 const handleReset = () => {
   courseName.value = ''
   teacherName.value = ''
+  courseStatus.value = 'all'
   pageNum.value = 1
   fetchCourses()
 }

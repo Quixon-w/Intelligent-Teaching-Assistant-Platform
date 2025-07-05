@@ -8,7 +8,33 @@
           <p class="page-subtitle">管理您已选择的课程，查看学习进度</p>
         </div>
         <div class="header-actions">
-          <el-button type="primary" size="large" @click="goToAllCourses">
+          <!-- 筛选按钮 -->
+          <div class="filter-section">
+            <el-button-group>
+              <el-button 
+                :type="filterType === 'all' ? 'primary' : 'default'"
+                @click="setFilter('all')"
+                size="large"
+              >
+                全部课程
+              </el-button>
+              <el-button 
+                :type="filterType === 'ongoing' ? 'primary' : 'default'"
+                @click="setFilter('ongoing')"
+                size="large"
+              >
+                进行中
+              </el-button>
+              <el-button 
+                :type="filterType === 'completed' ? 'primary' : 'default'"
+                @click="setFilter('completed')"
+                size="large"
+              >
+                已结束
+              </el-button>
+            </el-button-group>
+          </div>
+          <el-button type="primary" size="large" @click="goToAllCourses" style="margin-left: 16px;">
             <el-icon><Plus /></el-icon>
             选择更多课程
           </el-button>
@@ -22,8 +48,8 @@
         <el-col :span="6">
           <el-card class="stats-card">
             <div class="stats-content">
-              <div class="stats-number">{{ enrolledCourses.length }}</div>
-              <div class="stats-label">已选课程</div>
+              <div class="stats-number">{{ filteredCourses.length }}</div>
+              <div class="stats-label">{{ filterType === 'all' ? '已选课程' : filterType === 'ongoing' ? '进行中课程' : '已结束课程' }}</div>
             </div>
             <el-icon class="stats-icon"><Reading /></el-icon>
           </el-card>
@@ -31,7 +57,7 @@
         <el-col :span="6">
           <el-card class="stats-card">
             <div class="stats-content">
-              <div class="stats-number">{{ completedCourses }}</div>
+              <div class="stats-number">{{ filteredCompletedCourses }}</div>
               <div class="stats-label">已完成课程</div>
             </div>
             <el-icon class="stats-icon success"><Check /></el-icon>
@@ -40,7 +66,7 @@
         <el-col :span="6">
           <el-card class="stats-card">
             <div class="stats-content">
-              <div class="stats-number">{{ totalPendingTests }}</div>
+              <div class="stats-number">{{ filteredTotalPendingTests }}</div>
               <div class="stats-label">待完成测试</div>
             </div>
             <el-icon class="stats-icon warning"><EditPen /></el-icon>
@@ -49,7 +75,7 @@
         <el-col :span="6">
           <el-card class="stats-card">
             <div class="stats-content">
-              <div class="stats-number">{{ Math.round(averageProgress) }}%</div>
+              <div class="stats-number">{{ Math.round(filteredAverageProgress) }}%</div>
               <div class="stats-label">平均进度</div>
             </div>
             <el-icon class="stats-icon info"><TrendCharts /></el-icon>
@@ -66,10 +92,26 @@
       </div>
 
       <!-- 空状态 -->
-      <div v-else-if="enrolledCourses.length === 0" class="empty-state">
-        <el-empty :image-size="120" description="您还没有选择任何课程">
+      <div v-else-if="filteredCourses.length === 0" class="empty-state">
+        <el-empty 
+          :image-size="120" 
+          :description="getEmptyStateDescription()"
+        >
           <div class="empty-actions">
-            <el-button type="primary" size="large" @click="goToAllCourses">
+            <el-button 
+              v-if="filterType !== 'all'"
+              type="primary" 
+              size="large" 
+              @click="setFilter('all')"
+            >
+              查看全部课程
+            </el-button>
+            <el-button 
+              v-else
+              type="primary" 
+              size="large" 
+              @click="goToAllCourses"
+            >
               <el-icon><Plus /></el-icon>
               去选择课程
             </el-button>
@@ -80,7 +122,7 @@
       <!-- 课程网格 -->
       <div v-else class="courses-grid">
         <el-row :gutter="24">
-          <el-col :xs="24" :sm="12" :lg="8" v-for="course in enrolledCourses" :key="course.id">
+          <el-col :xs="24" :sm="12" :lg="8" v-for="course in filteredCourses" :key="course.id">
             <el-card class="course-card" shadow="hover">
                              <!-- 课程头部 -->
                <template #header>
@@ -226,6 +268,19 @@ const authStore = useAuthStore()
 // 响应式数据
 const enrolledCourses = ref([])
 const loading = ref(false)
+const filterType = ref('all') // 筛选类型：all, ongoing, completed
+
+// 筛选后的课程列表
+const filteredCourses = computed(() => {
+  if (filterType.value === 'all') {
+    return enrolledCourses.value
+  } else if (filterType.value === 'ongoing') {
+    return enrolledCourses.value.filter(course => course.isOver === 0)
+  } else if (filterType.value === 'completed') {
+    return enrolledCourses.value.filter(course => course.isOver === 1)
+  }
+  return enrolledCourses.value
+})
 
 // 计算属性
 const completedCourses = computed(() => {
@@ -245,6 +300,25 @@ const averageProgress = computed(() => {
     return sum + (course.progressPercentage || 0)
   }, 0)
   return totalProgress / enrolledCourses.value.length
+})
+
+// 筛选后的统计数据
+const filteredCompletedCourses = computed(() => {
+  return filteredCourses.value.filter(course => course.isOver !== 0).length
+})
+
+const filteredTotalPendingTests = computed(() => {
+  return filteredCourses.value.reduce((total, course) => {
+    return total + (course.pendingTests || 0)
+  }, 0)
+})
+
+const filteredAverageProgress = computed(() => {
+  if (filteredCourses.value.length === 0) return 0
+  const totalProgress = filteredCourses.value.reduce((sum, course) => {
+    return sum + (course.progressPercentage || 0)
+  }, 0)
+  return totalProgress / filteredCourses.value.length
 })
 
 // 方法
@@ -482,6 +556,24 @@ const goToAllCourses = () => {
   router.push('/dashboard/student/courses')
 }
 
+// 筛选方法
+const setFilter = (type) => {
+  filterType.value = type
+  console.log('设置筛选类型:', type)
+}
+
+// 获取空状态描述
+const getEmptyStateDescription = () => {
+  if (filterType.value === 'all') {
+    return '您还没有选择任何课程'
+  } else if (filterType.value === 'ongoing') {
+    return '您没有进行中的课程'
+  } else if (filterType.value === 'completed') {
+    return '您没有已结束的课程'
+  }
+  return '暂无数据'
+}
+
 // 生命周期
 onMounted(() => {
   loadEnrolledCourses()
@@ -527,6 +619,19 @@ onMounted(() => {
 
 .header-actions {
   flex-shrink: 0;
+}
+
+/* 筛选按钮 */
+.filter-section {
+  margin-bottom: 16px;
+}
+
+.filter-section .el-button-group {
+  margin-right: 16px;
+}
+
+.filter-section .el-button {
+  min-width: 80px;
 }
 
 /* 统计概览 */
