@@ -95,6 +95,13 @@ public class LessonQuestionMapController {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "传入的习题id有误");
             }
         });
+        // 无重复添加的习题
+        QueryWrapper<LessonQuestionMap> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("lesson_id", lessonId);
+        queryWrapper.in("question_id", questionIds);
+        if (lessonQuestionMapService.exists(queryWrapper)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "习题重复传入");
+        }
         // 添加课时习题映射
         List<LessonQuestionMap> records = questionIds.stream()
                 .map(q -> {

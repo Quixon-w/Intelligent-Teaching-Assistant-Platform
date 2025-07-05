@@ -119,7 +119,11 @@ public class LessonsController {
             throw new BusinessException(ErrorCode.NULL_ERROR, "该课时不存在习题");
         }
         // 查询返回
-        return ResultUtils.success(scoresService.getScore(lessonId, studentId));
+        Float result = scoresService.getScore(lessonId, studentId);
+        if (result == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "该学生未提交该课时的习题");
+        }
+        return ResultUtils.success(result);
     }
 
     @GetMapping("/getListScores")

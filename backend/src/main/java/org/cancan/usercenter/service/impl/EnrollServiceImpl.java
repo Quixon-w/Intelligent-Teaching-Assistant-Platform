@@ -153,7 +153,18 @@ public class EnrollServiceImpl extends ServiceImpl<EnrollMapper, Enroll> impleme
         List<Lessons> lessonsList = lessonsService.list(queryWrapperL);
         OptionalDouble result = lessonsList.stream()
                 .filter(lesson -> lesson.getHasQuestion() == 1)
-                .map(lesson -> scoresService.getScore(lesson.getLessonId(), studentId))
+                .map(lesson -> {
+                    Float score = scoresService.getScore(lesson.getLessonId(), studentId);
+                    if (score == null) {
+                        Scores scores = new Scores();
+                        scores.setStudentId(studentId);
+                        scores.setLessonId(lesson.getLessonId());
+                        scores.setScore((float) 0);
+                        scoresMapper.insert(scores);
+                        return 0f;
+                    }
+                    return score;
+                })
                 .mapToDouble(Float::doubleValue)
                 .average();
         return (float) result.orElse(0.0f);
