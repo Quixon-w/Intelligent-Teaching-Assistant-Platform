@@ -175,7 +175,7 @@ onMounted(() => {
     <!-- 答题进度 -->
     <el-card class="progress-card" shadow="never">
       <div class="progress-header">
-        <h3>{{ isReadOnly ? '查看测试题与解析' : '课时测试' }}</h3>
+        <h3>{{ isReadOnly ? '题目解析' : '课时测试' }}</h3>
         <div class="progress-info">
           <span v-if="!isReadOnly">进度: {{ progress.answered }}/{{ progress.total }}</span>
           <span v-else>题目数量: {{ progress.total }}</span>
@@ -227,13 +227,12 @@ onMounted(() => {
             <p class="question-text">{{ question.questionContent }}</p>
           </div>
           
-          <!-- 选项 -->
-          <div class="question-options">
+          <!-- 正常模式下显示选项 -->
+          <div v-if="!isReadOnly" class="question-options">
             <el-radio-group 
               v-model="question.selectedAnswer" 
               class="options-group"
               size="large"
-              :disabled="isReadOnly"
             >
               <el-radio value="A" class="option-item">
                 <span class="option-label">A</span>
@@ -254,21 +253,43 @@ onMounted(() => {
             </el-radio-group>
           </div>
 
-          <!-- 只读模式下显示正确答案和解析 -->
-          <div v-if="isReadOnly && question.correctAnswer" class="answer-section">
-            <el-divider content-position="left">
-              <el-tag type="success" size="small">正确答案</el-tag>
-            </el-divider>
-            <div class="correct-answer">
-              <el-icon color="#67c23a"><Check /></el-icon>
-              <span class="answer-text">正确答案：{{ question.correctAnswer }}</span>
+          <!-- 只读模式下显示所有选项和正确答案 -->
+          <div v-if="isReadOnly" class="readonly-options">
+            <div class="options-display">
+              <div class="option-display-item">
+                <span class="option-label">A.</span>
+                <span class="option-text">{{ question.optionA }}</span>
+              </div>
+              <div class="option-display-item">
+                <span class="option-label">B.</span>
+                <span class="option-text">{{ question.optionB }}</span>
+              </div>
+              <div class="option-display-item">
+                <span class="option-label">C.</span>
+                <span class="option-text">{{ question.optionC }}</span>
+              </div>
+              <div class="option-display-item">
+                <span class="option-label">D.</span>
+                <span class="option-text">{{ question.optionD }}</span>
+              </div>
             </div>
-            <div v-if="question.questionExplanation" class="explanation">
+            
+            <!-- 正确答案和解析 -->
+            <div v-if="question.correctAnswer" class="answer-section">
               <el-divider content-position="left">
-                <el-tag type="info" size="small">答案解析</el-tag>
+                <el-tag type="success" size="small">正确答案</el-tag>
               </el-divider>
-              <div class="explanation-content">
-                {{ question.questionExplanation }}
+              <div class="correct-answer">
+                <el-icon color="#67c23a"><Check /></el-icon>
+                <span class="answer-text">正确答案：{{ question.correctAnswer }}</span>
+              </div>
+              <div v-if="question.questionExplanation" class="explanation">
+                <el-divider content-position="left">
+                  <el-tag type="info" size="small">答案解析</el-tag>
+                </el-divider>
+                <div class="explanation-content">
+                  {{ question.questionExplanation }}
+                </div>
               </div>
             </div>
           </div>
@@ -298,9 +319,9 @@ onMounted(() => {
     <!-- 只读模式提示 -->
     <div v-if="isReadOnly" class="readonly-section">
       <el-alert
-        title="查看模式"
+        title="题目解析模式"
         type="info"
-        description="课程已结课，您可以查看测试题目和答案解析，但无法提交答案。"
+        description="课程已结课，您可以查看所有题目选项、正确答案和详细解析。"
         show-icon
         :closable="false"
       />
@@ -468,6 +489,42 @@ onMounted(() => {
   line-height: 1.6;
   color: #606266;
   font-size: 14px;
+}
+
+.readonly-options {
+  margin-top: 20px;
+}
+
+.options-display {
+  margin-bottom: 20px;
+}
+
+.option-display-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px;
+  margin-bottom: 8px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  transition: all 0.3s ease;
+}
+
+.option-display-item:hover {
+  background-color: #f0f2f5;
+}
+
+.option-display-item .option-label {
+  font-weight: bold;
+  color: #409eff;
+  margin-right: 12px;
+  min-width: 20px;
+}
+
+.option-display-item .option-text {
+  flex: 1;
+  line-height: 1.6;
+  color: #303133;
 }
   height: auto !important;
   max-height: none !important;
