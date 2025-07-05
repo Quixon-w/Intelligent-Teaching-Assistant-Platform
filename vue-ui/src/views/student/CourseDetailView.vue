@@ -506,10 +506,10 @@
                 <template #default="scope">
                   <div class="question-content">
                     <p class="question-text">{{ scope.row.questionDetails?.question || '题目信息加载中...' }}</p>
-                    <div class="question-options" v-if="scope.row.questionDetails?.options && getQuestionOptions(scope.row.questionDetails.options).length > 0">
+                    <div class="question-options" v-if="scope.row.questionDetails?.options && getQuestionOptions(scope.row.questionDetails).length > 0">
                       <div 
                         class="option-item"
-                        v-for="option in getQuestionOptions(scope.row.questionDetails.options)" 
+                        v-for="option in getQuestionOptions(scope.row.questionDetails)" 
                         :key="option.label"
                       >
                         <span class="option-label">{{ option.label }}.</span>
@@ -982,9 +982,30 @@ const getStudentRecords = async (lessonId, studentId) => {
       const questionsRes = await getLessonQuestionsList(lessonId)
       
       if (questionsRes.code === 0 && questionsRes.data) {
+        // 处理题目数据，解析options字段
+        const processedQuestions = questionsRes.data.map(question => {
+          let options = {}
+          try {
+            // 如果options是字符串，尝试解析
+            if (typeof question.options === 'string') {
+              options = JSON.parse(question.options)
+            } else if (typeof question.options === 'object') {
+              options = question.options
+            }
+          } catch (e) {
+            console.error('解析options失败:', e)
+            options = {}
+          }
+          
+          return {
+            ...question,
+            options: options
+          }
+        })
+        
         // 将记录和题目详情合并
         const mergedRecords = recordsRes.data.map(record => {
-          const question = questionsRes.data.find(q => q.questionId === record.questionId)
+          const question = processedQuestions.find(q => q.questionId === record.questionId)
           return {
             ...record,
             questionDetails: question || null
@@ -1255,10 +1276,12 @@ const formatSubmitTime = (timeString) => {
 
 // 获取题目选项（兼容不同的数据格式）
 const getQuestionOptions = (question) => {
+  console.log('getQuestionOptions 接收到的参数:', question)
   const options = []
   
   // 检查新格式：options 对象
   if (question.options && typeof question.options === 'object') {
+    console.log('找到 options 对象:', question.options)
     // 如果 options 是对象，尝试解析
     try {
       let optionsData = question.options
@@ -1268,11 +1291,15 @@ const getQuestionOptions = (question) => {
         optionsData = JSON.parse(optionsData)
       }
       
+      console.log('处理后的 optionsData:', optionsData)
+      
       // 检查是否有 A, B, C, D 属性
       if (optionsData.A) options.push({ label: 'A', text: optionsData.A })
       if (optionsData.B) options.push({ label: 'B', text: optionsData.B })
       if (optionsData.C) options.push({ label: 'C', text: optionsData.C })
       if (optionsData.D) options.push({ label: 'D', text: optionsData.D })
+      
+      console.log('解析出的选项:', options)
       
     } catch (error) {
       console.error('解析选项失败:', error)
@@ -1281,12 +1308,14 @@ const getQuestionOptions = (question) => {
   
   // 如果新格式没有找到选项，检查旧格式：optionA, optionB 等
   if (options.length === 0) {
+    console.log('尝试旧格式选项')
     if (question.optionA) options.push({ label: 'A', text: question.optionA })
     if (question.optionB) options.push({ label: 'B', text: question.optionB })
     if (question.optionC) options.push({ label: 'C', text: question.optionC })
     if (question.optionD) options.push({ label: 'D', text: question.optionD })
   }
   
+  console.log('最终返回的选项:', options)
   return options
 }
 
