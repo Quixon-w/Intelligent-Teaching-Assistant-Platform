@@ -20,8 +20,7 @@
       </div>
       
       <div v-if="loading" class="loading-section">
-        <el-loading-component />
-        <p>正在加载题目...</p>
+        <el-skeleton :rows="8" animated />
       </div>
       
       <div v-else-if="questions.length === 0" class="empty-section">
@@ -29,50 +28,56 @@
       </div>
       
       <div v-else class="questions-section">
-        <div v-for="(question, index) in questions" :key="question.questionId" class="question-item">
-          <div class="question-header">
-            <h4>第{{ index + 1 }}题 ({{ question.score }}分)</h4>
-          </div>
+        <el-card 
+          v-for="(question, index) in questions" 
+          :key="question.questionId"
+          class="question-card"
+          shadow="hover"
+        >
+          <template #header>
+            <div class="question-header">
+              <div class="question-info">
+                <el-tag type="primary" size="small">第{{ index + 1 }}题</el-tag>
+                <el-tag v-if="question.knowledge" type="info" size="small">
+                  {{ question.knowledge }}
+                </el-tag>
+              </div>
+            </div>
+          </template>
+          
           <div class="question-content">
-            <p>{{ question.content }}</p>
+            <!-- 题目内容 -->
+            <div class="question-text-container">
+              <p class="question-text">{{ question.content }}</p>
+            </div>
             
-            <!-- 单选题 -->
-            <div v-if="question.type === 'single'" class="options">
-              <el-radio-group v-model="question.answer">
-                <el-radio 
-                  v-for="option in question.options" 
-                  :key="option.key" 
-                  :label="option.key"
-                >
-                  {{ option.key }}. {{ option.content }}
+            <!-- 选项 -->
+            <div class="question-options">
+              <el-radio-group 
+                v-model="question.answer"
+                class="options-group"
+                size="large"
+              >
+                <el-radio value="A" class="option-item">
+                  <span class="option-label">A</span>
+                  <span class="option-text">{{ question.options.A }}</span>
+                </el-radio>
+                <el-radio value="B" class="option-item">
+                  <span class="option-label">B</span>
+                  <span class="option-text">{{ question.options.B }}</span>
+                </el-radio>
+                <el-radio value="C" class="option-item">
+                  <span class="option-label">C</span>
+                  <span class="option-text">{{ question.options.C }}</span>
+                </el-radio>
+                <el-radio value="D" class="option-item">
+                  <span class="option-label">D</span>
+                  <span class="option-text">{{ question.options.D }}</span>
                 </el-radio>
               </el-radio-group>
             </div>
-            
-            <!-- 多选题 -->
-            <div v-if="question.type === 'multiple'" class="options">
-              <el-checkbox-group v-model="question.answer">
-                <el-checkbox 
-                  v-for="option in question.options" 
-                  :key="option.key" 
-                  :label="option.key"
-                >
-                  {{ option.key }}. {{ option.content }}
-                </el-checkbox>
-              </el-checkbox-group>
-            </div>
-            
-            <!-- 填空题 -->
-            <div v-if="question.type === 'fill'" class="fill-answer">
-              <el-input 
-                v-model="question.answer" 
-                placeholder="请输入答案"
-                type="textarea"
-                :rows="3"
-              />
-            </div>
           </div>
-        </div>
+        </el-card>
       </div>
     </el-card>
   </div>
@@ -134,13 +139,6 @@ const submitTest = async () => {
       )
     }
     
-    // 调试：打印提交前的题目数据
-    console.log('提交前的题目数据:', questions.value.map(q => ({
-      questionId: q.questionId,
-      answer: q.answer,
-      content: q.content
-    })))
-    
     // 调用提交测试API
     const response = await commitQuestionHistory(questions.value, lessonId)
     
@@ -181,27 +179,31 @@ const loadQuestions = async () => {
     const response = await getLessonQuestionsList(lessonId)
     
     if (response.code === 0 && response.data) {
-      // 转换题目格式
+      // 转换题目格式，处理options字段
       questions.value = response.data.map((question, index) => {
-        const options = JSON.parse(question.options || '{}')
+        let options = {}
+        try {
+          // 如果options是字符串，尝试解析
+          if (typeof question.options === 'string') {
+            options = JSON.parse(question.options)
+          } else if (typeof question.options === 'object') {
+            options = question.options
+          }
+        } catch (e) {
+          console.error('解析options失败:', e)
+          options = {}
+        }
+        
         return {
           questionId: question.questionId,
           content: question.question,
-          type: 'single', // 默认为单选题
-          score: 10, // 默认每题10分
-          options: [
-            { key: 'A', content: options.A || '' },
-            { key: 'B', content: options.B || '' },
-            { key: 'C', content: options.C || '' },
-            { key: 'D', content: options.D || '' }
-          ],
+          knowledge: question.knowledge,
+          options: options,
           answer: '', // 学生的答案
           correctAnswer: question.answer,
           explanation: question.explanation
         }
       })
-      
-      console.log('加载的题目:', questions.value)
     } else {
       ElMessage.error('加载题目失败')
     }
@@ -249,6 +251,7 @@ onUnmounted(() => {
 .test-taking-container {
   max-width: 1000px;
   margin: 0 auto;
+  padding: 20px;
 }
 
 .card-header {
@@ -282,39 +285,86 @@ onUnmounted(() => {
   margin-top: 20px;
 }
 
-.question-item {
-  margin-bottom: 30px;
-  padding: 20px;
-  border: 1px solid #ebeef5;
+.question-card {
+  margin-bottom: 20px;
   border-radius: 8px;
-  background: #fafafa;
 }
 
-.question-header h4 {
-  margin: 0 0 15px 0;
-  color: #303133;
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.question-info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.question-content {
+  padding: 16px 0;
+}
+
+.question-text-container {
+  margin-bottom: 20px;
+}
+
+.question-text {
   font-size: 16px;
-}
-
-.question-content p {
-  margin: 0 0 15px 0;
-  color: #606266;
-  font-size: 14px;
   line-height: 1.6;
+  color: #303133;
+  margin: 0;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
 }
 
-.options {
-  margin-top: 15px;
+.question-options {
+  margin-bottom: 24px;
 }
 
-.options .el-radio,
-.options .el-checkbox {
-  display: block;
-  margin-bottom: 10px;
+.options-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
 
-.fill-answer {
-  margin-top: 15px;
+.option-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  background-color: #fafafa;
+  transition: all 0.3s;
+}
+
+.option-item:hover {
+  background-color: #f0f9ff;
+  border-color: #409eff;
+}
+
+.option-label {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  background-color: #409eff;
+  color: white;
+  border-radius: 50%;
+  margin-right: 12px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.option-text {
+  flex: 1;
+  font-size: 15px;
+  color: #606266;
 }
 
 .loading-section {
@@ -325,5 +375,39 @@ onUnmounted(() => {
 .empty-section {
   text-align: center;
   padding: 40px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .test-taking-container {
+    padding: 10px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .test-info {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .question-content {
+    padding: 12px 0;
+  }
+  
+  .question-text {
+    font-size: 14px;
+  }
+  
+  .option-item {
+    padding: 8px 12px;
+  }
+  
+  .option-text {
+    font-size: 14px;
+  }
 }
 </style> 

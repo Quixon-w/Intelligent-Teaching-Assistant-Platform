@@ -1166,14 +1166,8 @@ const viewTestResult = async (lesson) => {
         })
         
         if (questionsRes.code === 0 && questionsRes.data && questionsRes.data.length > 0) {
-          console.log('原始题目数据:', questionsRes.data)
-          
           // 处理题目数据，解析options字段
           const processedQuestions = questionsRes.data.map(question => {
-            console.log('处理题目:', question)
-            console.log('options类型:', typeof question.options)
-            console.log('options值:', question.options)
-            
             let options = {}
             try {
               // 如果options是字符串，尝试解析
@@ -1186,8 +1180,6 @@ const viewTestResult = async (lesson) => {
               console.error('解析options失败:', e)
               options = {}
             }
-            
-            console.log('解析后的options:', options)
             
             return {
               ...question,
