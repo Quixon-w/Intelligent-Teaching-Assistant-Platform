@@ -335,21 +335,97 @@
       :before-close="handleCloseDialog"
     >
       <div v-if="currentTestResult">
-        <!-- 未完成测试显示 -->
+        <!-- 未完成测试显示（类似教师端查看） -->
         <div v-if="currentTestResult.isNotCompleted" class="test-not-completed">
-          <el-empty 
-            description="您未完成此测试"
-            :image-size="120"
-          >
-            <template #description>
-              <div class="not-completed-content">
-                <h4>{{ currentTestResult.lesson.lessonName }} - 未完成测试</h4>
-                <p class="not-completed-text">
-                  课程已结课，您未完成此课时的测试。如需查看测试内容，请联系教师。
-                </p>
+          <div class="not-completed-header">
+            <h4>{{ currentTestResult.lesson.lessonName }} - 测试题目</h4>
+            <el-tag type="warning" size="large">您未完成此测试</el-tag>
+          </div>
+          
+          <!-- 题目列表 -->
+          <div class="questions-list" v-if="currentTestResult.questions">
+            <el-card 
+              v-for="(question, index) in currentTestResult.questions" 
+              :key="question.questionId"
+              class="question-card"
+              shadow="hover"
+            >
+              <template #header>
+                <div class="question-header">
+                  <div class="question-info">
+                    <el-tag type="primary" size="small">第{{ index + 1 }}题</el-tag>
+                    <el-tag v-if="question.questionKonwledge" type="info" size="small">
+                      {{ question.questionKonwledge }}
+                    </el-tag>
+                  </div>
+                </div>
+              </template>
+              
+              <div class="question-content">
+                <!-- 题目内容 -->
+                <div class="question-text-container">
+                  <p class="question-text">{{ question.questionContent }}</p>
+                </div>
+                
+                <!-- 选项（禁用状态） -->
+                <div class="question-options">
+                  <el-radio-group 
+                    :model-value="question.questionAnswer[0]"
+                    class="options-group"
+                    size="large"
+                    disabled
+                  >
+                    <el-radio value="A" class="option-item">
+                      <span class="option-label">A</span>
+                      <span class="option-text">{{ question.questionAnswer[1] }}</span>
+                    </el-radio>
+                    <el-radio value="B" class="option-item">
+                      <span class="option-label">B</span>
+                      <span class="option-text">{{ question.questionAnswer[2] }}</span>
+                    </el-radio>
+                    <el-radio value="C" class="option-item">
+                      <span class="option-label">C</span>
+                      <span class="option-text">{{ question.questionAnswer[3] }}</span>
+                    </el-radio>
+                    <el-radio value="D" class="option-item">
+                      <span class="option-label">D</span>
+                      <span class="option-text">{{ question.questionAnswer[4] }}</span>
+                    </el-radio>
+                  </el-radio-group>
+                </div>
+                
+                <!-- 正确答案和解析 -->
+                <div class="answer-section">
+                  <el-divider content-position="left">
+                    <el-tag type="success" size="small">正确答案</el-tag>
+                  </el-divider>
+                  <div class="correct-answer">
+                    <el-icon color="#67c23a"><Check /></el-icon>
+                    <span class="answer-text">正确答案：{{ question.questionAnswer[0] }}</span>
+                  </div>
+                  <div v-if="question.questionExplanation" class="explanation">
+                    <el-divider content-position="left">
+                      <el-tag type="info" size="small">答案解析</el-tag>
+                    </el-divider>
+                    <div class="explanation-content">
+                      {{ question.questionExplanation }}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </template>
-          </el-empty>
+            </el-card>
+          </div>
+          
+          <!-- 提示信息 -->
+          <div class="test-tip">
+            <el-alert
+              title="提示"
+              description="课程已结课，您可以查看题目内容和答案解析，但无法提交答案。"
+              type="info"
+              :closable="false"
+              show-icon
+            />
+          </div>
         </div>
         
         <!-- 已完成测试显示 -->
@@ -1045,7 +1121,7 @@ const loadLessonsCompletionStatus = async () => {
   }
 }
 
-const viewTestResult = (lesson) => {
+const viewTestResult = async (lesson) => {
   if (lesson.records && lesson.records.length > 0) {
     // 有测试记录，显示测试结果
     showTestResultDialog.value = true
@@ -1061,15 +1137,27 @@ const viewTestResult = (lesson) => {
       : 0
     currentTestResult.value.score = score
   } else {
-    // 没有测试记录，显示未完成信息
-    showTestResultDialog.value = true
-    currentTestResult.value = {
-      lesson,
-      records: [],
-      correctCount: 0,
-      totalCount: 0,
-      score: 0,
-      isNotCompleted: true // 标记为未完成
+    // 没有测试记录，获取题目信息并显示（类似教师端查看）
+    try {
+      const questionsRes = await getLessonQuestionsList(lesson.lessonId)
+      
+      if (questionsRes.code === 0 && questionsRes.data) {
+        showTestResultDialog.value = true
+        currentTestResult.value = {
+          lesson,
+          records: [],
+          correctCount: 0,
+          totalCount: 0,
+          score: 0,
+          isNotCompleted: true, // 标记为未完成
+          questions: questionsRes.data // 添加题目信息
+        }
+      } else {
+        ElMessage.error('获取题目信息失败')
+      }
+    } catch (error) {
+      console.error('获取题目信息失败:', error)
+      ElMessage.error('获取题目信息失败')
     }
   }
 }
@@ -1730,18 +1818,146 @@ onMounted(() => {
 
 /* 未完成测试样式 */
 .test-not-completed {
-  text-align: center;
-  padding: 40px 20px;
+  padding: 20px 0;
 }
 
-.not-completed-content h4 {
-  color: #909399;
+.not-completed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 0 20px;
+}
+
+.not-completed-header h4 {
+  margin: 0;
+  color: #303133;
+  font-size: 18px;
+}
+
+.questions-list {
+  margin-bottom: 24px;
+}
+
+.question-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.question-info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.question-content {
+  padding: 16px 0;
+}
+
+.question-text-container {
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #303133;
+  margin: 0;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
+}
+
+.question-options {
+  margin-bottom: 24px;
+}
+
+.options-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  background-color: #fafafa;
+  transition: all 0.3s;
+}
+
+.option-item:hover {
+  background-color: #f0f9ff;
+  border-color: #409eff;
+}
+
+.option-label {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  background-color: #409eff;
+  color: white;
+  border-radius: 50%;
+  margin-right: 12px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.option-text {
+  flex: 1;
+  font-size: 15px;
+  color: #606266;
+}
+
+.answer-section {
+  margin-top: 20px;
+}
+
+.correct-answer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #f0f9ff;
+  border: 1px solid #b3d8ff;
+  border-radius: 6px;
   margin-bottom: 16px;
 }
 
-.not-completed-text {
-  color: #606266;
-  line-height: 1.6;
+.answer-text {
+  font-size: 15px;
+  color: #67c23a;
+  font-weight: 500;
+}
+
+.explanation {
+  margin-top: 16px;
+}
+
+.explanation-content {
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #67c23a;
   font-size: 14px;
+  line-height: 1.6;
+  color: #606266;
+}
+
+.test-tip {
+  margin-top: 24px;
+  padding: 0 20px;
 }
 </style> 
