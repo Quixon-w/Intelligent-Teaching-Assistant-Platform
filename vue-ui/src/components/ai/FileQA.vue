@@ -55,9 +55,11 @@
           :action="null"
           :http-request="handleFileUpload"
           :show-file-list="false"
-          :disabled="!currentSessionId"
+          :disabled="!currentSessionId || uploading"
         >
-          <el-button type="primary" :disabled="!currentSessionId">上传文件</el-button>
+          <el-button type="primary" :loading="uploading" :disabled="!currentSessionId || uploading">
+            {{ uploading ? '上传中...' : '上传文件' }}
+          </el-button>
         </el-upload>
       </div>
       <div class="messages-container" ref="messagesContainer">
@@ -134,6 +136,7 @@ const loading = ref(false)
 const creatingSession = ref(false)
 const clearingHistory = ref(false)
 const deletingSession = ref('')
+const uploading = ref(false)
 const messagesContainer = ref()
 
 
@@ -322,6 +325,7 @@ const clearCurrentSession = async () => {
 }
 
 const handleFileUpload = async (option) => {
+  uploading.value = true
   try {
     await uploadFileForQA(option.file, currentSessionId.value)
     messages.value.push({ id: Date.now(), type: 'file', filename: option.file.name, role: 'system', timestamp: new Date() })
@@ -329,6 +333,8 @@ const handleFileUpload = async (option) => {
     scrollToBottom()
   } catch (error) {
     ElMessage.error('文件上传失败')
+  } finally {
+    uploading.value = false
   }
 }
 
