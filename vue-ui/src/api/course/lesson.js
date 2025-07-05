@@ -126,9 +126,9 @@ export function getLessonScores(lessonId) {
     })
 }
 export function saveQuestions(questions, lessonID) {
-  let tempQuestions = [];
-  for (let question of questions) {
-    tempQuestions.push({
+  // 由于API现在只接受单个Question，我们需要逐个保存
+  const savePromises = questions.map(question => {
+    const questionData = {
       "teacherId": sessionStorage.getItem("userId"),
       "knowledge": question.questionKonwledge,
       "question": question.questionContent,
@@ -140,21 +140,24 @@ export function saveQuestions(questions, lessonID) {
       },
       "answer": question.questionAnswer[0],
       "explanation": question.questionExplanation,
-    })
-  }
-  return request.post('/api/map/addByEntity', tempQuestions, {
-    params: {
-      lessonId: lessonID
     }
-  }).then(res => {
-    console.log(res);
-    return res;
+    return request.post('/api/map/addByEntity', questionData, {
+      params: {
+        lessonId: lessonID
+      }
+    })
+  })
+
+  return Promise.all(savePromises).then(results => {
+    console.log('批量保存结果:', results);
+    // 返回第一个结果作为代表，或者返回所有结果
+    return results[0];
   }).catch(err => {
     return err;
   })
 }
 export function saveNewQuestion(question, lessonID) {
-  return request.post('/api/map/addByEntities', [{
+  const questionData = {
     "teacherId": sessionStorage.getItem("userId"),
     "knowledge": question.questionKonwledge,
     "question": question.questionContent,
@@ -166,7 +169,8 @@ export function saveNewQuestion(question, lessonID) {
     },
     "answer": question.questionAnswer[0],
     "explanation": question.questionExplanation,
-  }], {
+  }
+  return request.post('/api/map/addByEntity', questionData, {
     params: {
       lessonId: lessonID
     }

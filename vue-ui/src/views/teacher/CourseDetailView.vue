@@ -824,8 +824,8 @@
             <template #description>
               <span>您的个人题库为空</span>
             </template>
-            <el-button type="primary" @click="showQuestionBankDialog = false">
-              去题库管理添加题目
+            <el-button type="primary" @click="goToQuestionBank">
+              前往个人题库创建习题
             </el-button>
           </el-empty>
         </div>
@@ -1023,7 +1023,7 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
@@ -1034,6 +1034,7 @@ import { showError, showDetailedError, showSuccess, showWarning, handleApiRespon
 import * as echarts from 'echarts'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 
 // 响应式数据
@@ -2653,7 +2654,7 @@ const saveQuestion = async () => {
     console.log('发送请求数据:', questionData)
 
     // 调用API保存题目到课时映射
-    const result = await request.post(`/api/map/addByEntities?lessonId=${currentLesson.value.lessonId}`, [questionData])
+    const result = await request.post(`/api/map/addByEntity?lessonId=${currentLesson.value.lessonId}`, questionData)
     
     console.log('API响应:', result)
     
@@ -2917,7 +2918,7 @@ const saveDraft = async () => {
     }
 
     // 草稿保存实际上就是确保题目已经保存，并给用户一个明确的反馈
-    // 因为每次添加题目时已经调用了 /api/map/addByEntities 保存到数据库
+    // 因为每次添加题目时已经调用了 /api/map/addByEntityy 保存到数据库
     // 所以这里主要是提供用户反馈和确认当前状态
     
     // 重新检测状态以确保数据一致性
@@ -3336,6 +3337,13 @@ onMounted(async () => {
     await loadAllScores()
   }
 })
+
+const goToQuestionBank = () => {
+  // 关闭当前对话框
+  showQuestionBankDialog.value = false
+  // 跳转到题库管理页面
+  router.push('/dashboard/teacher/questions')
+}
 </script>
 
 <style scoped>
