@@ -335,6 +335,14 @@
       :before-close="handleCloseDialog"
     >
       <div v-if="currentTestResult">
+        <!-- 调试信息 -->
+        <div style="background: #f0f0f0; padding: 10px; margin-bottom: 10px; font-size: 12px;">
+          <p>调试信息:</p>
+          <p>isNotCompleted: {{ currentTestResult.isNotCompleted }}</p>
+          <p>questions: {{ currentTestResult.questions ? currentTestResult.questions.length : 'null' }}</p>
+          <p>records: {{ currentTestResult.records ? currentTestResult.records.length : 'null' }}</p>
+        </div>
+        
         <!-- 未完成测试显示（类似教师端查看） -->
         <div v-if="currentTestResult.isNotCompleted" class="test-not-completed">
           <div class="not-completed-header">
@@ -1122,8 +1130,11 @@ const loadLessonsCompletionStatus = async () => {
 }
 
 const viewTestResult = async (lesson) => {
+  console.log('viewTestResult called with lesson:', lesson)
+  
   if (lesson.records && lesson.records.length > 0) {
     // 有测试记录，显示测试结果
+    console.log('有测试记录，显示测试结果')
     showTestResultDialog.value = true
     currentTestResult.value = {
       lesson,
@@ -1138,10 +1149,14 @@ const viewTestResult = async (lesson) => {
     currentTestResult.value.score = score
   } else {
     // 没有测试记录，获取题目信息并显示（类似教师端查看）
+    console.log('没有测试记录，获取题目信息')
     try {
+      console.log('调用 getLessonQuestionsList，lessonId:', lesson.lessonId)
       const questionsRes = await getLessonQuestionsList(lesson.lessonId)
+      console.log('getLessonQuestionsList 响应:', questionsRes)
       
-      if (questionsRes.code === 0 && questionsRes.data) {
+      if (questionsRes.code === 0 && questionsRes.data && questionsRes.data.length > 0) {
+        console.log('获取题目成功，题目数量:', questionsRes.data.length)
         showTestResultDialog.value = true
         currentTestResult.value = {
           lesson,
@@ -1152,8 +1167,10 @@ const viewTestResult = async (lesson) => {
           isNotCompleted: true, // 标记为未完成
           questions: questionsRes.data // 添加题目信息
         }
+        console.log('设置 currentTestResult:', currentTestResult.value)
       } else {
-        ElMessage.error('获取题目信息失败')
+        console.log('获取题目失败或题目为空:', questionsRes)
+        ElMessage.error('获取题目信息失败或该课时暂无测试题目')
       }
     } catch (error) {
       console.error('获取题目信息失败:', error)
