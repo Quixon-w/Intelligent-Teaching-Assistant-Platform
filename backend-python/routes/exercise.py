@@ -1740,3 +1740,99 @@ async def test_docx_file(user_id: str, course_id: str, lesson_num: str, filename
             "error": str(e),
             "message": f"测试docx文件失败: {str(e)}"
         }
+
+
+@router.post("/v1/practice/generate_instant", tags=["Practice"])
+async def generate_instant_practice(
+    knowledge_point: str = Field(..., description="知识点"),
+    difficulty: str = Field("medium", description="题目难度：easy(简单)、medium(中等)、hard(困难)"),
+    request: Request = None
+):
+    """
+    基于知识点生成即时自主练习题目（不保存）
+    """
+    print(f"开始生成即时练习题目: knowledge_point={knowledge_point}, difficulty={difficulty}")
+    
+    try:
+        # 从domain知识库搜索相关知识
+        domain_knowledge = search_domain_knowledge(
+            query=knowledge_point,
+            top_k=3
+        )
+        
+        # 构建针对该知识点的提示词
+        prompt = generate_instant_practice_prompt(knowledge_point, difficulty, domain_knowledge)
+        
+        # 使用RWKV生成习题
+        response_text = await generate_exercises_with_rwkv(
+            prompt, 
+            request, 
+            max_tokens=1500, 
+            temperature=0.7
+        )
+        
+        # 验证生成的内容
+        if not response_text or len(response_text.strip()) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="习题生成失败：生成的内容为空"
+            )
+        
+        print(f"即时练习题目生成完成，长度: {len(response_text)} 字符")
+        
+        return {
+            "success": True,
+            "message": "即时练习题目生成成功",
+            "data": response_text,
+            "knowledge_point": knowledge_point,
+            "difficulty": difficulty
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"生成即时练习题目时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"生成即时练习题目失败: {str(e)}"
+        )
+
+
+def generate_instant_practice_prompt(knowledge_point: str, difficulty: str, domain_knowledge: str = "") -> str:
+    """
+    生成即时练习的提示词
+    """
+    difficulty_map = {
+        "easy": "简单",
+        "medium": "中等", 
+        "hard": "困难"
+    }
+    
+    difficulty_text = difficulty_map.get(difficulty, "中等")
+    
+    prompt = f"""基于知识点"{knowledge_point}"生成1道{difficulty_text}难度的单选题。
+
+要求：
+1. 题目要针对该知识点的常见错误和难点
+2. 选项要具有迷惑性，体现学生的常见错误
+3. 解析要详细说明为什么选择正确答案
+4. 严格按照标准格式输出
+
+相关教学知识参考：
+{domain_knowledge}
+
+格式：
+题目：
+题干：[题干内容]
+A. [选项A]
+B. [选项B]
+C. [选项C]
+D. [选项D]
+正确答案：[A/B/C/D]
+解析：[详细解析为什么选择正确答案，说明其他选项为什么错误]
+所属知识点：[{knowledge_point}]"""
+
+    return prompt

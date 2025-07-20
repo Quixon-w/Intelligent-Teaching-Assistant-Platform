@@ -16,6 +16,10 @@
             <el-icon><Monitor /></el-icon>
             <span>系统概览</span>
           </el-menu-item>
+          <el-menu-item index="/dashboard/admin/big-screen">
+            <el-icon><DataBoard /></el-icon>
+            <span>大屏概览</span>
+          </el-menu-item>
           <el-sub-menu index="users">
             <template #title>
               <el-icon><User /></el-icon>
@@ -135,7 +139,8 @@ import {
   UserFilled,
   ArrowUp,
   Setting,
-  SwitchButton
+  SwitchButton,
+  DataBoard
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

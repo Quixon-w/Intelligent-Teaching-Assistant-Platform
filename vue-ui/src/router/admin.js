@@ -16,6 +16,12 @@ export default [
         meta: { title: '系统概览', role: 'admin' }
       },
       {
+        path: 'big-screen',
+        name: 'admin-big-screen',
+        component: () => import('@/views/admin/AdminBigScreenView.vue'),
+        meta: { title: '大屏概览', role: 'admin' }
+      },
+      {
         path: 'users',
         name: 'admin-users',
         component: () => import('@/views/admin/UserManagementView.vue'),

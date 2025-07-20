@@ -333,6 +333,8 @@
                   :studentId="currentUser.id"
                   title="课程错题知识点分布"
                   :showDetails="false"
+                  :showPracticeButton="true"
+                  @start-practice="handleStartPractice"
                 />
               </div>
               
@@ -352,7 +354,9 @@
                       :studentId="currentUser.id"
                       :title="`${lesson.lessonName} - 错题统计`"
                       :showDetails="true"
+                      :showPracticeButton="true"
                       @tag-click="handleKnowledgeTagClick"
+                      @start-practice="handleStartPractice"
                     />
                   </el-collapse-item>
                 </el-collapse>
@@ -374,6 +378,13 @@
         <el-skeleton :rows="8" animated />
       </div>
     </el-card>
+    
+    <!-- 即时练习弹窗 -->
+    <InstantPracticeDialog
+      v-model="showInstantPractice"
+      :knowledgePoint="currentPracticeKnowledge"
+      :difficulty="practiceDifficulty"
+    />
     
     <!-- 测试结果详情对话框 -->
     <el-dialog 
@@ -655,6 +666,7 @@ import axios from 'axios'
 import { dismissCourse as dismissCourseAPI } from '@/api/course'
 import { getLessonRecords, getLessonQuestionsList } from '@/api/course/lesson'
 import WrongKnowledgeCloud from '@/components/WrongKnowledgeCloud.vue'
+import InstantPracticeDialog from '@/components/InstantPracticeDialog.vue'
 import * as echarts from 'echarts'
 
 const route = useRoute()
@@ -694,6 +706,11 @@ const scoreTrendChart = ref(null)
 
 // 错题统计相关
 const activeLessonCollapse = ref([])
+
+// 即时练习相关
+const showInstantPractice = ref(false)
+const currentPracticeKnowledge = ref('')
+const practiceDifficulty = ref('medium')
 
 // 计算属性
 const getStatusTitle = () => {
@@ -1303,6 +1320,13 @@ const handleCloseDialog = (done) => {
 const handleKnowledgeTagClick = (item) => {
   ElMessage.info(`点击了知识点: ${item.knowledge}，错误次数: ${item.wrongCount}`)
   // 这里可以添加更多交互逻辑，比如跳转到相关练习等
+}
+
+// 即时练习相关方法
+const handleStartPractice = (item) => {
+  currentPracticeKnowledge.value = item.knowledge
+  practiceDifficulty.value = 'medium' // 默认中等难度
+  showInstantPractice.value = true
 }
 
 // 表格行类名

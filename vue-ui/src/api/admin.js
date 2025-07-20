@@ -6,7 +6,7 @@ export function getUsersList(pageNum, pageSize, username = '', userAccount = '')
     pageNum: pageNum,
     pageSize: pageSize
   }
-  
+
   // 只有当搜索条件不为空时才添加到参数中
   if (username) {
     params.username = username
@@ -14,9 +14,9 @@ export function getUsersList(pageNum, pageSize, username = '', userAccount = '')
   if (userAccount) {
     params.userAccount = userAccount
   }
-  
+
   console.log('API调用参数:', params)
-  
+
   return request.get('/api/user/searchPage', { params })
 }
 
@@ -111,4 +111,25 @@ export function getCourseNum() {
   }).catch(err => {
     return err
   })
+}
+
+// 管理员大屏统计API
+export function getAdminOverview() {
+  return request.get('/api/admin/statistics/overview')
+}
+
+export function getTeacherUsage(data) {
+  return request.post('/api/admin/statistics/teacher-usage', data)
+}
+
+export function getStudentUsage(data) {
+  return request.post('/api/admin/statistics/student-usage', data)
+}
+
+export function getTeachingEfficiency(data) {
+  return request.post('/api/admin/statistics/teaching-efficiency', data)
+}
+
+export function getLearningEffectiveness(data) {
+  return request.post('/api/admin/statistics/learning-effectiveness', data)
 } 

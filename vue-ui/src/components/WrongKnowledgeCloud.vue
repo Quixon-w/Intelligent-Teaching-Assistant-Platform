@@ -33,6 +33,15 @@
         >
           {{ item.knowledge }}
           <span class="count">({{ item.wrongCount }})</span>
+          <el-button 
+            v-if="showPracticeButton"
+            size="small" 
+            type="primary" 
+            class="practice-btn"
+            @click.stop="startInstantPractice(item)"
+          >
+            练习
+          </el-button>
         </div>
       </div>
       
@@ -121,9 +130,13 @@ export default {
     showDetails: {
       type: Boolean,
       default: false
+    },
+    showPracticeButton: {
+      type: Boolean,
+      default: false
     }
   },
-  emits: ['tag-click'],
+  emits: ['tag-click', 'start-practice'],
   setup(props, { emit }) {
     const loading = ref(false)
     const knowledgeStats = ref([])
@@ -195,6 +208,11 @@ export default {
     const handleTagClick = (item) => {
       emit('tag-click', item)
     }
+    
+    // 开始即时练习
+    const startInstantPractice = (item) => {
+      emit('start-practice', item)
+    }
 
     // 格式化日期
     const formatDate = (dateStr) => {
@@ -217,6 +235,7 @@ export default {
       getTagStyle,
       loadData,
       handleTagClick,
+      startInstantPractice,
       formatDate
     }
   }
@@ -286,6 +305,12 @@ export default {
   font-size: 0.8em;
   opacity: 0.7;
   margin-left: 4px;
+}
+
+.knowledge-tag .practice-btn {
+  margin-left: 8px;
+  font-size: 12px;
+  padding: 2px 8px;
 }
 
 .stats-info {

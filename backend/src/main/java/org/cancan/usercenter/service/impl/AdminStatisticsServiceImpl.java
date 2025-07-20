@@ -1,0 +1,481 @@
+package org.cancan.usercenter.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import org.cancan.usercenter.mapper.*;
+import org.cancan.usercenter.model.dto.AdminStatisticsRequest;
+import org.cancan.usercenter.model.entity.*;
+import org.cancan.usercenter.model.vo.*;
+import org.cancan.usercenter.service.AdminStatisticsService;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 管理员统计服务实现
+ */
+@Service
+public class AdminStatisticsServiceImpl implements AdminStatisticsService {
+
+    @Resource
+    private CourseMapper courseMapper;
+
+    @Resource
+    private UserMapper userMapper;
+
+    @Resource
+    private QuestionRecordsMapper questionRecordsMapper;
+
+    @Resource
+    private EnrollMapper enrollMapper;
+
+    @Resource
+    private LessonMapper lessonMapper;
+
+    @Override
+    public TeacherUsageStatisticsVO getTeacherUsageStatistics(AdminStatisticsRequest request) {
+        TeacherUsageStatisticsVO result = new TeacherUsageStatisticsVO();
+        
+        // 获取时间范围
+        LocalDateTime startTime = getStartTime(request.getPeriod());
+        LocalDateTime endTime = LocalDateTime.now();
+        
+        // 统计教师使用情况（基于课程创建、题目生成等活动）
+        QueryWrapper<Course> courseQuery = new QueryWrapper<>();
+        courseQuery.ge("createTime", startTime);
+        courseQuery.le("createTime", endTime);
+        List<Course> courses = courseMapper.selectList(courseQuery);
+        
+        // 统计活跃教师
+        Set<Long> activeTeacherIds = courses.stream()
+                .map(Course::getTeacherId)
+                .collect(Collectors.toSet());
+        
+        result.setTotalUsageCount((long) courses.size());
+        result.setActiveTeacherCount((long) activeTeacherIds.size());
+        result.setAverageUsageCount(activeTeacherIds.isEmpty() ? 0.0 : 
+                (double) courses.size() / activeTeacherIds.size());
+        
+        // 活跃板块统计（模拟数据）
+        List<ActiveModuleVO> activeModules = new ArrayList<>();
+        activeModules.add(new ActiveModuleVO() {{
+            setModuleName("课程管理");
+            setUsageCount((long) courses.size());
+            setPercentage(60.0);
+            setModuleType("course_management");
+        }});
+        activeModules.add(new ActiveModuleVO() {{
+            setModuleName("题目生成");
+            setUsageCount((long) (courses.size() * 0.8));
+            setPercentage(30.0);
+            setModuleType("question_generation");
+        }});
+        activeModules.add(new ActiveModuleVO() {{
+            setModuleName("学生分析");
+            setUsageCount((long) (courses.size() * 0.5));
+            setPercentage(10.0);
+            setModuleType("student_analysis");
+        }});
+        result.setActiveModules(activeModules);
+        
+        // 使用趋势（模拟数据）
+        List<UsageTrendVO> usageTrends = generateUsageTrends(startTime, endTime, "teacher");
+        result.setUsageTrends(usageTrends);
+        
+        // 教师排名（模拟数据）
+        List<TeacherRankingVO> teacherRankings = new ArrayList<>();
+        for (Long teacherId : activeTeacherIds) {
+            User teacher = userMapper.selectById(teacherId);
+            if (teacher != null) {
+                long courseCount = courses.stream()
+                        .filter(course -> course.getTeacherId().equals(teacherId))
+                        .count();
+                teacherRankings.add(new TeacherRankingVO() {{
+                    setTeacherId(teacherId);
+                    setTeacherName(teacher.getUsername());
+                    setUsageCount(courseCount);
+                    setRanking(teacherRankings.size() + 1);
+                }});
+            }
+        }
+        teacherRankings.sort((a, b) -> Long.compare(b.getUsageCount(), a.getUsageCount()));
+        result.setTeacherRankings(teacherRankings);
+        
+        return result;
+    }
+
+    @Override
+    public StudentUsageStatisticsVO getStudentUsageStatistics(AdminStatisticsRequest request) {
+        StudentUsageStatisticsVO result = new StudentUsageStatisticsVO();
+        
+        // 获取时间范围
+        LocalDateTime startTime = getStartTime(request.getPeriod());
+        LocalDateTime endTime = LocalDateTime.now();
+        
+        // 统计学生使用情况（基于答题记录）
+        QueryWrapper<QuestionRecords> recordsQuery = new QueryWrapper<>();
+        recordsQuery.ge("submitTime", startTime);
+        recordsQuery.le("submitTime", endTime);
+        List<QuestionRecords> records = questionRecordsMapper.selectList(recordsQuery);
+        
+        // 统计活跃学生
+        Set<Long> activeStudentIds = records.stream()
+                .map(QuestionRecords::getStudentId)
+                .collect(Collectors.toSet());
+        
+        result.setTotalUsageCount((long) records.size());
+        result.setActiveStudentCount((long) activeStudentIds.size());
+        result.setAverageUsageCount(activeStudentIds.isEmpty() ? 0.0 : 
+                (double) records.size() / activeStudentIds.size());
+        
+        // 活跃板块统计（模拟数据）
+        List<ActiveModuleVO> activeModules = new ArrayList<>();
+        activeModules.add(new ActiveModuleVO() {{
+            setModuleName("在线测试");
+            setUsageCount((long) (records.size() * 0.7));
+            setPercentage(70.0);
+            setModuleType("online_test");
+        }});
+        activeModules.add(new ActiveModuleVO() {{
+            setModuleName("错题练习");
+            setUsageCount((long) (records.size() * 0.2));
+            setPercentage(20.0);
+            setModuleType("wrong_question_practice");
+        }});
+        activeModules.add(new ActiveModuleVO() {{
+            setModuleName("课程学习");
+            setUsageCount((long) (records.size() * 0.1));
+            setPercentage(10.0);
+            setModuleType("course_learning");
+        }});
+        result.setActiveModules(activeModules);
+        
+        // 使用趋势（模拟数据）
+        List<UsageTrendVO> usageTrends = generateUsageTrends(startTime, endTime, "student");
+        result.setUsageTrends(usageTrends);
+        
+        // 学生排名（模拟数据）
+        List<StudentRankingVO> studentRankings = new ArrayList<>();
+        for (Long studentId : activeStudentIds) {
+            User student = userMapper.selectById(studentId);
+            if (student != null) {
+                long recordCount = records.stream()
+                        .filter(record -> record.getStudentId().equals(studentId))
+                        .count();
+                studentRankings.add(new StudentRankingVO() {{
+                    setStudentId(studentId);
+                    setStudentName(student.getUsername());
+                    setUsageCount(recordCount);
+                    setRanking(studentRankings.size() + 1);
+                }});
+            }
+        }
+        studentRankings.sort((a, b) -> Long.compare(b.getUsageCount(), a.getUsageCount()));
+        result.setStudentRankings(studentRankings);
+        
+        return result;
+    }
+
+    @Override
+    public TeachingEfficiencyVO getTeachingEfficiency(AdminStatisticsRequest request) {
+        TeachingEfficiencyVO result = new TeachingEfficiencyVO();
+        
+        // 获取所有课程
+        List<Course> courses = courseMapper.selectList(null);
+        
+        // 计算整体教学效率指数（基于通过率、参与度等）
+        double overallEfficiency = 0.0;
+        List<CoursePassRateVO> coursePassRates = new ArrayList<>();
+        
+        for (Course course : courses) {
+            // 获取课程答题记录
+            QueryWrapper<QuestionRecords> recordsQuery = new QueryWrapper<>();
+            recordsQuery.eq("courseId", course.getId());
+            List<QuestionRecords> records = questionRecordsMapper.selectList(recordsQuery);
+            
+            if (!records.isEmpty()) {
+                long totalStudents = records.stream()
+                        .map(QuestionRecords::getStudentId)
+                        .distinct()
+                        .count();
+                
+                long passedStudents = records.stream()
+                        .filter(record -> record.getIsCorrect() == 1)
+                        .map(QuestionRecords::getStudentId)
+                        .distinct()
+                        .count();
+                
+                double passRate = totalStudents > 0 ? (double) passedStudents / totalStudents * 100 : 0.0;
+                double averageScore = records.stream()
+                        .mapToDouble(QuestionRecords::getScore)
+                        .average()
+                        .orElse(0.0);
+                
+                coursePassRates.add(new CoursePassRateVO() {{
+                    setCourseId(course.getId());
+                    setCourseName(course.getName());
+                    setPassRate(passRate);
+                    setTotalStudents(totalStudents);
+                    setPassedStudents(passedStudents);
+                    setAverageScore(averageScore);
+                }});
+                
+                overallEfficiency += passRate;
+            }
+        }
+        
+        result.setOverallEfficiencyIndex(coursePassRates.isEmpty() ? 0.0 : 
+                overallEfficiency / coursePassRates.size());
+        result.setCoursePassRates(coursePassRates);
+        
+        // 需要优化的课程
+        List<CourseOptimizationVO> optimizationSuggestions = new ArrayList<>();
+        for (CoursePassRateVO passRate : coursePassRates) {
+            if (passRate.getPassRate() < 60.0) {
+                optimizationSuggestions.add(new CourseOptimizationVO() {{
+                    setCourseId(passRate.getCourseId());
+                    setCourseName(passRate.getCourseName());
+                    setIssueType("low_pass_rate");
+                    setIssueDescription("通过率偏低，需要加强教学");
+                    setSuggestion("建议增加练习题目，加强重点知识点讲解");
+                    setPriority(passRate.getPassRate() < 40.0 ? "high" : "medium");
+                    setRelatedData(passRate.getPassRate());
+                }});
+            }
+        }
+        result.setOptimizationSuggestions(optimizationSuggestions);
+        
+        // 教学效率趋势（模拟数据）
+        List<EfficiencyTrendVO> efficiencyTrends = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (int i = 6; i >= 0; i--) {
+            LocalDate date = today.minusDays(i);
+            efficiencyTrends.add(new EfficiencyTrendVO() {{
+                setDate(date);
+                setEfficiencyIndex(70.0 + Math.random() * 20.0);
+                setPassRate(65.0 + Math.random() * 25.0);
+            }});
+        }
+        result.setEfficiencyTrends(efficiencyTrends);
+        
+        // 学科表现分析（模拟数据）
+        List<SubjectPerformanceVO> subjectPerformances = new ArrayList<>();
+        subjectPerformances.add(new SubjectPerformanceVO() {{
+            setSubjectName("数学");
+            setAveragePassRate(75.0);
+            setStudentCount(150L);
+            setCourseCount(8L);
+        }});
+        subjectPerformances.add(new SubjectPerformanceVO() {{
+            setSubjectName("语文");
+            setAveragePassRate(82.0);
+            setStudentCount(120L);
+            setCourseCount(6L);
+        }});
+        subjectPerformances.add(new SubjectPerformanceVO() {{
+            setSubjectName("英语");
+            setAveragePassRate(68.0);
+            setStudentCount(100L);
+            setCourseCount(5L);
+        }});
+        result.setSubjectPerformances(subjectPerformances);
+        
+        return result;
+    }
+
+    @Override
+    public LearningEffectivenessVO getLearningEffectiveness(AdminStatisticsRequest request) {
+        LearningEffectivenessVO result = new LearningEffectivenessVO();
+        
+        // 获取所有答题记录
+        List<QuestionRecords> allRecords = questionRecordsMapper.selectList(null);
+        
+        if (!allRecords.isEmpty()) {
+            // 计算平均正确率
+            double averageCorrectRate = allRecords.stream()
+                    .mapToDouble(record -> record.getIsCorrect() == 1 ? 100.0 : 0.0)
+                    .average()
+                    .orElse(0.0);
+            result.setAverageCorrectRate(averageCorrectRate);
+            
+            // 正确率趋势（模拟数据）
+            List<CorrectRateTrendVO> correctRateTrends = new ArrayList<>();
+            LocalDate today = LocalDate.now();
+            for (int i = 6; i >= 0; i--) {
+                LocalDate date = today.minusDays(i);
+                correctRateTrends.add(new CorrectRateTrendVO() {{
+                    setDate(date);
+                    setCorrectRate(65.0 + Math.random() * 25.0);
+                    setQuestionCount(50L + (long)(Math.random() * 100));
+                }});
+            }
+            result.setCorrectRateTrends(correctRateTrends);
+            
+            // 知识点掌握情况（基于错题统计）
+            Map<String, Long> knowledgePointErrors = allRecords.stream()
+                    .filter(record -> record.getIsCorrect() == 0 && record.getKnowledge() != null)
+                    .collect(Collectors.groupingBy(
+                            QuestionRecords::getKnowledge,
+                            Collectors.counting()
+                    ));
+            
+            List<KnowledgePointMasteryVO> knowledgePointMastery = new ArrayList<>();
+            for (Map.Entry<String, Long> entry : knowledgePointErrors.entrySet()) {
+                String knowledge = entry.getKey();
+                long errorCount = entry.getValue();
+                long totalCount = allRecords.stream()
+                        .filter(record -> knowledge.equals(record.getKnowledge()))
+                        .count();
+                double masteryRate = totalCount > 0 ? (double)(totalCount - errorCount) / totalCount * 100 : 0.0;
+                
+                knowledgePointMastery.add(new KnowledgePointMasteryVO() {{
+                    setKnowledgePoint(knowledge);
+                    setMasteryRate(masteryRate);
+                    setTotalQuestions(totalCount);
+                    setCorrectCount(totalCount - errorCount);
+                }});
+            }
+            result.setKnowledgePointMastery(knowledgePointMastery);
+            
+            // 高频错误知识点
+            List<HighFrequencyErrorVO> highFrequencyErrors = knowledgePointErrors.entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                    .limit(10)
+                    .map(entry -> {
+                        String knowledge = entry.getKey();
+                        long errorCount = entry.getValue();
+                        long totalCount = allRecords.stream()
+                                .filter(record -> knowledge.equals(record.getKnowledge()))
+                                .count();
+                        double errorRate = totalCount > 0 ? (double) errorCount / totalCount * 100 : 0.0;
+                        
+                        return new HighFrequencyErrorVO() {{
+                            setKnowledgePoint(knowledge);
+                            setErrorCount(errorCount);
+                            setErrorRate(errorRate);
+                            setCourseCount(1L); // 简化处理
+                            setStudentCount(allRecords.stream()
+                                    .filter(record -> knowledge.equals(record.getKnowledge()))
+                                    .map(QuestionRecords::getStudentId)
+                                    .distinct()
+                                    .count());
+                        }};
+                    })
+                    .collect(Collectors.toList());
+            result.setHighFrequencyErrors(highFrequencyErrors);
+            
+            // 学习效果分布（模拟数据）
+            List<LearningEffectivenessDistributionVO> effectivenessDistribution = new ArrayList<>();
+            effectivenessDistribution.add(new LearningEffectivenessDistributionVO() {{
+                setLevel("优秀");
+                setStudentCount(50L);
+                setPercentage(25.0);
+                setScoreRange("90-100");
+            }});
+            effectivenessDistribution.add(new LearningEffectivenessDistributionVO() {{
+                setLevel("良好");
+                setStudentCount(80L);
+                setPercentage(40.0);
+                setScoreRange("80-89");
+            }});
+            effectivenessDistribution.add(new LearningEffectivenessDistributionVO() {{
+                setLevel("中等");
+                setStudentCount(50L);
+                setPercentage(25.0);
+                setScoreRange("70-79");
+            }});
+            effectivenessDistribution.add(new LearningEffectivenessDistributionVO() {{
+                setLevel("待提高");
+                setStudentCount(20L);
+                setPercentage(10.0);
+                setScoreRange("0-69");
+            }});
+            result.setEffectivenessDistribution(effectivenessDistribution);
+        }
+        
+        return result;
+    }
+
+    @Override
+    public SystemOverviewVO getSystemOverview() {
+        SystemOverviewVO result = new SystemOverviewVO();
+        
+        // 基础统计数据
+        result.setTotalCourses(courseMapper.selectCount(null));
+        result.setTotalTeachers(userMapper.selectCount(new QueryWrapper<User>().eq("userRole", 1)));
+        result.setTotalStudents(userMapper.selectCount(new QueryWrapper<User>().eq("userRole", 0)));
+        result.setTotalTests(questionRecordsMapper.selectCount(null));
+        
+        // 今日活跃用户
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime todayEnd = LocalDateTime.now();
+        QueryWrapper<QuestionRecords> todayQuery = new QueryWrapper<>();
+        todayQuery.ge("submitTime", todayStart);
+        todayQuery.le("submitTime", todayEnd);
+        long todayActiveUsers = questionRecordsMapper.selectList(todayQuery).stream()
+                .map(QuestionRecords::getStudentId)
+                .distinct()
+                .count();
+        result.setTodayActiveUsers(todayActiveUsers);
+        
+        // 本周活跃用户
+        LocalDateTime weekStart = LocalDate.now().minusDays(7).atStartOfDay();
+        QueryWrapper<QuestionRecords> weekQuery = new QueryWrapper<>();
+        weekQuery.ge("submitTime", weekStart);
+        weekQuery.le("submitTime", todayEnd);
+        long weekActiveUsers = questionRecordsMapper.selectList(weekQuery).stream()
+                .map(QuestionRecords::getStudentId)
+                .distinct()
+                .count();
+        result.setWeekActiveUsers(weekActiveUsers);
+        
+        // 平均通过率
+        List<QuestionRecords> allRecords = questionRecordsMapper.selectList(null);
+        if (!allRecords.isEmpty()) {
+            double averagePassRate = allRecords.stream()
+                    .mapToDouble(record -> record.getIsCorrect() == 1 ? 100.0 : 0.0)
+                    .average()
+                    .orElse(0.0);
+            result.setAveragePassRate(averagePassRate);
+        } else {
+            result.setAveragePassRate(0.0);
+        }
+        
+        return result;
+    }
+    
+    // 辅助方法
+    private LocalDateTime getStartTime(String period) {
+        LocalDate today = LocalDate.now();
+        switch (period) {
+            case "today":
+                return today.atStartOfDay();
+            case "week":
+                return today.minusDays(7).atStartOfDay();
+            case "month":
+                return today.minusDays(30).atStartOfDay();
+            default:
+                return today.atStartOfDay();
+        }
+    }
+    
+    private List<UsageTrendVO> generateUsageTrends(LocalDateTime startTime, LocalDateTime endTime, String userType) {
+        List<UsageTrendVO> trends = new ArrayList<>();
+        LocalDateTime current = startTime;
+        
+        while (!current.isAfter(endTime)) {
+            trends.add(new UsageTrendVO() {{
+                setTimePoint(current);
+                setUsageCount((long) (Math.random() * 100 + 50));
+                setUserType(userType);
+            }});
+            current = current.plusHours(1);
+        }
+        
+        return trends;
+    }
+} 
