@@ -9,6 +9,7 @@ import org.cancan.usercenter.service.QuestionRecordsService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author 洪
@@ -33,6 +34,42 @@ public class QuestionRecordsServiceImpl extends ServiceImpl<QuestionRecordsMappe
         queryWrapper.eq("lesson_id", lessonId);
         queryWrapper.orderByAsc("question_id");
         return questionRecordsMapper.selectList(queryWrapper);
+    }
+
+    /**
+     * 获取学生在某课时的错题知识点统计
+     *
+     * @param lessonId 课时ID
+     * @param studentId 学生ID
+     * @return 知识点-错误次数的映射
+     */
+    @Override
+    public List<Map<String, Object>> getWrongKnowledgeStatsByLesson(Long lessonId, Long studentId) {
+        return questionRecordsMapper.getWrongKnowledgeStatsByLesson(lessonId, studentId);
+    }
+
+    /**
+     * 获取学生在某课程的错题知识点统计
+     *
+     * @param courseId 课程ID
+     * @param studentId 学生ID
+     * @return 知识点-错误次数的映射
+     */
+    @Override
+    public List<Map<String, Object>> getWrongKnowledgeStatsByCourse(Long courseId, Long studentId) {
+        return questionRecordsMapper.getWrongKnowledgeStatsByCourse(courseId, studentId);
+    }
+
+    /**
+     * 获取学生在某课时的所有错题记录（包含知识点信息）
+     *
+     * @param lessonId 课时ID
+     * @param studentId 学生ID
+     * @return 错题记录列表
+     */
+    @Override
+    public List<Map<String, Object>> getWrongQuestionsByLesson(Long lessonId, Long studentId) {
+        return questionRecordsMapper.getWrongQuestionsByLesson(lessonId, studentId);
     }
 }
 

@@ -77,6 +77,11 @@ class Settings:
         self.TEACHERS_DIR = self.KNOWLEDGE_BASE_DIR / "Teachers"
         self.STUDENTS_DIR = self.KNOWLEDGE_BASE_DIR / "Students"
         
+        # Domain知识库路径
+        self.DOMAIN_KNOWLEDGE_DIR = self.KNOWLEDGE_BASE_DIR / "domain_knowledge"
+        self.DOMAIN_DOCS_DIR = self.DOMAIN_KNOWLEDGE_DIR / "domain_docs"
+        self.DOMAIN_VECTOR_KB_DIR = self.DOMAIN_KNOWLEDGE_DIR / "vector_kb"
+        
         # 其他路径
         self.LOGS_DIR = base_path / "logs"
         self.TEMP_DIR = base_path / "temp"
@@ -84,7 +89,8 @@ class Settings:
         
         # 确保目录存在
         for path in [self.MODEL_DIR, self.KNOWLEDGE_BASE_DIR, self.TEACHERS_DIR, 
-                    self.STUDENTS_DIR, self.LOGS_DIR, self.TEMP_DIR, self.UPLOADS_DIR]:
+                    self.STUDENTS_DIR, self.DOMAIN_KNOWLEDGE_DIR, self.DOMAIN_DOCS_DIR,
+                    self.DOMAIN_VECTOR_KB_DIR, self.LOGS_DIR, self.TEMP_DIR, self.UPLOADS_DIR]:
             path.mkdir(parents=True, exist_ok=True)
     
     def get_model_config(self) -> Dict[str, Any]:
@@ -151,6 +157,9 @@ class Settings:
             "KNOWLEDGE_BASE_DIR": str(self.KNOWLEDGE_BASE_DIR),
             "TEACHERS_DIR": str(self.TEACHERS_DIR),
             "STUDENTS_DIR": str(self.STUDENTS_DIR),
+            "DOMAIN_KNOWLEDGE_DIR": str(self.DOMAIN_KNOWLEDGE_DIR),
+            "DOMAIN_DOCS_DIR": str(self.DOMAIN_DOCS_DIR),
+            "DOMAIN_VECTOR_KB_DIR": str(self.DOMAIN_VECTOR_KB_DIR),
             "LOGS_DIR": str(self.LOGS_DIR),
             "TEMP_DIR": str(self.TEMP_DIR),
             "UPLOADS_DIR": str(self.UPLOADS_DIR),

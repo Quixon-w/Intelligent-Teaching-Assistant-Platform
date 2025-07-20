@@ -370,6 +370,89 @@
               </div>
             </div>
           </el-tab-pane>
+
+          <!-- 错题统计 -->
+          <el-tab-pane label="错题统计" name="wrongQuestions">
+            <div class="wrong-questions-section">
+              <div class="section-header">
+                <h4>学生错题统计分析</h4>
+                <div class="action-buttons">
+                  <el-button @click="loadStudents">刷新学生列表</el-button>
+                </div>
+              </div>
+              
+              <!-- 学生选择器 -->
+              <div class="student-selector-section">
+                <h5>选择学生查看错题统计</h5>
+                <el-select 
+                  v-model="selectedStudentForWrongQuestions" 
+                  placeholder="选择学生查看错题统计" 
+                  @change="loadStudentWrongQuestions"
+                  style="width: 300px;"
+                >
+                  <el-option
+                    v-for="student in studentsList"
+                    :key="student.id"
+                    :label="student.username"
+                    :value="student.id"
+                  />
+                </el-select>
+              </div>
+              
+              <!-- 学生错题统计 -->
+              <div v-if="selectedStudentForWrongQuestions" class="student-wrong-stats">
+                <!-- 课程整体错题统计 -->
+                <div class="course-wrong-stats">
+                  <h5>课程整体错题统计</h5>
+                  <WrongKnowledgeCloud
+                    type="course"
+                    :courseId="courseId"
+                    :studentId="selectedStudentForWrongQuestions"
+                    title="课程错题知识点分布"
+                    :showDetails="false"
+                  />
+                </div>
+                
+                <!-- 课时错题统计 -->
+                <div class="lesson-wrong-stats">
+                  <h5>各课时错题统计</h5>
+                  <el-collapse v-model="activeLessonCollapse">
+                    <el-collapse-item 
+                      v-for="lesson in lessonsList" 
+                      :key="lesson.lessonId"
+                      :title="`${lesson.lessonName} (课时${lesson.lessonId})`"
+                      :name="lesson.lessonId"
+                    >
+                      <WrongKnowledgeCloud
+                        type="lesson"
+                        :lessonId="lesson.lessonId"
+                        :studentId="selectedStudentForWrongQuestions"
+                        :title="`${lesson.lessonName} - 错题统计`"
+                        :showDetails="true"
+                        @tag-click="handleKnowledgeTagClick"
+                      />
+                    </el-collapse-item>
+                  </el-collapse>
+                  
+                  <!-- 空状态 -->
+                  <el-empty 
+                    v-if="lessonsList.length === 0"
+                    description="暂无课时信息"
+                    :image-size="100"
+                  />
+                </div>
+              </div>
+              
+              <!-- 未选择学生时的提示 -->
+              <div v-else class="no-student-selected">
+                <el-empty description="请选择学生查看错题统计">
+                  <template #description>
+                    <span>从上方下拉菜单中选择学生，查看该学生的错题知识点分布情况</span>
+                  </template>
+                </el-empty>
+              </div>
+            </div>
+          </el-tab-pane>
         </el-tabs>
       </div>
       
@@ -1031,6 +1114,7 @@ import axios from 'axios'
 import { addLesson as addLessonApi, commitQuestion } from '@/api/course/lesson'
 import { getCourseScore } from '@/api/course'
 import { showError, showDetailedError, showSuccess, showWarning, handleApiResponse, handleException } from '@/utils/errorHandler'
+import WrongKnowledgeCloud from '@/components/WrongKnowledgeCloud.vue'
 import * as echarts from 'echarts'
 
 const route = useRoute()
@@ -1220,6 +1304,10 @@ const selectedStudentId = ref(null)
 const scoreTrendData = ref([])
 const scoreTrendLoading = ref(false)
 const scoreChartRef = ref(null)
+
+// 错题统计相关
+const selectedStudentForWrongQuestions = ref(null)
+const activeLessonCollapse = ref([])
 
 // 计算属性：判断当前用户是否为课程教师
 const isCurrentUserTeacher = computed(() => {
@@ -3270,6 +3358,28 @@ const viewStudentDetailScore = async (student) => {
   }
 }
 
+// 错题统计相关方法
+const loadStudentWrongQuestions = async () => {
+  if (!selectedStudentForWrongQuestions.value) {
+    return
+  }
+  
+  try {
+    // 切换到错题统计标签页
+    activeTab.value = 'wrongQuestions'
+    
+    ElMessage.success(`已加载学生错题统计`)
+  } catch (error) {
+    console.error('加载学生错题统计失败:', error)
+    ElMessage.error('加载学生错题统计失败')
+  }
+}
+
+const handleKnowledgeTagClick = (item) => {
+  ElMessage.info(`点击了知识点: ${item.knowledge}，错误次数: ${item.wrongCount}`)
+  // 这里可以添加更多交互逻辑，比如跳转到相关练习等
+}
+
 
 
 const getGrade = (score) => {
@@ -3937,5 +4047,75 @@ const goToQuestionBank = () => {
   margin: 0;
   color: #909399;
   font-style: italic;
+}
+
+/* 错题统计样式 */
+.wrong-questions-section {
+  padding: 20px;
+}
+
+.student-selector-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+}
+
+.student-selector-section h5 {
+  margin: 0 0 15px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.student-wrong-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.course-wrong-stats {
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+}
+
+.course-wrong-stats h5 {
+  margin: 0 0 15px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.lesson-wrong-stats {
+  margin-top: 20px;
+}
+
+.lesson-wrong-stats h5 {
+  margin-bottom: 15px;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.no-student-selected {
+  padding: 40px;
+  text-align: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .student-selector-section,
+  .course-wrong-stats {
+    padding: 15px;
+  }
+  
+  .student-selector-section h5,
+  .course-wrong-stats h5,
+  .lesson-wrong-stats h5 {
+    font-size: 14px;
+  }
 }
 </style> 

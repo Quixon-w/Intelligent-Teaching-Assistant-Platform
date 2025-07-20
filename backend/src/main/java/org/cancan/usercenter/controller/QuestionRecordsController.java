@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
 
 import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
 
@@ -185,6 +186,89 @@ public class QuestionRecordsController {
                 .distinct()
                 .count();
         return ResultUtils.success(distinctCount);
+    }
+
+    @GetMapping("/wrongKnowledgeStats/lesson")
+    @Operation(summary = "获取学生在某课时的错题知识点统计")
+    @Parameters({
+            @Parameter(name = "lessonId", description = "课时ID", required = true),
+            @Parameter(name = "studentId", description = "学生ID", required = true)
+    })
+    public BaseResponse<List<Map<String, Object>>> getWrongKnowledgeStatsByLesson(
+            @RequestParam Long lessonId, 
+            @RequestParam Long studentId, 
+            HttpServletRequest request) {
+        // 课时校验
+        Lessons lessons = lessonsService.getValidLessonById(lessonId);
+        if (lessons.getHasQuestion() == 0) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "课时习题未发布");
+        }
+        // 权限校验
+        Courses courses = coursesService.getValidCourseById(lessons.getCourseId());
+        User currentUser = userService.getCurrentUser(request);
+        if (!Objects.equals(currentUser.getId(), studentId)
+                && !(currentUser.getUserRole() == ADMIN_ROLE)
+                && !Objects.equals(currentUser.getId(), courses.getTeacherId())
+        ) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "没有权限查看");
+        }
+        // 获取错题知识点统计
+        List<Map<String, Object>> stats = questionRecordsService.getWrongKnowledgeStatsByLesson(lessonId, studentId);
+        return ResultUtils.success(stats);
+    }
+
+    @GetMapping("/wrongKnowledgeStats/course")
+    @Operation(summary = "获取学生在某课程的错题知识点统计")
+    @Parameters({
+            @Parameter(name = "courseId", description = "课程ID", required = true),
+            @Parameter(name = "studentId", description = "学生ID", required = true)
+    })
+    public BaseResponse<List<Map<String, Object>>> getWrongKnowledgeStatsByCourse(
+            @RequestParam Long courseId, 
+            @RequestParam Long studentId, 
+            HttpServletRequest request) {
+        // 课程校验
+        Courses courses = coursesService.getValidCourseById(courseId);
+        // 权限校验
+        User currentUser = userService.getCurrentUser(request);
+        if (!Objects.equals(currentUser.getId(), studentId)
+                && !(currentUser.getUserRole() == ADMIN_ROLE)
+                && !Objects.equals(currentUser.getId(), courses.getTeacherId())
+        ) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "没有权限查看");
+        }
+        // 获取错题知识点统计
+        List<Map<String, Object>> stats = questionRecordsService.getWrongKnowledgeStatsByCourse(courseId, studentId);
+        return ResultUtils.success(stats);
+    }
+
+    @GetMapping("/wrongQuestions/lesson")
+    @Operation(summary = "获取学生在某课时的所有错题记录")
+    @Parameters({
+            @Parameter(name = "lessonId", description = "课时ID", required = true),
+            @Parameter(name = "studentId", description = "学生ID", required = true)
+    })
+    public BaseResponse<List<Map<String, Object>>> getWrongQuestionsByLesson(
+            @RequestParam Long lessonId, 
+            @RequestParam Long studentId, 
+            HttpServletRequest request) {
+        // 课时校验
+        Lessons lessons = lessonsService.getValidLessonById(lessonId);
+        if (lessons.getHasQuestion() == 0) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "课时习题未发布");
+        }
+        // 权限校验
+        Courses courses = coursesService.getValidCourseById(lessons.getCourseId());
+        User currentUser = userService.getCurrentUser(request);
+        if (!Objects.equals(currentUser.getId(), studentId)
+                && !(currentUser.getUserRole() == ADMIN_ROLE)
+                && !Objects.equals(currentUser.getId(), courses.getTeacherId())
+        ) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "没有权限查看");
+        }
+        // 获取错题记录
+        List<Map<String, Object>> wrongQuestions = questionRecordsService.getWrongQuestionsByLesson(lessonId, studentId);
+        return ResultUtils.success(wrongQuestions);
     }
 
 }

@@ -583,3 +583,202 @@ def search_knowledge_db(query: str, chroma_manager: ChromaDBManager, collection_
     except Exception as e:
         print(f"搜索知识库失败: {e}")
         return []
+
+
+def search_domain_knowledge(query: str, top_k: int = 3) -> str:
+    """
+    从domain知识库中检索相关内容
+    :param query: 查询文本
+    :param top_k: 返回结果数量
+    :return: 合并的文本内容
+    """
+    try:
+        settings = get_settings()
+        
+        # 初始化ChromaDB管理器
+        chroma_manager = ChromaDBManager(
+            host=settings.CHROMADB_HOST,
+            port=settings.CHROMADB_PORT
+        )
+        
+        # 使用统一的domain collection名称
+        collection_name = "domain_knowledge"
+        
+        # 搜索domain知识库
+        search_results = search_knowledge_db(
+            query=query,
+            chroma_manager=chroma_manager,
+            collection_name=collection_name,
+            top_k=top_k,
+            use_rerank=True
+        )
+        
+        if search_results and len(search_results) > 0:
+            # 提取文档内容并合并
+            documents = [result['document'] for result in search_results]
+            combined_content = "\n\n".join(documents)
+            print(f"✅ 成功从domain知识库获取相关内容，返回 {len(search_results)} 段内容")
+            return combined_content
+        else:
+            print("domain知识库中没有找到相关内容")
+            return ""
+            
+    except Exception as e:
+        print(f"搜索domain知识库失败: {e}")
+        return ""
+
+
+def ensure_domain_knowledge_exists():
+    """确保domain知识库存在，如果不存在则自动构建"""
+    try:
+        settings = get_settings()
+        
+        # 检查ChromaDB中是否存在domain collection
+        chroma_manager = ChromaDBManager(
+            host=settings.CHROMADB_HOST,
+            port=settings.CHROMADB_PORT
+        )
+        
+        try:
+            collection = chroma_manager.client.get_collection("domain_knowledge")
+            # 检查collection是否为空
+            count = collection.count()
+            if count > 0:
+                print(f"✅ Domain知识库已存在，包含 {count} 个文档")
+                return True
+        except:
+            pass
+        
+        # 如果不存在或为空，则构建
+        print("🔄 Domain知识库不存在或为空，开始自动构建...")
+        return build_domain_knowledge()
+        
+    except Exception as e:
+        print(f"❌ 检查domain知识库时出错: {e}")
+        return False
+
+
+def build_domain_knowledge():
+    """构建domain知识库"""
+    try:
+        settings = get_settings()
+        
+        # 检查domain_docs目录
+        domain_docs_dir = settings.DOMAIN_DOCS_DIR
+        if not domain_docs_dir.exists():
+            print(f"❌ Domain文档目录不存在: {domain_docs_dir}")
+            return False
+        
+        # 检查是否有文档文件
+        doc_files = []
+        for file_path in domain_docs_dir.rglob("*"):
+            if file_path.is_file() and file_path.suffix.lower() in ['.txt', '.md', '.pdf', '.docx']:
+                doc_files.append(file_path)
+        
+        if not doc_files:
+            print("❌ 没有找到支持的文档文件")
+            return False
+        
+        print(f"📁 找到 {len(doc_files)} 个文档文件")
+        
+        # 加载所有文档
+        print("📖 正在加载文档...")
+        documents = load_documents(domain_docs_dir)
+        
+        if not documents:
+            print("❌ 文档加载失败")
+            return False
+        
+        print(f"✅ 成功加载 {len(documents)} 个文档")
+        
+        # 创建向量知识库
+        print("🔧 正在创建向量知识库...")
+        collection_name = "domain_knowledge"
+        
+        success = create_vector_db(
+            documents=documents,
+            collection_name=collection_name
+        )
+        
+        if success:
+            # 验证构建结果
+            chroma_manager = ChromaDBManager(
+                host=settings.CHROMADB_HOST,
+                port=settings.CHROMADB_PORT
+            )
+            collection = chroma_manager.client.get_collection(collection_name)
+            count = collection.count()
+            print(f"✅ Domain知识库构建成功！Collection: {collection_name}")
+            print(f"📄 文档块数量: {count}")
+            return True
+        else:
+            print("❌ Domain知识库构建失败")
+            return False
+            
+    except Exception as e:
+        print(f"❌ 构建过程中出错: {e}")
+        return False
+
+
+def build_enhanced_prompt(query: str, user_content: str, domain_knowledge: str, task_type: str = "qa") -> str:
+    """
+    构建增强的提示词，包含用户内容和domain知识
+    :param query: 用户查询
+    :param user_content: 用户上传的内容
+    :param domain_knowledge: domain知识库内容
+    :param task_type: 任务类型 ("qa" 或 "outline")
+    :return: 增强的提示词
+    """
+    if task_type == "qa":
+        prompt = f"""你是一个专业的教学助手。请基于以下信息回答用户问题：
+
+用户问题：{query}
+
+用户上传的内容：
+{user_content}
+
+相关教学知识参考：
+{domain_knowledge}
+
+请结合用户内容和教学知识，生成专业、准确、有用的回答。回答要：
+1. 准确回答用户问题
+2. 体现教学专业性
+3. 语言清晰易懂
+4. 提供实用的建议或方法
+
+回答："""
+    
+    elif task_type == "outline":
+        prompt = f"""你是一个专业的教学设计专家。请基于以下内容生成教学设计：
+
+用户提供的教学内容：
+{user_content}
+
+相关教学知识参考：
+{domain_knowledge}
+
+请生成一个结构清晰、内容完整的教学设计，要求：
+1. 层次分明，使用数字编号
+2. 包含知识讲解、实训练习与指导、建议时间分布等详细内容
+3. 体现教学设计的专业性和可操作性
+4. 适合实际教学使用，包含具体的教学方法和时间安排
+
+教学设计："""
+    
+    else:
+        # 默认通用提示词
+        prompt = f"""请基于以下信息生成内容：
+
+用户查询：{query}
+
+用户内容：
+{user_content}
+
+相关专业知识：
+{domain_knowledge}
+
+请结合用户内容和专业知识，生成专业、准确的内容。
+
+内容："""
+    
+    return prompt

@@ -540,11 +540,11 @@ const loadAdminStats = async () => {
     
     addError(errorTitle, errorDescription)
     
-    stats.value = {
+  stats.value = {
       courses: 0,
       users: 0,
       tests: 0,
-      overallProgress: 0
+    overallProgress: 0
     }
   }
 }

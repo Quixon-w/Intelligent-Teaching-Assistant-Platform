@@ -318,6 +318,54 @@
               </div>
             </div>
           </el-tab-pane>
+
+          <!-- 错题统计（仅已选课学生可见） -->
+          <el-tab-pane v-if="isEnrolled" label="错题统计" name="wrongQuestions">
+            <div class="wrong-questions-section">
+              <h4>错题知识点分析</h4>
+              
+              <!-- 课程错题统计 -->
+              <div class="course-wrong-stats">
+                <h5>课程整体错题统计</h5>
+                <WrongKnowledgeCloud
+                  type="course"
+                  :courseId="courseId"
+                  :studentId="currentUser.id"
+                  title="课程错题知识点分布"
+                  :showDetails="false"
+                />
+              </div>
+              
+              <!-- 课时错题统计 -->
+              <div class="lesson-wrong-stats">
+                <h5>各课时错题统计</h5>
+                <el-collapse v-model="activeLessonCollapse">
+                  <el-collapse-item 
+                    v-for="lesson in lessonsList" 
+                    :key="lesson.lessonId"
+                    :title="`${lesson.lessonName} (课时${lesson.lessonId})`"
+                    :name="lesson.lessonId"
+                  >
+                    <WrongKnowledgeCloud
+                      type="lesson"
+                      :lessonId="lesson.lessonId"
+                      :studentId="currentUser.id"
+                      :title="`${lesson.lessonName} - 错题统计`"
+                      :showDetails="true"
+                      @tag-click="handleKnowledgeTagClick"
+                    />
+                  </el-collapse-item>
+                </el-collapse>
+                
+                <!-- 空状态 -->
+                <el-empty 
+                  v-if="lessonsList.length === 0"
+                  description="暂无课时信息"
+                  :image-size="100"
+                />
+              </div>
+            </div>
+          </el-tab-pane>
         </el-tabs>
       </div>
       
@@ -606,6 +654,7 @@ import request from '@/utils/request'
 import axios from 'axios'
 import { dismissCourse as dismissCourseAPI } from '@/api/course'
 import { getLessonRecords, getLessonQuestionsList } from '@/api/course/lesson'
+import WrongKnowledgeCloud from '@/components/WrongKnowledgeCloud.vue'
 import * as echarts from 'echarts'
 
 const route = useRoute()
@@ -642,6 +691,9 @@ const courseMaterialsLoading = ref(false)
 const scoreTrendData = ref([])
 const scoreTrendLoading = ref(false)
 const scoreTrendChart = ref(null)
+
+// 错题统计相关
+const activeLessonCollapse = ref([])
 
 // 计算属性
 const getStatusTitle = () => {
@@ -1245,6 +1297,12 @@ const viewTestResult = async (lesson) => {
 // 对话框关闭处理
 const handleCloseDialog = (done) => {
   done()
+}
+
+// 错题统计相关方法
+const handleKnowledgeTagClick = (item) => {
+  ElMessage.info(`点击了知识点: ${item.knowledge}，错误次数: ${item.wrongCount}`)
+  // 这里可以添加更多交互逻辑，比如跳转到相关练习等
 }
 
 // 表格行类名
@@ -2066,5 +2124,60 @@ onMounted(() => {
   color: #606266;
   line-height: 1.6;
   font-size: 14px;
+}
+
+/* 错题统计样式 */
+.wrong-questions-section {
+  padding: 20px 0;
+}
+
+.wrong-questions-section h4 {
+  margin-bottom: 20px;
+  color: #303133;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.course-wrong-stats {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+}
+
+.course-wrong-stats h5 {
+  margin: 0 0 15px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.lesson-wrong-stats {
+  margin-top: 20px;
+}
+
+.lesson-wrong-stats h5 {
+  margin-bottom: 15px;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .course-wrong-stats,
+  .lesson-wrong-stats {
+    padding: 15px;
+  }
+  
+  .wrong-questions-section h4 {
+    font-size: 16px;
+  }
+  
+  .course-wrong-stats h5,
+  .lesson-wrong-stats h5 {
+    font-size: 14px;
+  }
 }
 </style> 

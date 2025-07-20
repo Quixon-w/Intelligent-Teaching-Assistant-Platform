@@ -7,7 +7,7 @@ import asyncio
 from threading import Lock
 
 from utils.rwkv import *
-from utils.knowledge import load_vector_db, search_knowledge_db, ChromaDBManager
+from utils.knowledge import load_vector_db, search_knowledge_db, ChromaDBManager, search_domain_knowledge, build_enhanced_prompt
 from utils.session_manager import session_manager
 import global_var
 from config.settings import get_settings
@@ -366,8 +366,8 @@ async def intelligent_qa(body: QABody, request: Request):
                 
                 print(f"获取到 {len(qa_history)} 条历史问答记录")
             
-            # 1. 从知识库搜索相关内容
-            search_result = search_knowledge_db(
+            # 1. 从用户知识库搜索相关内容
+            user_knowledge = search_knowledge_db(
                 body.user_id,
                 body.session_id, 
                 body.query, 
@@ -378,14 +378,21 @@ async def intelligent_qa(body: QABody, request: Request):
                 body.search_mode
             )
             
-            if search_result is None:
+            if user_knowledge is None:
                 raise HTTPException(
                     status_code=404,
-                    detail="知识库不存在或搜索失败"
+                    detail="用户知识库不存在或搜索失败"
                 )
             
-            if search_result == "未找到相关内容":
-                # 如果没有找到相关内容，返回提示信息
+            # 2. 从domain知识库搜索相关内容
+            domain_knowledge = search_domain_knowledge(
+                query=body.query,
+                top_k=3
+            )
+            
+            # 3. 构建增强的问答提示词
+            if user_knowledge == "未找到相关内容" and not domain_knowledge:
+                # 如果两个知识库都没有找到相关内容，返回提示信息
                 return {
                     "success": True,
                     "query": body.query,
@@ -395,18 +402,30 @@ async def intelligent_qa(body: QABody, request: Request):
                     "course_id": body.course_id,
                     "lesson_num": body.lesson_num,
                     "search_mode": body.search_mode,
-                    "answer": "抱歉，我在当前知识库中没有找到与您问题相关的信息。请尝试重新表述您的问题，或者检查是否选择了正确的课程和课时。",
+                    "answer": "抱歉，我在知识库中没有找到与您问题相关的信息。请尝试重新表述您的问题，或者检查是否选择了正确的课程和课时。",
                     "context": "未找到相关内容",
+                    "domain_knowledge_used": False,
                     "has_context": False,
                     "use_context": body.use_context,
                     "history_count": len(qa_history)
                 }
             
-            # 2. 构建问答提示词（包含历史上下文）
-            prompt = build_qa_prompt(body.query, search_result, qa_history if body.use_context else None)
+            # 构建增强提示词
+            enhanced_prompt = build_enhanced_prompt(
+                query=body.query,
+                user_content=user_knowledge if user_knowledge != "未找到相关内容" else "无相关内容",
+                domain_knowledge=domain_knowledge,
+                task_type="qa"
+            )
+            
+            # 如果有历史上下文，添加到提示词中
+            if body.use_context and qa_history:
+                context_prompt = build_qa_prompt(body.query, user_knowledge, qa_history)
+                # 将历史上下文信息添加到增强提示词中
+                enhanced_prompt = enhanced_prompt.replace("用户问题：", f"历史对话：\n{context_prompt}\n\n用户问题：")
             
             # 3. 使用RWKV模型生成回答
-            answer = await generate_answer_with_rwkv(prompt, request, body.temperature, body.max_tokens)
+            answer = await generate_answer_with_rwkv(enhanced_prompt, request, body.temperature, body.max_tokens)
             
             # 4. 保存问答历史记录到会话管理器
             messages = [
@@ -433,8 +452,10 @@ async def intelligent_qa(body: QABody, request: Request):
                 "lesson_num": body.lesson_num,
                 "search_mode": body.search_mode,
                 "answer": answer,
-                "context": search_result,
-                "has_context": True,
+                "context": user_knowledge if user_knowledge != "未找到相关内容" else "无相关内容",
+                "domain_knowledge_used": bool(domain_knowledge),
+                "domain_knowledge": domain_knowledge,
+                "has_context": user_knowledge != "未找到相关内容" or bool(domain_knowledge),
                 "use_context": body.use_context,
                 "history_count": len(qa_history)
             }

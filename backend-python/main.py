@@ -63,6 +63,7 @@ from utils.rwkv import *
 from utils.torch import *
 from utils.ngrok import *
 from utils.log import log_middleware
+from utils.knowledge import ensure_domain_knowledge_exists
 from routes import completion, config, state_cache, upload, qa, create, exercise, download, session_routes, knowledge
 import global_var
 from config.settings import get_settings
@@ -139,6 +140,17 @@ def init():
 
     if os.environ.get("ngrok_token") is not None:
         ngrok_connect()
+    
+    # 检查并初始化domain知识库
+    print("🔍 检查Domain知识库...")
+    try:
+        if ensure_domain_knowledge_exists():
+            print("✅ Domain知识库检查完成")
+        else:
+            print("⚠️  Domain知识库初始化失败，但不影响基本功能")
+    except Exception as e:
+        print(f"⚠️  Domain知识库检查时出错: {e}")
+        print("💡 可以稍后手动运行 scripts/build_domain_knowledge.py 来构建知识库")
 
 def start_chromadb_server():
     """启动ChromaDB服务器"""

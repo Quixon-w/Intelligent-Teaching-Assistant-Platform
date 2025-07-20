@@ -12,7 +12,7 @@ from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from utils.rwkv import *
-from utils.knowledge import load_vector_db, search_knowledge_db, ChromaDBManager
+from utils.knowledge import load_vector_db, search_knowledge_db, ChromaDBManager, search_domain_knowledge, build_enhanced_prompt
 import global_var
 from config.settings import get_settings
 
@@ -22,14 +22,14 @@ router = APIRouter()
 create_lock = Lock()
 
 
-class CreateOutlineBody(BaseModel):
+class CreateContentDesignBody(BaseModel):
     user_id: Union[str, int] = Field(..., description="用户ID，用于确定存储路径")
     session_id: str = Field(..., description="会话ID")
     course_id: str = Field(..., description="课程ID")
     lesson_num: str = Field(..., description="课时号，必填")
     is_teacher: bool = Field(False, description="是否为教师用户")
-    # 教学大纲字数控制：课时大纲控制在800-1200字
-    max_words: int = Field(1000, description="最大字数限制，课时大纲建议1000字", ge=300, le=2000)
+    # 教学设计字数控制：课时教学设计控制在800-1200字
+    max_words: int = Field(1000, description="最大字数限制，课时教学设计建议1000字", ge=300, le=2000)
 
     model_config = {
         "json_schema_extra": {
@@ -187,51 +187,51 @@ def read_files_in_folder(folder_path: str) -> str:
         return None
 
 
-def generate_outline_prompt(content: str, max_words: int) -> str:
+def generate_content_design_prompt(content: str, max_words: int) -> str:
     """
-    根据内容生成大纲提示词
+    根据内容生成教学内容设计提示词
     """
-    prompt = f"""请根据以下教学内容，生成一个详细的教学大纲。要求：
+    prompt = f"""请根据以下教学内容，设计一个详细的教学方案。要求：
 
 1. 结构清晰，层次分明，使用数字编号（如1.1、1.2、2.1等）
-2. 包含主要知识点和重点内容
-3. 适合教学使用，内容完整
+2. 包含知识讲解、实训练习与指导、建议时间分布等完整内容
+3. 适合实际教学使用，内容完整且可操作
 4. 字数控制在{max_words}字左右
-5. 确保每个部分都有完整的描述
-6. 大纲应该包含：教学目标、重点难点、教学内容、教学方法等
+5. 确保每个部分都有详细的描述和具体指导
+6. 教学设计应该包含：教学目标、重点难点、知识讲解、实训练习、时间分配、教学方法等
 
-请生成完整的教学大纲，确保内容完整且结构清晰：
+请生成完整的教学设计方案，确保内容详细且可操作：
 
 教学内容：
 {content[:2000]}  # 限制内容长度，避免token过多
 
-教学大纲："""
+教学设计："""
 
     return prompt
 
 
-def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_content: str, is_teacher: bool) -> dict:
+def save_content_design_to_file(user_id: str, course_id: str, lesson_num: str, content_design: str, is_teacher: bool) -> dict:
     """
-    将生成的大纲保存为DOCX文件
+    将生成的教学设计保存为DOCX文件
     """
     try:
         # 获取用户路径
         user_path = get_user_path(user_id, is_teacher)
         
-        # 创建大纲保存目录
-        outline_dir = os.path.join(user_path, course_id, lesson_num, "outline")
-        os.makedirs(outline_dir, exist_ok=True)
+        # 创建教学设计保存目录
+        content_design_dir = os.path.join(user_path, course_id, lesson_num, "content_design")
+        os.makedirs(content_design_dir, exist_ok=True)
         
                 # 生成文件名（包含时间戳）
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"outline_{timestamp}.docx"
-        file_path = os.path.join(outline_dir, filename)
+        filename = f"content_design_{timestamp}.docx"
+        file_path = os.path.join(content_design_dir, filename)
         
         # 创建DOCX文档
         doc = Document()
         
         # 添加标题
-        title = f"教学大纲 - {course_id} - {lesson_num}"
+        title = f"教学设计 - {course_id} - {lesson_num}"
         title_paragraph = doc.add_paragraph()
         title_run = title_paragraph.add_run(title)
         title_run.font.size = Inches(0.2)  # 设置字体大小
@@ -241,8 +241,8 @@ def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_
         # 添加空行
         doc.add_paragraph()
         
-        # 添加大纲内容
-        lines = outline_content.split('\n')
+        # 添加教学设计内容
+        lines = content_design.split('\n')
         for line in lines:
             line = line.strip()
             if line:
@@ -264,28 +264,28 @@ def save_outline_to_file(user_id: str, course_id: str, lesson_num: str, outline_
         
         # 保存DOCX文件
         doc.save(file_path)
-        print(f"大纲DOCX已保存到: {file_path}")
+        print(f"教学设计DOCX已保存到: {file_path}")
         
         return {
             "success": True,
             "file_path": file_path,
             "filename": filename,
-            "download_url": f"/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{filename}"
+            "download_url": f"/v1/download/content_design/{user_id}/{course_id}/{lesson_num}/{filename}"
         }
         
     except Exception as e:
-        print(f"保存大纲文件时出错: {e}")
+        print(f"保存教学设计文件时出错: {e}")
         return {
             "success": False,
             "error": str(e)
         }
 
 
-async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: int = 1000):
+async def generate_content_design_with_rwkv(prompt: str, request: Request, max_words: int = 1000):
     """
-    使用RWKV模型生成大纲
+    使用RWKV模型生成教学设计
     """
-    print("开始使用RWKV模型生成大纲...")
+    print("开始使用RWKV模型生成教学设计...")
     
     try:
         # 获取RWKV模型实例
@@ -302,12 +302,12 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
         max_tokens = 3000  # 设置最大token数
         model.max_tokens_per_generation = max_tokens
         
-        # 生成大纲内容
-        outline_content = ""
+        # 生成教学设计内容
+        content_design = ""
         token_count = 0
         min_words = max(300, max_words * 0.3)  # 最小字数至少300字或目标字数的30%
         
-        print("开始生成大纲...")
+        print("开始生成教学设计...")
         print(f"提示词长度: {len(prompt)} 字符")
         print(f"最大token数: {max_tokens}")
         print(f"目标字数: {max_words}")
@@ -320,13 +320,13 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
         
         print("开始生成循环...")
         for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
-            outline_content += delta
+            content_design += delta
             token_count += 1
             
                         # 每100个token打印一次进度
             if token_count % 100 == 0:
-                current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
-                print(f"已生成 {token_count} tokens, 当前内容长度: {len(outline_content)} 字符, 字数: {current_words}")
+                current_words = len([c for c in content_design if '\u4e00' <= c <= '\u9fff'])
+                print(f"已生成 {token_count} tokens, 当前内容长度: {len(content_design)} 字符, 字数: {current_words}")
             
             # 检查请求是否断开
             if await request.is_disconnected():
@@ -339,7 +339,7 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
                 break
             
             # 检查字数限制
-            current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+            current_words = len([c for c in content_design if '\u4e00' <= c <= '\u9fff'])
             if current_words >= max_words * 1.2:  # 允许超出20%的字数
                 print(f"达到字数限制 {current_words} >= {max_words * 1.2}")
                 break
@@ -348,24 +348,24 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
         model.max_tokens_per_generation = original_max_tokens
         
         # 确保句子完整性
-        outline_content = ensure_sentence_completeness(outline_content)
+        content_design = ensure_sentence_completeness(content_design)
         
         # 检查生成的内容是否达到最小字数要求
-        final_word_count = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+        final_word_count = len([c for c in content_design if '\u4e00' <= c <= '\u9fff'])
         
         if final_word_count < min_words:
             print(f"生成的内容字数不足（{final_word_count} < {min_words}），尝试重新生成...")
             # 如果字数不足，尝试重新生成一次
             retry_prompt = prompt + "\n\n请确保生成的内容详细完整，字数不少于300字。"
-            return await generate_outline_with_rwkv_retry(retry_prompt, request, max_words, model, max_tokens)
+            return await generate_content_design_with_rwkv_retry(retry_prompt, request, max_words, model, max_tokens)
         
-        print(f"大纲生成完成，生成长度: {len(outline_content)} 字符，字数: {final_word_count}")
-        print(f"内容预览: {outline_content[:200]}...")
+        print(f"教学设计生成完成，生成长度: {len(content_design)} 字符，字数: {final_word_count}")
+        print(f"内容预览: {content_design[:200]}...")
         
-        return outline_content.strip()
+        return content_design.strip()
         
     except Exception as e:
-        print(f"RWKV生成大纲时出错: {e}")
+        print(f"RWKV生成教学设计时出错: {e}")
         # 确保在出错时也恢复原始设置
         try:
             model = global_var.get(global_var.Model)
@@ -376,29 +376,29 @@ async def generate_outline_with_rwkv(prompt: str, request: Request, max_words: i
         raise e
 
 
-async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_words: int, model, max_tokens):
+async def generate_content_design_with_rwkv_retry(prompt: str, request: Request, max_words: int, model, max_tokens):
     """
-    重试生成大纲（当第一次生成字数不足时）
+    重试生成教学设计（当第一次生成字数不足时）
     """
     try:
-        print("开始重试生成教学大纲...")
+        print("开始重试生成教学设计...")
         
         # 临时设置max_tokens_per_generation
         original_max_tokens = model.max_tokens_per_generation
         model.max_tokens_per_generation = max_tokens
         
-        outline_content = ""
+        content_design = ""
         token_count = 0
         
         # 设置停止条件
         stop_sequences = ["###", "---", "问题", "题目", "结束", "完毕"]
         
         for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
-            outline_content += delta
+            content_design += delta
             token_count += 1
             
             # 计算当前字数（中文字符）
-            current_words = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
+            current_words = len([c for c in content_design if '\u4e00' <= c <= '\u9fff'])
             
             # 检查token数量限制
             if token_count >= max_tokens:
@@ -419,15 +419,15 @@ async def generate_outline_with_rwkv_retry(prompt: str, request: Request, max_wo
         model.max_tokens_per_generation = original_max_tokens
         
         # 确保句子完整性
-        outline_content = ensure_sentence_completeness(outline_content)
+        content_design = ensure_sentence_completeness(content_design)
         
-        final_word_count = len([c for c in outline_content if '\u4e00' <= c <= '\u9fff'])
-        print(f"重试大纲生成完成，生成长度: {len(outline_content)} 字符，字数: {final_word_count}")
+        final_word_count = len([c for c in content_design if '\u4e00' <= c <= '\u9fff'])
+        print(f"重试教学设计生成完成，生成长度: {len(content_design)} 字符，字数: {final_word_count}")
         
-        return outline_content.strip()
+        return content_design.strip()
         
     except Exception as e:
-        print(f"重试生成大纲时出错: {e}")
+        print(f"重试生成教学设计时出错: {e}")
         # 确保在出错时也恢复原始设置
         try:
             model.max_tokens_per_generation = original_max_tokens
@@ -470,10 +470,10 @@ def ensure_sentence_completeness(text: str) -> str:
     return text
 
 
-@router.post("/v1/create/outline", tags=["Create"])
-async def create_outline(body: CreateOutlineBody, request: Request):
+@router.post("/v1/create/content_design", tags=["Create"])
+async def create_content_design(body: CreateContentDesignBody, request: Request):
     """
-    创建教学大纲
+    创建教学设计
     """
     # 检查模型是否加载
     model: TextRWKV = global_var.get(global_var.Model)
@@ -487,12 +487,12 @@ async def create_outline(body: CreateOutlineBody, request: Request):
     if create_lock.locked():
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="已有大纲生成任务在进行中，请稍后再试"
+            detail="已有教学设计生成任务在进行中，请稍后再试"
         )
     
     try:
         with create_lock:
-            print(f"开始为课时 {body.lesson_num} 生成教学大纲")
+            print(f"开始为课时 {body.lesson_num} 生成教学设计")
             
             # 获取课时内容
             content = get_file_content(body.user_id, body.course_id, body.lesson_num, body.is_teacher)
@@ -502,91 +502,106 @@ async def create_outline(body: CreateOutlineBody, request: Request):
                     detail=f"未找到课时 {body.lesson_num} 的内容，请先上传相关文件"
                 )
             
-            # 生成大纲提示词
-            prompt = generate_outline_prompt(content, body.max_words)
+            # 从domain知识库搜索相关内容
+            domain_knowledge = search_domain_knowledge(
+                query=f"教学设计 {content[:200]}",  # 使用内容前200字符作为查询
+                top_k=3
+            )
             
-            # 使用RWKV模型生成大纲
-            outline_content = await generate_outline_with_rwkv(prompt, request, body.max_words)
+            # 构建增强的教学设计生成提示词
+            enhanced_prompt = build_enhanced_prompt(
+                query=f"生成课时 {body.lesson_num} 的教学设计",
+                user_content=content,
+                domain_knowledge=domain_knowledge,
+                task_type="outline"
+            )
             
-            # 保存大纲到文件
-            save_result = save_outline_to_file(body.user_id, body.course_id, body.lesson_num, outline_content, body.is_teacher)
+            # 添加字数限制到提示词
+            enhanced_prompt += f"\n\n要求：字数控制在{body.max_words}字左右，包含知识讲解、实训练习、时间分配等详细内容。"
+            
+            # 使用RWKV模型生成教学设计
+            content_design = await generate_content_design_with_rwkv(enhanced_prompt, request, body.max_words)
+            
+            # 保存教学设计到文件
+            save_result = save_content_design_to_file(body.user_id, body.course_id, body.lesson_num, content_design, body.is_teacher)
             
             if save_result["success"]:
                 return {
                     "success": True,
-                    "message": "教学大纲生成成功",
+                    "message": "教学设计生成成功",
                     "user_id": body.user_id,
                     "session_id": body.session_id,
                     "course_id": body.course_id,
                     "lesson_num": body.lesson_num,
                     "is_teacher": body.is_teacher,
-                    "outline_content": outline_content[:500] + "..." if len(outline_content) > 500 else outline_content,
+                    "content_design": content_design[:500] + "..." if len(content_design) > 500 else content_design,
+                    "domain_knowledge_used": bool(domain_knowledge),
                     "download_url": save_result["download_url"],
                     "filename": save_result["filename"]
                 }
             else:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"保存大纲文件失败: {save_result['error']}"
+                    detail=f"保存教学设计文件失败: {save_result['error']}"
                 )
                 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"创建大纲时出错: {e}")
+        print(f"创建教学设计时出错: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"创建大纲失败: {str(e)}"
+            detail=f"创建教学设计失败: {str(e)}"
         )
 
 
-@router.get("/v1/create/outline/status", tags=["Create"])
-async def get_outline_status(user_id: str, course_id: str, lesson_num: str, is_teacher: bool = False):
+@router.get("/v1/create/content_design/status", tags=["Create"])
+async def get_content_design_status(user_id: str, course_id: str, lesson_num: str, is_teacher: bool = False):
     """
-    获取大纲生成状态
+    获取教学设计生成状态
     """
     try:
         # 获取用户路径
         user_path = get_user_path(user_id, is_teacher)
         
-        # 检查大纲目录是否存在
-        outline_dir = os.path.join(user_path, course_id, lesson_num, "outline")
+        # 检查教学设计目录是否存在
+        content_design_dir = os.path.join(user_path, course_id, lesson_num, "content_design")
         
-        if not os.path.exists(outline_dir):
+        if not os.path.exists(content_design_dir):
             return {
-                "has_outline": False,
-                "message": "大纲目录不存在"
+                "has_content_design": False,
+                "message": "教学设计目录不存在"
             }
         
-        # 检查是否有大纲文件（支持DOCX和文本文件）
-        outline_files = [f for f in os.listdir(outline_dir) if f.startswith('outline_') and (f.endswith('.docx') or f.endswith('.txt'))]
+        # 检查是否有教学设计文件（支持DOCX和文本文件）
+        content_design_files = [f for f in os.listdir(content_design_dir) if f.startswith('content_design_') and (f.endswith('.docx') or f.endswith('.txt'))]
         
-        if outline_files:
-            # 获取最新的大纲文件
-            latest_file = max(outline_files, key=lambda x: os.path.getctime(os.path.join(outline_dir, x)))
-            file_path = os.path.join(outline_dir, latest_file)
+        if content_design_files:
+            # 获取最新的教学设计文件
+            latest_file = max(content_design_files, key=lambda x: os.path.getctime(os.path.join(content_design_dir, x)))
+            file_path = os.path.join(content_design_dir, latest_file)
             
             return {
                 "success": True,
-                "message": "获取大纲状态成功",
+                "message": "获取教学设计状态成功",
                 "user_id": user_id,
                 "course_id": course_id,
                 "lesson_num": lesson_num,
                 "is_teacher": is_teacher,
-                "has_outline": True,
+                "has_content_design": True,
                 "latest_file": latest_file,
                 "file_type": "DOCX" if latest_file.endswith('.docx') else "TXT",
-                "download_url": f"/v1/download/outline/{user_id}/{course_id}/{lesson_num}/{latest_file}",
+                "download_url": f"/v1/download/content_design/{user_id}/{course_id}/{lesson_num}/{latest_file}",
                 "created_time": datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
             }
         else:
             return {
-                "has_outline": False,
-                "message": "大纲文件不存在"
+                "has_content_design": False,
+                "message": "教学设计文件不存在"
             }
             
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取大纲状态失败: {str(e)}"
+            detail=f"获取教学设计状态失败: {str(e)}"
         ) 
