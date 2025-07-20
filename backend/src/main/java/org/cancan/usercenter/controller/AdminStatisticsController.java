@@ -21,7 +21,7 @@ import static org.cancan.usercenter.constant.UserConstant.ADMIN_ROLE;
  * 管理员统计数据控制器
  */
 @RestController
-@RequestMapping("/api/admin/statistics")
+@RequestMapping("/admin/statistics")
 public class AdminStatisticsController {
 
     @Resource
