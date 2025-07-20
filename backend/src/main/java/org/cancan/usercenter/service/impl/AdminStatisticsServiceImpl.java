@@ -1,7 +1,12 @@
 package org.cancan.usercenter.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import org.cancan.usercenter.mapper.*;
+import org.cancan.usercenter.mapper.CoursesMapper;
+import org.cancan.usercenter.mapper.UserMapper;
+import org.cancan.usercenter.mapper.QuestionRecordsMapper;
+import org.cancan.usercenter.mapper.EnrollMapper;
+import org.cancan.usercenter.mapper.LessonsMapper;
+import org.cancan.usercenter.mapper.QuestionsMapper;
 import org.cancan.usercenter.model.dto.AdminStatisticsRequest;
 import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.model.vo.*;
@@ -22,7 +27,7 @@ import java.util.stream.Collectors;
 public class AdminStatisticsServiceImpl implements AdminStatisticsService {
 
     @Resource
-    private CourseMapper courseMapper;
+    private CoursesMapper courseMapper;
 
     @Resource
     private UserMapper userMapper;
@@ -34,7 +39,7 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
     private EnrollMapper enrollMapper;
 
     @Resource
-    private LessonMapper lessonMapper;
+    private LessonsMapper lessonMapper;
 
     @Resource
     private QuestionsMapper questionsMapper;
