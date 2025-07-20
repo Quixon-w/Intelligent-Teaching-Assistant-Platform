@@ -3,12 +3,12 @@ package org.cancan.usercenter.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.cancan.usercenter.mapper.*;
 import org.cancan.usercenter.model.dto.AdminStatisticsRequest;
-import org.cancan.usercenter.model.entity.*;
+import org.cancan.usercenter.model.domain.*;
 import org.cancan.usercenter.model.vo.*;
 import org.cancan.usercenter.service.AdminStatisticsService;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,6 +36,9 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
     @Resource
     private LessonMapper lessonMapper;
 
+    @Resource
+    private QuestionsMapper questionsMapper;
+
     @Override
     public TeacherUsageStatisticsVO getTeacherUsageStatistics(AdminStatisticsRequest request) {
         TeacherUsageStatisticsVO result = new TeacherUsageStatisticsVO();
@@ -45,14 +48,14 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         LocalDateTime endTime = LocalDateTime.now();
         
         // 统计教师使用情况（基于课程创建、题目生成等活动）
-        QueryWrapper<Course> courseQuery = new QueryWrapper<>();
+        QueryWrapper<Courses> courseQuery = new QueryWrapper<>();
         courseQuery.ge("createTime", startTime);
         courseQuery.le("createTime", endTime);
-        List<Course> courses = courseMapper.selectList(courseQuery);
+        List<Courses> courses = courseMapper.selectList(courseQuery);
         
         // 统计活跃教师
         Set<Long> activeTeacherIds = courses.stream()
-                .map(Course::getTeacherId)
+                .map(Courses::getTeacherId)
                 .collect(Collectors.toSet());
         
         result.setTotalUsageCount((long) courses.size());
@@ -185,17 +188,23 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         TeachingEfficiencyVO result = new TeachingEfficiencyVO();
         
         // 获取所有课程
-        List<Course> courses = courseMapper.selectList(null);
+        List<Courses> courses = courseMapper.selectList(null);
         
         // 计算整体教学效率指数（基于通过率、参与度等）
         double overallEfficiency = 0.0;
         List<CoursePassRateVO> coursePassRates = new ArrayList<>();
         
-        for (Course course : courses) {
-            // 获取课程答题记录
-            QueryWrapper<QuestionRecords> recordsQuery = new QueryWrapper<>();
-            recordsQuery.eq("courseId", course.getId());
-            List<QuestionRecords> records = questionRecordsMapper.selectList(recordsQuery);
+        for (Courses course : courses) {
+            // 获取课程答题记录（通过lessonId关联）
+            List<Lessons> lessons = lessonMapper.selectList(new QueryWrapper<Lessons>().eq("courseId", course.getId()));
+            List<Long> lessonIds = lessons.stream().map(Lessons::getLessonId).collect(Collectors.toList());
+            
+            List<QuestionRecords> records = new ArrayList<>();
+            if (!lessonIds.isEmpty()) {
+                QueryWrapper<QuestionRecords> recordsQuery = new QueryWrapper<>();
+                recordsQuery.in("lessonId", lessonIds);
+                records = questionRecordsMapper.selectList(recordsQuery);
+            }
             
             if (!records.isEmpty()) {
                 long totalStudents = records.stream()
@@ -210,8 +219,9 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
                         .count();
                 
                 double passRate = totalStudents > 0 ? (double) passedStudents / totalStudents * 100 : 0.0;
+                // 计算平均分数（基于正确率）
                 double averageScore = records.stream()
-                        .mapToDouble(QuestionRecords::getScore)
+                        .mapToDouble(record -> record.getIsCorrect() == 1 ? 100.0 : 0.0)
                         .average()
                         .orElse(0.0);
                 
@@ -316,10 +326,25 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
             result.setCorrectRateTrends(correctRateTrends);
             
             // 知识点掌握情况（基于错题统计）
+            // 获取所有题目信息
+            List<Long> questionIds = allRecords.stream()
+                    .map(QuestionRecords::getQuestionId)
+                    .distinct()
+                    .collect(Collectors.toList());
+            
+            Map<Long, Questions> questionMap = new HashMap<>();
+            if (!questionIds.isEmpty()) {
+                List<Questions> questions = questionsMapper.selectBatchIds(questionIds);
+                questionMap = questions.stream()
+                        .collect(Collectors.toMap(Questions::getQuestionId, q -> q));
+            }
+            
             Map<String, Long> knowledgePointErrors = allRecords.stream()
-                    .filter(record -> record.getIsCorrect() == 0 && record.getKnowledge() != null)
+                    .filter(record -> record.getIsCorrect() == 0)
+                    .filter(record -> questionMap.containsKey(record.getQuestionId()))
+                    .filter(record -> questionMap.get(record.getQuestionId()).getKnowledge() != null)
                     .collect(Collectors.groupingBy(
-                            QuestionRecords::getKnowledge,
+                            record -> questionMap.get(record.getQuestionId()).getKnowledge(),
                             Collectors.counting()
                     ));
             
@@ -328,7 +353,8 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
                 String knowledge = entry.getKey();
                 long errorCount = entry.getValue();
                 long totalCount = allRecords.stream()
-                        .filter(record -> knowledge.equals(record.getKnowledge()))
+                        .filter(record -> questionMap.containsKey(record.getQuestionId()))
+                        .filter(record -> knowledge.equals(questionMap.get(record.getQuestionId()).getKnowledge()))
                         .count();
                 double masteryRate = totalCount > 0 ? (double)(totalCount - errorCount) / totalCount * 100 : 0.0;
                 
@@ -359,7 +385,8 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
                             setErrorRate(errorRate);
                             setCourseCount(1L); // 简化处理
                             setStudentCount(allRecords.stream()
-                                    .filter(record -> knowledge.equals(record.getKnowledge()))
+                                    .filter(record -> questionMap.containsKey(record.getQuestionId()))
+                                    .filter(record -> knowledge.equals(questionMap.get(record.getQuestionId()).getKnowledge()))
                                     .map(QuestionRecords::getStudentId)
                                     .distinct()
                                     .count());

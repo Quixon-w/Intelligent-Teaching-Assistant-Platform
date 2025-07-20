@@ -8,8 +8,8 @@ import org.cancan.usercenter.model.vo.*;
 import org.cancan.usercenter.service.AdminStatisticsService;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
