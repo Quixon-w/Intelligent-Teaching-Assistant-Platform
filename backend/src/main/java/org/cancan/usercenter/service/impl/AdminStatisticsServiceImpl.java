@@ -70,21 +70,22 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         
         // 活跃板块统计（模拟数据）
         List<ActiveModuleVO> activeModules = new ArrayList<>();
+        final int coursesSize = courses.size();
         activeModules.add(new ActiveModuleVO() {{
             setModuleName("课程管理");
-            setUsageCount((long) courses.size());
+            setUsageCount((long) coursesSize);
             setPercentage(60.0);
             setModuleType("course_management");
         }});
         activeModules.add(new ActiveModuleVO() {{
             setModuleName("题目生成");
-            setUsageCount((long) (courses.size() * 0.8));
+            setUsageCount((long) (coursesSize * 0.8));
             setPercentage(30.0);
             setModuleType("question_generation");
         }});
         activeModules.add(new ActiveModuleVO() {{
             setModuleName("学生分析");
-            setUsageCount((long) (courses.size() * 0.5));
+            setUsageCount((long) (coursesSize * 0.5));
             setPercentage(10.0);
             setModuleType("student_analysis");
         }});
@@ -99,12 +100,14 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         for (Long teacherId : activeTeacherIds) {
             User teacher = userMapper.selectById(teacherId);
             if (teacher != null) {
-                long courseCount = courses.stream()
+                final long courseCount = courses.stream()
                         .filter(course -> course.getTeacherId().equals(teacherId))
                         .count();
+                final Long finalTeacherId = teacherId;
+                final String teacherName = teacher.getUsername();
                 teacherRankings.add(new TeacherRankingVO() {{
-                    setTeacherId(teacherId);
-                    setTeacherName(teacher.getUsername());
+                    setTeacherId(finalTeacherId);
+                    setTeacherName(teacherName);
                     setUsageCount(courseCount);
                     setRanking(teacherRankings.size() + 1);
                 }});
@@ -142,21 +145,22 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         
         // 活跃板块统计（模拟数据）
         List<ActiveModuleVO> activeModules = new ArrayList<>();
+        final int recordsSize = records.size();
         activeModules.add(new ActiveModuleVO() {{
             setModuleName("在线测试");
-            setUsageCount((long) (records.size() * 0.7));
+            setUsageCount((long) (recordsSize * 0.7));
             setPercentage(70.0);
             setModuleType("online_test");
         }});
         activeModules.add(new ActiveModuleVO() {{
             setModuleName("错题练习");
-            setUsageCount((long) (records.size() * 0.2));
+            setUsageCount((long) (recordsSize * 0.2));
             setPercentage(20.0);
             setModuleType("wrong_question_practice");
         }});
         activeModules.add(new ActiveModuleVO() {{
             setModuleName("课程学习");
-            setUsageCount((long) (records.size() * 0.1));
+            setUsageCount((long) (recordsSize * 0.1));
             setPercentage(10.0);
             setModuleType("course_learning");
         }});
@@ -171,12 +175,14 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         for (Long studentId : activeStudentIds) {
             User student = userMapper.selectById(studentId);
             if (student != null) {
-                long recordCount = records.stream()
+                final long recordCount = records.stream()
                         .filter(record -> record.getStudentId().equals(studentId))
                         .count();
+                final Long finalStudentId = studentId;
+                final String studentName = student.getUsername();
                 studentRankings.add(new StudentRankingVO() {{
-                    setStudentId(studentId);
-                    setStudentName(student.getUsername());
+                    setStudentId(finalStudentId);
+                    setStudentName(studentName);
                     setUsageCount(recordCount);
                     setRanking(studentRankings.size() + 1);
                 }});
@@ -230,13 +236,19 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
                         .average()
                         .orElse(0.0);
                 
+                final Long courseId = course.getId();
+                final String courseName = course.getName();
+                final double finalPassRate = passRate;
+                final long finalTotalStudents = totalStudents;
+                final long finalPassedStudents = passedStudents;
+                final double finalAverageScore = averageScore;
                 coursePassRates.add(new CoursePassRateVO() {{
-                    setCourseId(course.getId());
-                    setCourseName(course.getName());
-                    setPassRate(passRate);
-                    setTotalStudents(totalStudents);
-                    setPassedStudents(passedStudents);
-                    setAverageScore(averageScore);
+                    setCourseId(courseId);
+                    setCourseName(courseName);
+                    setPassRate(finalPassRate);
+                    setTotalStudents(finalTotalStudents);
+                    setPassedStudents(finalPassedStudents);
+                    setAverageScore(finalAverageScore);
                 }});
                 
                 overallEfficiency += passRate;
@@ -251,14 +263,17 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         List<CourseOptimizationVO> optimizationSuggestions = new ArrayList<>();
         for (CoursePassRateVO passRate : coursePassRates) {
             if (passRate.getPassRate() < 60.0) {
+                final Long optCourseId = passRate.getCourseId();
+                final String optCourseName = passRate.getCourseName();
+                final double optPassRate = passRate.getPassRate();
                 optimizationSuggestions.add(new CourseOptimizationVO() {{
-                    setCourseId(passRate.getCourseId());
-                    setCourseName(passRate.getCourseName());
+                    setCourseId(optCourseId);
+                    setCourseName(optCourseName);
                     setIssueType("low_pass_rate");
                     setIssueDescription("通过率偏低，需要加强教学");
                     setSuggestion("建议增加练习题目，加强重点知识点讲解");
-                    setPriority(passRate.getPassRate() < 40.0 ? "high" : "medium");
-                    setRelatedData(passRate.getPassRate());
+                    setPriority(optPassRate < 40.0 ? "high" : "medium");
+                    setRelatedData(optPassRate);
                 }});
             }
         }
@@ -321,7 +336,7 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
             List<CorrectRateTrendVO> correctRateTrends = new ArrayList<>();
             LocalDate today = LocalDate.now();
             for (int i = 6; i >= 0; i--) {
-                LocalDate date = today.minusDays(i);
+                final LocalDate date = today.minusDays(i);
                 correctRateTrends.add(new CorrectRateTrendVO() {{
                     setDate(date);
                     setCorrectRate(65.0 + Math.random() * 25.0);
@@ -332,19 +347,19 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
             
             // 知识点掌握情况（基于错题统计）
             // 获取所有题目信息
-            List<Long> questionIds = allRecords.stream()
+            final List<Long> questionIds = allRecords.stream()
                     .map(QuestionRecords::getQuestionId)
                     .distinct()
                     .collect(Collectors.toList());
             
-            Map<Long, Questions> questionMap = new HashMap<>();
+            final Map<Long, Questions> questionMap = new HashMap<>();
             if (!questionIds.isEmpty()) {
-                List<Questions> questions = questionsMapper.selectBatchIds(questionIds);
-                questionMap = questions.stream()
-                        .collect(Collectors.toMap(Questions::getQuestionId, q -> q));
+                List<Questions> questions = questionsMapper.selectList(new QueryWrapper<Questions>().in("question_id", questionIds));
+                questionMap.putAll(questions.stream()
+                        .collect(Collectors.toMap(Questions::getQuestionId, q -> q)));
             }
             
-            Map<String, Long> knowledgePointErrors = allRecords.stream()
+            final Map<String, Long> knowledgePointErrors = allRecords.stream()
                     .filter(record -> record.getIsCorrect() == 0)
                     .filter(record -> questionMap.containsKey(record.getQuestionId()))
                     .filter(record -> questionMap.get(record.getQuestionId()).getKnowledge() != null)
@@ -355,13 +370,13 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
             
             List<KnowledgePointMasteryVO> knowledgePointMastery = new ArrayList<>();
             for (Map.Entry<String, Long> entry : knowledgePointErrors.entrySet()) {
-                String knowledge = entry.getKey();
-                long errorCount = entry.getValue();
-                long totalCount = allRecords.stream()
+                final String knowledge = entry.getKey();
+                final long errorCount = entry.getValue();
+                final long totalCount = allRecords.stream()
                         .filter(record -> questionMap.containsKey(record.getQuestionId()))
                         .filter(record -> knowledge.equals(questionMap.get(record.getQuestionId()).getKnowledge()))
                         .count();
-                double masteryRate = totalCount > 0 ? (double)(totalCount - errorCount) / totalCount * 100 : 0.0;
+                final double masteryRate = totalCount > 0 ? (double)(totalCount - errorCount) / totalCount * 100 : 0.0;
                 
                 knowledgePointMastery.add(new KnowledgePointMasteryVO() {{
                     setKnowledgePoint(knowledge);
@@ -377,13 +392,13 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
                     .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                     .limit(10)
                     .map(entry -> {
-                        String knowledge = entry.getKey();
-                        long errorCount = entry.getValue();
-                        long totalCount = allRecords.stream()
+                        final String knowledge = entry.getKey();
+                        final long errorCount = entry.getValue();
+                        final long totalCount = allRecords.stream()
                                 .filter(record -> questionMap.containsKey(record.getQuestionId()))
                                 .filter(record -> knowledge.equals(questionMap.get(record.getQuestionId()).getKnowledge()))
                                 .count();
-                        double errorRate = totalCount > 0 ? (double) errorCount / totalCount * 100 : 0.0;
+                        final double errorRate = totalCount > 0 ? (double) errorCount / totalCount * 100 : 0.0;
                         
                         return new HighFrequencyErrorVO() {{
                             setKnowledgePoint(knowledge);
@@ -499,12 +514,14 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
     private List<UsageTrendVO> generateUsageTrends(LocalDateTime startTime, LocalDateTime endTime, String userType) {
         List<UsageTrendVO> trends = new ArrayList<>();
         LocalDateTime current = startTime;
+        final String finalUserType = userType;
         
         while (!current.isAfter(endTime)) {
+            final LocalDateTime finalCurrent = current;
             trends.add(new UsageTrendVO() {{
-                setTimePoint(current);
+                setTimePoint(finalCurrent);
                 setUsageCount((long) (Math.random() * 100 + 50));
-                setUserType(userType);
+                setUserType(finalUserType);
             }});
             current = current.plusHours(1);
         }
