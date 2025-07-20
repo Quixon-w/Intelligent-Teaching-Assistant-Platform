@@ -3,6 +3,7 @@ package org.cancan.usercenter.controller;
 import org.cancan.usercenter.common.BaseResponse;
 import org.cancan.usercenter.common.ErrorCode;
 import org.cancan.usercenter.common.ResultUtils;
+import org.cancan.usercenter.exception.BusinessException;
 import org.cancan.usercenter.model.dto.AdminStatisticsRequest;
 import org.cancan.usercenter.model.vo.*;
 import org.cancan.usercenter.service.AdminStatisticsService;
@@ -30,7 +31,7 @@ public class AdminStatisticsController {
             @RequestBody AdminStatisticsRequest request,
             HttpServletRequest httpServletRequest) {
         if (request == null) {
-            throw new RuntimeException(ErrorCode.PARAMS_ERROR, "请求参数不能为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数不能为空");
         }
         TeacherUsageStatisticsVO result = adminStatisticsService.getTeacherUsageStatistics(request);
         return ResultUtils.success(result);
@@ -44,7 +45,7 @@ public class AdminStatisticsController {
             @RequestBody AdminStatisticsRequest request,
             HttpServletRequest httpServletRequest) {
         if (request == null) {
-            throw new RuntimeException(ErrorCode.PARAMS_ERROR, "请求参数不能为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数不能为空");
         }
         StudentUsageStatisticsVO result = adminStatisticsService.getStudentUsageStatistics(request);
         return ResultUtils.success(result);
@@ -58,7 +59,7 @@ public class AdminStatisticsController {
             @RequestBody AdminStatisticsRequest request,
             HttpServletRequest httpServletRequest) {
         if (request == null) {
-            throw new RuntimeException(ErrorCode.PARAMS_ERROR, "请求参数不能为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数不能为空");
         }
         TeachingEfficiencyVO result = adminStatisticsService.getTeachingEfficiency(request);
         return ResultUtils.success(result);
@@ -72,7 +73,7 @@ public class AdminStatisticsController {
             @RequestBody AdminStatisticsRequest request,
             HttpServletRequest httpServletRequest) {
         if (request == null) {
-            throw new RuntimeException(ErrorCode.PARAMS_ERROR, "请求参数不能为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数不能为空");
         }
         LearningEffectivenessVO result = adminStatisticsService.getLearningEffectiveness(request);
         return ResultUtils.success(result);

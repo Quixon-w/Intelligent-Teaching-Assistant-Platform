@@ -380,7 +380,8 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
                         String knowledge = entry.getKey();
                         long errorCount = entry.getValue();
                         long totalCount = allRecords.stream()
-                                .filter(record -> knowledge.equals(record.getKnowledge()))
+                                .filter(record -> questionMap.containsKey(record.getQuestionId()))
+                                .filter(record -> knowledge.equals(questionMap.get(record.getQuestionId()).getKnowledge()))
                                 .count();
                         double errorRate = totalCount > 0 ? (double) errorCount / totalCount * 100 : 0.0;
                         
