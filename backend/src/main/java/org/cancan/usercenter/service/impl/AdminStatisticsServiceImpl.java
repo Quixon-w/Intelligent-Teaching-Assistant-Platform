@@ -54,8 +54,8 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         
         // 统计教师使用情况（基于课程创建、题目生成等活动）
         QueryWrapper<Courses> courseQuery = new QueryWrapper<>();
-        courseQuery.ge("createTime", startTime);
-        courseQuery.le("createTime", endTime);
+        courseQuery.ge("create_time", startTime);
+        courseQuery.le("create_time", endTime);
         List<Courses> courses = courseMapper.selectList(courseQuery);
         
         // 统计活跃教师
@@ -129,8 +129,8 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         
         // 统计学生使用情况（基于答题记录）
         QueryWrapper<QuestionRecords> recordsQuery = new QueryWrapper<>();
-        recordsQuery.ge("submitTime", startTime);
-        recordsQuery.le("submitTime", endTime);
+        recordsQuery.ge("submit_time", startTime);
+        recordsQuery.le("submit_time", endTime);
         List<QuestionRecords> records = questionRecordsMapper.selectList(recordsQuery);
         
         // 统计活跃学生
@@ -207,13 +207,13 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         
         for (Courses course : courses) {
             // 获取课程答题记录（通过lessonId关联）
-            List<Lessons> lessons = lessonMapper.selectList(new QueryWrapper<Lessons>().eq("courseId", course.getId()));
+            List<Lessons> lessons = lessonMapper.selectList(new QueryWrapper<Lessons>().eq("course_id", course.getId()));
             List<Long> lessonIds = lessons.stream().map(Lessons::getLessonId).collect(Collectors.toList());
             
             List<QuestionRecords> records = new ArrayList<>();
             if (!lessonIds.isEmpty()) {
                 QueryWrapper<QuestionRecords> recordsQuery = new QueryWrapper<>();
-                recordsQuery.in("lessonId", lessonIds);
+                recordsQuery.in("lesson_id", lessonIds);
                 records = questionRecordsMapper.selectList(recordsQuery);
             }
             
@@ -354,7 +354,7 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
             
             final Map<Long, Questions> questionMap = new HashMap<>();
             if (!questionIds.isEmpty()) {
-                List<Questions> questions = questionsMapper.selectList(new QueryWrapper<Questions>().in("question_id", questionIds));
+                List<Questions> questions = questionsMapper.selectList(new QueryWrapper<Questions>().in("questionId", questionIds));
                 questionMap.putAll(questions.stream()
                         .collect(Collectors.toMap(Questions::getQuestionId, q -> q)));
             }
@@ -454,16 +454,16 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         
         // 基础统计数据
         result.setTotalCourses(courseMapper.selectCount(null));
-        result.setTotalTeachers(userMapper.selectCount(new QueryWrapper<User>().eq("userRole", 1)));
-        result.setTotalStudents(userMapper.selectCount(new QueryWrapper<User>().eq("userRole", 0)));
+        result.setTotalTeachers(userMapper.selectCount(new QueryWrapper<User>().eq("user_role", 1)));
+        result.setTotalStudents(userMapper.selectCount(new QueryWrapper<User>().eq("user_role", 0)));
         result.setTotalTests(questionRecordsMapper.selectCount(null));
         
         // 今日活跃用户
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LocalDateTime todayEnd = LocalDateTime.now();
         QueryWrapper<QuestionRecords> todayQuery = new QueryWrapper<>();
-        todayQuery.ge("submitTime", todayStart);
-        todayQuery.le("submitTime", todayEnd);
+        todayQuery.ge("submit_time", todayStart);
+        todayQuery.le("submit_time", todayEnd);
         long todayActiveUsers = questionRecordsMapper.selectList(todayQuery).stream()
                 .map(QuestionRecords::getStudentId)
                 .distinct()
@@ -473,8 +473,8 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         // 本周活跃用户
         LocalDateTime weekStart = LocalDate.now().minusDays(7).atStartOfDay();
         QueryWrapper<QuestionRecords> weekQuery = new QueryWrapper<>();
-        weekQuery.ge("submitTime", weekStart);
-        weekQuery.le("submitTime", todayEnd);
+        weekQuery.ge("submit_time", weekStart);
+        weekQuery.le("submit_time", todayEnd);
         long weekActiveUsers = questionRecordsMapper.selectList(weekQuery).stream()
                 .map(QuestionRecords::getStudentId)
                 .distinct()
