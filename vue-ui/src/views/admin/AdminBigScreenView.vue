@@ -627,10 +627,18 @@ onMounted(() => {
   
   // 监听窗口大小变化，调整图表大小
   window.addEventListener('resize', () => {
-    teacherChart?.resize()
-    studentChart?.resize()
-    efficiencyChart?.resize()
-    effectivenessChart?.resize()
+    if (teacherChart && typeof teacherChart.resize === 'function') {
+      teacherChart.resize()
+    }
+    if (studentChart && typeof studentChart.resize === 'function') {
+      studentChart.resize()
+    }
+    if (efficiencyChart && typeof efficiencyChart.resize === 'function') {
+      efficiencyChart.resize()
+    }
+    if (effectivenessChart && typeof effectivenessChart.resize === 'function') {
+      effectivenessChart.resize()
+    }
   })
 })
 </script>

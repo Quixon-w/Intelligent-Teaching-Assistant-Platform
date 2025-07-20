@@ -3,6 +3,7 @@ package org.cancan.usercenter.model.domain;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 
 import java.util.Date;
@@ -22,6 +23,7 @@ public class Lessons {
     /**
      * 所属课程ID
      */
+    @TableField("course_id")
     private Long courseId;
 
     /**
@@ -32,6 +34,7 @@ public class Lessons {
     /**
      * 课时生成时间
      */
+    @TableField("create_time")
     private Date createTime;
 
     /**
