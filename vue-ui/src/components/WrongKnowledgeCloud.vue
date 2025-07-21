@@ -132,10 +132,17 @@ export default {
   emits: ['tag-click', 'start-practice'],
   setup(props, { emit }) {
     const loading = ref(false)
-    const knowledgeStats = ref([])
+    const localKnowledgeStats = ref([])
     const wrongQuestions = ref([])
 
-    // 计算属性
+    // 计算属性，优先用外部传入
+    const knowledgeStats = computed(() => {
+      if (props.type === 'course' && Array.isArray(props.knowledgeStats)) {
+        return props.knowledgeStats
+      }
+      return localKnowledgeStats.value
+    })
+
     const totalWrongCount = computed(() => {
       return knowledgeStats.value.reduce((sum, item) => sum + item.wrongCount, 0)
     })
@@ -167,7 +174,7 @@ export default {
       try {
         // 课程整体云图直接用外部传入数据
         if (props.type === 'course' && Array.isArray(props.knowledgeStats)) {
-          knowledgeStats.value = props.knowledgeStats
+          localKnowledgeStats.value = []
           wrongQuestions.value = []
           loading.value = false
           return
@@ -176,14 +183,14 @@ export default {
         // 只有发布了测试的课时才请求错题
         if (props.type === 'lesson' && props.lessonId && props.studentId) {
           if (props.lessonHasQuestion !== 1) {
-            knowledgeStats.value = []
+            localKnowledgeStats.value = []
             wrongQuestions.value = []
             loading.value = false
             return
           }
           questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
         } else {
-          knowledgeStats.value = []
+          localKnowledgeStats.value = []
           wrongQuestions.value = []
           loading.value = false
           return
@@ -200,15 +207,15 @@ export default {
               statsMap[item.knowledge]++
             }
           })
-          knowledgeStats.value = Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
+          localKnowledgeStats.value = Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
         } else {
           wrongQuestions.value = []
-          knowledgeStats.value = []
+          localKnowledgeStats.value = []
         }
       } catch (error) {
         // 不弹窗，只清空
         wrongQuestions.value = []
-        knowledgeStats.value = []
+        localKnowledgeStats.value = []
       } finally {
         loading.value = false
       }
