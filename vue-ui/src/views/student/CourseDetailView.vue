@@ -373,8 +373,8 @@
         </el-tabs>
       </div>
       
-      <!-- 加载状态 -->
-      <div v-if="loading" class="loading-state">
+      <!-- 加载状态（只在页面初次加载且主要内容未渲染时显示） -->
+      <div v-if="loading && !courseInfo" class="loading-state">
         <el-skeleton :rows="8" animated />
       </div>
     </el-card>
