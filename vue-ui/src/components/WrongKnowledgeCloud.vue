@@ -2,15 +2,6 @@
   <div class="wrong-knowledge-cloud">
     <div class="header">
       <h3>{{ title }}</h3>
-      <el-button 
-        v-if="showRefresh" 
-        type="primary" 
-        size="small" 
-        @click="loadData"
-        :loading="loading"
-      >
-        刷新数据
-      </el-button>
     </div>
     
     <div v-if="loading" class="loading">
@@ -96,7 +87,6 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
 import { getWrongQuestionsByLesson } from '@/api/questionRecords'
 
 export default {
@@ -175,19 +165,12 @@ export default {
         // 只有发布了测试的课时才请求错题
         if (props.type === 'lesson' && props.lessonId && props.studentId) {
           if (props.lessonHasQuestion !== 1) {
-            // 未发布测试，直接清空
             knowledgeStats.value = []
             wrongQuestions.value = []
             loading.value = false
             return
           }
           questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
-        } else if (props.type === 'course' && props.courseId && props.studentId) {
-          // 课程整体错题统计暂时不处理
-          knowledgeStats.value = []
-          wrongQuestions.value = []
-          loading.value = false
-          return
         } else {
           knowledgeStats.value = []
           wrongQuestions.value = []
@@ -212,7 +195,7 @@ export default {
           knowledgeStats.value = []
         }
       } catch (error) {
-        console.error('加载错题数据失败:', error)
+        // 不弹窗，只清空
         wrongQuestions.value = []
         knowledgeStats.value = []
       } finally {
