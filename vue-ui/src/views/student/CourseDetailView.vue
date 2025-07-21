@@ -329,11 +329,10 @@
                 <h5>课程整体错题统计</h5>
                 <WrongKnowledgeCloud
                   type="course"
-                  :courseId="courseId"
-                  :studentId="currentUser.id"
-                  title="课程错题知识点分布"
+                  :title="'课程错题知识点分布'"
                   :showDetails="false"
                   :showPracticeButton="true"
+                  :knowledgeStats="courseWrongKnowledgeStats"
                   @start-practice="handleStartPractice"
                 />
               </div>
@@ -711,6 +710,31 @@ const scoreTrendChart = ref(null)
 
 // 错题统计相关
 const activeLessonCollapse = ref([])
+
+// 课程整体错题云图数据
+const courseWrongKnowledgeStats = ref([])
+
+// 聚合所有课时错题明细，统计知识点频数
+const aggregateCourseWrongStats = () => {
+  const statsMap = {}
+  lessonsList.value.forEach(lesson => {
+    if (lesson.hasQuestion === 1 && Array.isArray(lesson.records)) {
+      lesson.records.forEach(record => {
+        if (record.isCorrect === 0 && record.questionDetails && record.questionDetails.knowledge) {
+          const knowledge = record.questionDetails.knowledge
+          if (!statsMap[knowledge]) statsMap[knowledge] = 0
+          statsMap[knowledge]++
+        }
+      })
+    }
+  })
+  courseWrongKnowledgeStats.value = Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
+}
+
+// 监听课时错题明细变化，自动聚合
+watch(lessonsList, () => {
+  aggregateCourseWrongStats()
+}, { deep: true })
 
 // 即时练习相关
 const showInstantPractice = ref(false)

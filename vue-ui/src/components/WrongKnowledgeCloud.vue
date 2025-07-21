@@ -123,6 +123,10 @@ export default {
     showPracticeButton: {
       type: Boolean,
       default: false
+    },
+    knowledgeStats: {
+      type: Array,
+      default: undefined
     }
   },
   emits: ['tag-click', 'start-practice'],
@@ -161,6 +165,13 @@ export default {
     const loadData = async () => {
       loading.value = true
       try {
+        // 课程整体云图直接用外部传入数据
+        if (props.type === 'course' && Array.isArray(props.knowledgeStats)) {
+          knowledgeStats.value = props.knowledgeStats
+          wrongQuestions.value = []
+          loading.value = false
+          return
+        }
         let questionsResponse
         // 只有发布了测试的课时才请求错题
         if (props.type === 'lesson' && props.lessonId && props.studentId) {
