@@ -174,40 +174,59 @@ export default {
       try {
         let statsResponse, questionsResponse
         let statsError = false, questionsError = false
+        let statsNetworkError = false, questionsNetworkError = false
         
         if (props.type === 'lesson') {
-          statsResponse = await getWrongKnowledgeStatsByLesson(props.lessonId, props.studentId)
+          try {
+            statsResponse = await getWrongKnowledgeStatsByLesson(props.lessonId, props.studentId)
+          } catch (e) {
+            statsNetworkError = true
+            throw e
+          }
           if (props.showDetails) {
-            questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
+            try {
+              questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
+            } catch (e) {
+              questionsNetworkError = true
+              throw e
+            }
           }
         } else {
-          statsResponse = await getWrongKnowledgeStatsByCourse(props.courseId, props.studentId)
+          try {
+            statsResponse = await getWrongKnowledgeStatsByCourse(props.courseId, props.studentId)
+          } catch (e) {
+            statsNetworkError = true
+            throw e
+          }
         }
-        
         // 只要 code===0 就赋值（无论 data 是否为空数组），否则才弹错误
         if (statsResponse.code === 0) {
           knowledgeStats.value = Array.isArray(statsResponse.data) ? statsResponse.data : []
         } else {
           statsError = true
-          ElMessage.error(statsResponse.message || '获取错题统计失败')
         }
-        
         if (props.showDetails && questionsResponse) {
           if (questionsResponse.code === 0) {
             wrongQuestions.value = Array.isArray(questionsResponse.data) ? questionsResponse.data : []
           } else {
             questionsError = true
-            ElMessage.error(questionsResponse.message || '获取错题详情失败')
           }
         }
-        // 只有真正的接口错误才抛出异常
-        if (statsError || questionsError) {
-          throw new Error('接口返回错误')
+        // 只有真正的接口错误（如401/500/网络异常）才弹窗，数据为空不弹窗
+        if (statsNetworkError || questionsNetworkError) {
+          ElMessage.error('加载错题数据失败')
+          throw new Error('网络或接口异常')
+        }
+        if (statsError) {
+          ElMessage.error(statsResponse.message || '获取错题统计失败')
+        }
+        if (questionsError) {
+          ElMessage.error(questionsResponse.message || '获取错题详情失败')
         }
       } catch (error) {
         // 只有网络/接口异常才显示“请求失败”
         console.error('加载错题数据失败:', error)
-        ElMessage.error('加载错题数据失败')
+        // 已在上面弹窗，这里不再重复弹窗
       } finally {
         loading.value = false
       }
@@ -351,4 +370,5 @@ export default {
   margin-bottom: 15px;
   color: #303133;
 }
+</style> 
 </style> 

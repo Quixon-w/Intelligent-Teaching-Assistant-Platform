@@ -8,7 +8,7 @@ import request from '@/utils/request'
  */
 export function getWrongKnowledgeStatsByLesson(lessonId, studentId) {
   return request({
-    url: `/records/wrongKnowledgeStats/lesson`,
+    url: `/api/records/wrongKnowledgeStats/lesson`,
     method: 'get',
     params: {
       lessonId,
