@@ -673,6 +673,10 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
+// 修复：明确定义 courseId 和 currentUser，供模板和组件使用
+const courseId = route.params.id
+const currentUser = authStore.user
+
 // 响应式数据
 const loading = ref(false)
 const courseInfo = ref(null)

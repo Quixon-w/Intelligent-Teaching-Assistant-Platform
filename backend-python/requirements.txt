@@ -1,7 +1,7 @@
 # Web框架和API
-fastapi>=0.104.0
+fastapi>=0.104.0,<0.111.0
 uvicorn[standard]>=0.24.0
-pydantic>=2.0.0
+pydantic>=1.10.2,<2.0.0
 sse-starlette>=1.8.0
 
 # 数据处理和科学计算
@@ -11,8 +11,7 @@ safetensors>=0.4.0
 
 # AI和机器学习
 rwkv>=0.8.0
-langchain>=0.1.0
-langchain-community>=0.0.10
+langchain==0.0.350
 sentence-transformers>=2.2.0
 tiktoken>=0.5.0
 tokenizers>=0.15.0
@@ -48,17 +47,13 @@ tqdm>=4.65.0
 python-multipart>=0.0.6
 
 # 高性能数据结构
-cyac>=2.0.0
+cyac==1.11
 
 # 开发工具
-setuptools>=70.0.0
+setuptools>=58.0.0,<59.0.0
 
-# 新增依赖
 # BGEM3嵌入模型
 FlagEmbedding>=1.2.0
-
-# BGE重排序模型
-bge-reranker>=0.1.0
 
 # 正则表达式增强
 regex>=2023.0.0
@@ -85,4 +80,4 @@ marshmallow>=3.20.0
 cachetools>=5.3.0
 
 # 并发控制
-asyncio-throttle>=1.0.0 
+asyncio-throttle>=1.0.0
