@@ -8,7 +8,7 @@ import request from '@/utils/request'
  */
 export function getWrongQuestionsByLesson(lessonId, studentId) {
   return request({
-    url: `/records/wrongQuestions/lesson`,
+    url: `/api/records/wrongQuestions/lesson`,
     method: 'get',
     params: {
       lessonId,
@@ -25,7 +25,7 @@ export function getWrongQuestionsByLesson(lessonId, studentId) {
  */
 export function getStudentLessonRecords(lessonId, studentId) {
   return request({
-    url: `/records/getRecords`,
+    url: `/api/records/getRecords`,
     method: 'get',
     params: {
       lessonId,
@@ -41,7 +41,7 @@ export function getStudentLessonRecords(lessonId, studentId) {
  */
 export function getLessonRecords(lessonId) {
   return request({
-    url: `/records/getLessonRecords`,
+    url: `/api/records/getLessonRecords`,
     method: 'get',
     params: {
       lessonId
@@ -56,7 +56,7 @@ export function getLessonRecords(lessonId) {
  */
 export function getFinishedTestNum(studentId) {
   return request({
-    url: `/records/getFinishedTestNum`,
+    url: `/api/records/getFinishedTestNum`,
     method: 'get',
     params: {
       studentId
