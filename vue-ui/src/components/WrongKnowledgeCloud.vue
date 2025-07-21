@@ -97,15 +97,14 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getWrongKnowledgeStatsByLesson, getWrongKnowledgeStatsByCourse, getWrongQuestionsByLesson } from '@/api/questionRecords'
+import { getWrongQuestionsByLesson } from '@/api/questionRecords'
 
 export default {
   name: 'WrongKnowledgeCloud',
   props: {
     type: {
       type: String,
-      required: true,
-      validator: (value) => ['lesson', 'course'].includes(value)
+      required: true
     },
     lessonId: {
       type: [String, Number],
@@ -117,15 +116,15 @@ export default {
     },
     studentId: {
       type: [String, Number],
-      required: true
+      default: null
+    },
+    lessonHasQuestion: {
+      type: Number,
+      default: 1
     },
     title: {
       type: String,
-      default: '错题知识点统计'
-    },
-    showRefresh: {
-      type: Boolean,
-      default: true
+      default: ''
     },
     showDetails: {
       type: Boolean,
@@ -172,61 +171,50 @@ export default {
     const loadData = async () => {
       loading.value = true
       try {
-        let statsResponse, questionsResponse
-        let statsError = false, questionsError = false
-        let statsNetworkError = false, questionsNetworkError = false
-        
-        if (props.type === 'lesson') {
-          try {
-            statsResponse = await getWrongKnowledgeStatsByLesson(props.lessonId, props.studentId)
-          } catch (e) {
-            statsNetworkError = true
-            throw e
+        let questionsResponse
+        // 只有发布了测试的课时才请求错题
+        if (props.type === 'lesson' && props.lessonId && props.studentId) {
+          if (props.lessonHasQuestion !== 1) {
+            // 未发布测试，直接清空
+            knowledgeStats.value = []
+            wrongQuestions.value = []
+            loading.value = false
+            return
           }
-          if (props.showDetails) {
-            try {
-              questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
-            } catch (e) {
-              questionsNetworkError = true
-              throw e
+          questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
+        } else if (props.type === 'course' && props.courseId && props.studentId) {
+          // 课程整体错题统计暂时不处理
+          knowledgeStats.value = []
+          wrongQuestions.value = []
+          loading.value = false
+          return
+        } else {
+          knowledgeStats.value = []
+          wrongQuestions.value = []
+          loading.value = false
+          return
+        }
+        if (questionsResponse && questionsResponse.code === 0) {
+          wrongQuestions.value = Array.isArray(questionsResponse.data) ? questionsResponse.data : []
+          // 前端统计知识点分布
+          const statsMap = {}
+          wrongQuestions.value.forEach(item => {
+            if (item.knowledge) {
+              if (!statsMap[item.knowledge]) {
+                statsMap[item.knowledge] = 0
+              }
+              statsMap[item.knowledge]++
             }
-          }
+          })
+          knowledgeStats.value = Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
         } else {
-          try {
-            statsResponse = await getWrongKnowledgeStatsByCourse(props.courseId, props.studentId)
-          } catch (e) {
-            statsNetworkError = true
-            throw e
-          }
-        }
-        // 只要 code===0 就赋值（无论 data 是否为空数组），否则才弹错误
-        if (statsResponse.code === 0) {
-          knowledgeStats.value = Array.isArray(statsResponse.data) ? statsResponse.data : []
-        } else {
-          statsError = true
-        }
-        if (props.showDetails && questionsResponse) {
-          if (questionsResponse.code === 0) {
-            wrongQuestions.value = Array.isArray(questionsResponse.data) ? questionsResponse.data : []
-          } else {
-            questionsError = true
-          }
-        }
-        // 只有真正的接口错误（如401/500/网络异常）才弹窗，数据为空不弹窗
-        if (statsNetworkError || questionsNetworkError) {
-          ElMessage.error('加载错题数据失败')
-          throw new Error('网络或接口异常')
-        }
-        if (statsError) {
-          ElMessage.error(statsResponse.message || '获取错题统计失败')
-        }
-        if (questionsError) {
-          ElMessage.error(questionsResponse.message || '获取错题详情失败')
+          wrongQuestions.value = []
+          knowledgeStats.value = []
         }
       } catch (error) {
-        // 只有网络/接口异常才显示“请求失败”
         console.error('加载错题数据失败:', error)
-        // 已在上面弹窗，这里不再重复弹窗
+        wrongQuestions.value = []
+        knowledgeStats.value = []
       } finally {
         loading.value = false
       }

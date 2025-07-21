@@ -352,6 +352,7 @@
                       type="lesson"
                       :lessonId="lesson.lessonId"
                       :studentId="currentUser.id"
+                      :lessonHasQuestion="lesson.hasQuestion"
                       :title="`${lesson.lessonName} - 错题统计`"
                       :showDetails="true"
                       :showPracticeButton="true"
