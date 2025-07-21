@@ -173,6 +173,7 @@ export default {
       loading.value = true
       try {
         let statsResponse, questionsResponse
+        let statsError = false, questionsError = false
         
         if (props.type === 'lesson') {
           statsResponse = await getWrongKnowledgeStatsByLesson(props.lessonId, props.studentId)
@@ -183,20 +184,28 @@ export default {
           statsResponse = await getWrongKnowledgeStatsByCourse(props.courseId, props.studentId)
         }
         
+        // 只要 code===0 就赋值（无论 data 是否为空数组），否则才弹错误
         if (statsResponse.code === 0) {
-          knowledgeStats.value = statsResponse.data || []
+          knowledgeStats.value = Array.isArray(statsResponse.data) ? statsResponse.data : []
         } else {
+          statsError = true
           ElMessage.error(statsResponse.message || '获取错题统计失败')
         }
         
         if (props.showDetails && questionsResponse) {
           if (questionsResponse.code === 0) {
-            wrongQuestions.value = questionsResponse.data || []
+            wrongQuestions.value = Array.isArray(questionsResponse.data) ? questionsResponse.data : []
           } else {
+            questionsError = true
             ElMessage.error(questionsResponse.message || '获取错题详情失败')
           }
         }
+        // 只有真正的接口错误才抛出异常
+        if (statsError || questionsError) {
+          throw new Error('接口返回错误')
+        }
       } catch (error) {
+        // 只有网络/接口异常才显示“请求失败”
         console.error('加载错题数据失败:', error)
         ElMessage.error('加载错题数据失败')
       } finally {
