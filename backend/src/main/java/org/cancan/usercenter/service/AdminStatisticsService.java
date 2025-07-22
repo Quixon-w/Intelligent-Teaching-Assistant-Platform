@@ -32,4 +32,11 @@ public interface AdminStatisticsService {
      * 获取系统概览数据
      */
     SystemOverviewVO getSystemOverview();
+
+    /**
+     * 获取活跃用户数量
+     * @param period 统计周期：today-今日，month-本月
+     * @return 活跃用户数量
+     */
+    Long getActiveUsersCount(String period);
 } 

@@ -33,17 +33,7 @@ public class SystemOverviewVO implements Serializable {
     private Long todayActiveUsers;
 
     /**
-     * 本周活跃用户数
+     * 本月活跃用户数
      */
-    private Long weekActiveUsers;
-
-    /**
-     * 总测试次数
-     */
-    private Long totalTests;
-
-    /**
-     * 平均通过率
-     */
-    private Double averagePassRate;
+    private Long monthActiveUsers;
 } 

@@ -119,4 +119,20 @@ public class AdminStatisticsController {
         SystemOverviewVO result = adminStatisticsService.getSystemOverview();
         return ResultUtils.success(result);
     }
+
+    /**
+     * 获取活跃用户数量
+     */
+    @GetMapping("/active-users")
+    public BaseResponse<Long> getActiveUsersCount(
+            @RequestParam String period,
+            HttpServletRequest httpServletRequest) {
+        // 验证管理员权限
+        User currentUser = userService.getCurrentUser(httpServletRequest);
+        if (currentUser.getUserRole() != ADMIN_ROLE) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有管理员可访问统计数据");
+        }
+        Long result = adminStatisticsService.getActiveUsersCount(period);
+        return ResultUtils.success(result);
+    }
 } 

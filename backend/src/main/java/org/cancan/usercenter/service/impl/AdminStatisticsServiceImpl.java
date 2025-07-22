@@ -456,44 +456,61 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         result.setTotalCourses(courseMapper.selectCount(null));
         result.setTotalTeachers(userMapper.selectCount(new QueryWrapper<User>().eq("user_role", 1)));
         result.setTotalStudents(userMapper.selectCount(new QueryWrapper<User>().eq("user_role", 0)));
-        result.setTotalTests(questionRecordsMapper.selectCount(null));
         
         // 今日活跃用户
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LocalDateTime todayEnd = LocalDateTime.now();
-        QueryWrapper<QuestionRecords> todayQuery = new QueryWrapper<>();
-        todayQuery.ge("submit_time", todayStart);
-        todayQuery.le("submit_time", todayEnd);
-        long todayActiveUsers = questionRecordsMapper.selectList(todayQuery).stream()
-                .map(QuestionRecords::getStudentId)
-                .distinct()
-                .count();
-        result.setTodayActiveUsers(todayActiveUsers);
+        result.setTodayActiveUsers(getActiveUsersCount("today"));
         
-        // 本周活跃用户
-        LocalDateTime weekStart = LocalDate.now().minusDays(7).atStartOfDay();
-        QueryWrapper<QuestionRecords> weekQuery = new QueryWrapper<>();
-        weekQuery.ge("submit_time", weekStart);
-        weekQuery.le("submit_time", todayEnd);
-        long weekActiveUsers = questionRecordsMapper.selectList(weekQuery).stream()
-                .map(QuestionRecords::getStudentId)
-                .distinct()
-                .count();
-        result.setWeekActiveUsers(weekActiveUsers);
-        
-        // 平均通过率
-        List<QuestionRecords> allRecords = questionRecordsMapper.selectList(null);
-        if (!allRecords.isEmpty()) {
-            double averagePassRate = allRecords.stream()
-                    .mapToDouble(record -> record.getIsCorrect() == 1 ? 100.0 : 0.0)
-                    .average()
-                    .orElse(0.0);
-            result.setAveragePassRate(averagePassRate);
-        } else {
-            result.setAveragePassRate(0.0);
-        }
+        // 本月活跃用户
+        result.setMonthActiveUsers(getActiveUsersCount("month"));
         
         return result;
+    }
+
+    @Override
+    public Long getActiveUsersCount(String period) {
+        LocalDateTime startTime;
+        LocalDateTime endTime = LocalDateTime.now();
+        
+        if ("today".equals(period)) {
+            startTime = LocalDate.now().atStartOfDay();
+        } else if ("month".equals(period)) {
+            startTime = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        } else {
+            return 0L;
+        }
+        
+        // 统计教师活跃用户（基于课程和课时创建记录）
+        QueryWrapper<Courses> courseQuery = new QueryWrapper<>();
+        courseQuery.ge("create_time", startTime);
+        courseQuery.le("create_time", endTime);
+        Set<Long> activeTeacherIds = courseMapper.selectList(courseQuery).stream()
+                .map(Courses::getTeacherId)
+                .collect(Collectors.toSet());
+        
+        QueryWrapper<Lessons> lessonQuery = new QueryWrapper<>();
+        lessonQuery.ge("create_time", startTime);
+        lessonQuery.le("create_time", endTime);
+        Set<Long> lessonTeacherIds = lessonMapper.selectList(lessonQuery).stream()
+                .map(lesson -> {
+                    // 通过课程ID获取教师ID
+                    Courses course = courseMapper.selectById(lesson.getCourseId());
+                    return course != null ? course.getTeacherId() : null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        
+        activeTeacherIds.addAll(lessonTeacherIds);
+        
+        // 统计学生活跃用户（基于做题记录）
+        QueryWrapper<QuestionRecords> studentQuery = new QueryWrapper<>();
+        studentQuery.ge("submit_time", startTime);
+        studentQuery.le("submit_time", endTime);
+        Set<Long> activeStudentIds = questionRecordsMapper.selectList(studentQuery).stream()
+                .map(QuestionRecords::getStudentId)
+                .collect(Collectors.toSet());
+        
+        // 返回总活跃用户数
+        return (long) (activeTeacherIds.size() + activeStudentIds.size());
     }
     
     // 辅助方法

@@ -118,6 +118,12 @@ export function getAdminOverview() {
   return request.get('/api/admin/statistics/overview')
 }
 
+export function getActiveUsersCount(period) {
+  return request.get('/api/admin/statistics/active-users', {
+    params: { period }
+  })
+}
+
 export function getTeacherUsage(data) {
   return request.post('/api/admin/statistics/teacher-usage', data)
 }

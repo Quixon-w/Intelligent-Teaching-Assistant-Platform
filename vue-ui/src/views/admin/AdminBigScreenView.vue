@@ -59,23 +59,9 @@
               </el-statistic>
             </div>
             <div class="stat-item">
-              <el-statistic title="本周活跃用户" :value="overview.weekActiveUsers || 0">
+              <el-statistic title="本月活跃用户" :value="overview.monthActiveUsers || 0">
                 <template #prefix>
                   <el-icon><TrendCharts /></el-icon>
-                </template>
-              </el-statistic>
-            </div>
-            <div class="stat-item">
-              <el-statistic title="总测试次数" :value="overview.totalTests || 0">
-                <template #prefix>
-                  <el-icon><Document /></el-icon>
-                </template>
-              </el-statistic>
-            </div>
-            <div class="stat-item">
-              <el-statistic title="平均通过率" :value="(overview.averagePassRate || 0).toFixed(1) + '%'">
-                <template #prefix>
-                  <el-icon><Trophy /></el-icon>
                 </template>
               </el-statistic>
             </div>
@@ -295,12 +281,17 @@ import {
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { 
+  getCourseNum,
+  getTeacherNum,
+  getStudentNum,
   getAdminOverview, 
+  getActiveUsersCount,
   getTeacherUsage, 
   getStudentUsage, 
   getTeachingEfficiency, 
   getLearningEffectiveness 
 } from '@/api/admin'
+import request from '@/utils/request'
 
 // 响应式数据
 const period = ref('today')
@@ -309,7 +300,13 @@ const lastUpdateTime = ref('')
 const activeTab = ref('teacherRanking')
 
 // 统计数据
-const overview = ref({})
+const overview = ref({
+  totalCourses: 0,
+  totalTeachers: 0,
+  totalStudents: 0,
+  todayActiveUsers: 0,
+  monthActiveUsers: 0
+})
 const teacherUsage = ref({})
 const studentUsage = ref({})
 const teachingEfficiency = ref({})
@@ -321,19 +318,72 @@ let studentChart = null
 let efficiencyChart = null
 let effectivenessChart = null
 
+// 获取基础统计数据（使用和管理员页面相同的API）
+const fetchBasicStats = async () => {
+  try {
+    const [courseRes, teacherRes, studentRes] = await Promise.all([
+      getCourseNum(),
+      getTeacherNum(),
+      getStudentNum()
+    ])
+    
+    // 更新基础统计数据
+    if (courseRes.code === 0) {
+      overview.value.totalCourses = courseRes.data || 0
+    }
+    if (teacherRes.code === 0) {
+      overview.value.totalTeachers = teacherRes.data || 0
+    }
+    if (studentRes.code === 0) {
+      overview.value.totalStudents = studentRes.data || 0
+    }
+    
+  } catch (error) {
+    console.error('获取基础统计数据失败:', error)
+    ElMessage.error('获取基础统计数据失败')
+  }
+}
+
+// 获取活跃用户统计
+const fetchActiveUsers = async () => {
+  try {
+    // 获取今日活跃用户
+    const todayActiveRes = await getActiveUsersCount('today')
+    
+    // 获取本月活跃用户
+    const monthActiveRes = await getActiveUsersCount('month')
+    
+    if (todayActiveRes.code === 0) {
+      overview.value.todayActiveUsers = todayActiveRes.data || 0
+    }
+    if (monthActiveRes.code === 0) {
+      overview.value.monthActiveUsers = monthActiveRes.data || 0
+    }
+    
+  } catch (error) {
+    console.error('获取活跃用户统计失败:', error)
+    ElMessage.error('获取活跃用户统计失败')
+  }
+}
+
 // 获取所有数据
 const fetchAll = async () => {
   loading.value = true
   try {
-    const [ov, t, s, e, l] = await Promise.all([
-      getAdminOverview(),
+    // 先获取基础统计数据
+    await fetchBasicStats()
+    
+    // 获取活跃用户统计
+    await fetchActiveUsers()
+    
+    // 再获取其他统计数据
+    const [t, s, e, l] = await Promise.all([
       getTeacherUsage({ period: period.value }),
       getStudentUsage({ period: period.value }),
       getTeachingEfficiency({ period: period.value }),
       getLearningEffectiveness({ period: period.value })
     ])
     
-    overview.value = ov.data || {}
     teacherUsage.value = t.data || {}
     studentUsage.value = s.data || {}
     teachingEfficiency.value = e.data || {}
