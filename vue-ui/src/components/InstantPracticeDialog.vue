@@ -24,25 +24,30 @@
           <el-tag type="warning">自主练习（不保存）</el-tag>
         </div>
         <div class="practice-content">
-          <div v-for="(block, idx) in visibleBlocks" :key="idx" class="practice-block">
-            <template v-if="block.type === 'stem'">
-              <b>题干：</b>{{ block.text }}
-            </template>
-            <template v-else-if="block.type === 'option'">
-              <div style="margin-left: 1em;"><b>{{ block.text.slice(0,2) }}</b>{{ block.text.slice(2) }}</div>
-            </template>
-            <template v-else-if="block.type === 'answer'">
-              <div style="margin-top: 1em;"><b>正确答案：</b>{{ block.text }}</div>
-            </template>
-            <template v-else-if="block.type === 'explanation'">
-              <div style="margin-top: 0.5em;"><b>解析：</b>{{ block.text }}</div>
-            </template>
-            <template v-else-if="block.type === 'knowledge'">
-              <div style="margin-top: 0.5em;"><b>所属知识点：</b>{{ block.text }}</div>
-            </template>
-            <template v-else>
-              <div>{{ block.text }}</div>
-            </template>
+          <!-- 优先用 Markdown 渲染 -->
+          <div v-if="renderedMarkdown" v-html="renderedMarkdown"></div>
+          <!-- 回退为原有分段渲染 -->
+          <div v-else>
+            <div v-for="(block, idx) in visibleBlocks" :key="idx" class="practice-block">
+              <template v-if="block.type === 'stem'">
+                <b>题干：</b>{{ block.text }}
+              </template>
+              <template v-else-if="block.type === 'option'">
+                <div style="margin-left: 1em;"><b>{{ block.text.slice(0,2) }}</b>{{ block.text.slice(2) }}</div>
+              </template>
+              <template v-else-if="block.type === 'answer'">
+                <div v-if="showAnswer" style="margin-top: 1em;"><b>正确答案：</b>{{ block.text }}</div>
+              </template>
+              <template v-else-if="block.type === 'explanation'">
+                <div v-if="showAnswer" style="margin-top: 0.5em;"><b>解析：</b>{{ block.text }}</div>
+              </template>
+              <template v-else-if="block.type === 'knowledge'">
+                <div style="margin-top: 0.5em;"><b>所属知识点：</b>{{ block.text }}</div>
+              </template>
+              <template v-else>
+                <div>{{ block.text }}</div>
+              </template>
+            </div>
           </div>
           <div v-if="hasAnswer || hasExplanation" class="action-buttons" style="margin-top: 1em;">
             <el-button v-if="!showAnswer" type="primary" @click="showAnswer = true">显示答案和解析</el-button>
@@ -59,6 +64,7 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { generateInstantPractice } from '@/api/ai'
+import { marked } from 'marked'
 
 export default {
   name: 'InstantPracticeDialog',
@@ -186,6 +192,21 @@ export default {
       }
     })
 
+    // 新增：Markdown 渲染
+    const renderedMarkdown = computed(() => {
+      if (!rawText.value) return ''
+      try {
+        const html = marked.parse(rawText.value)
+        // 简单判断是否为纯文本（无标签）
+        if (/<[a-z][\s\S]*>/i.test(html)) {
+          return html
+        }
+        return ''
+      } catch {
+        return ''
+      }
+    })
+
     return {
       visible,
       loading,
@@ -198,7 +219,8 @@ export default {
       hasAnswer,
       hasExplanation,
       generateNewQuestion,
-      handleClose
+      handleClose,
+      renderedMarkdown
     }
   }
 }

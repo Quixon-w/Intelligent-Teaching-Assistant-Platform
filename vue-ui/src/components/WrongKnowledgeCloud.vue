@@ -86,7 +86,8 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import axios from 'axios'
 import { getWrongQuestionsByLesson } from '@/api/questionRecords'
 
 export default {
@@ -123,43 +124,79 @@ export default {
     showPracticeButton: {
       type: Boolean,
       default: false
-    },
-    knowledgeStats: {
-      type: Array,
-      default: undefined
     }
   },
   emits: ['tag-click', 'start-practice'],
   setup(props, { emit }) {
     const loading = ref(false)
-    const localKnowledgeStats = ref([])
+    const knowledgeStats = ref([])
     const wrongQuestions = ref([])
 
-    // 计算属性，优先用外部传入
-    const knowledgeStats = computed(() => {
-      if (props.type === 'course' && Array.isArray(props.knowledgeStats)) {
-        return props.knowledgeStats
+    // 统计数据加载
+    const loadData = async () => {
+      loading.value = true
+      try {
+        if (props.type === 'course' && props.courseId) {
+          // 课程整体错题统计（全体学生）
+          const res = await axios.get('/v1/statistics/wrong_knowledge', {
+            params: { course_id: props.courseId }
+          })
+          if (res.data && Array.isArray(res.data)) {
+            knowledgeStats.value = res.data
+          } else if (res.data && Array.isArray(res.data.data)) {
+            knowledgeStats.value = res.data.data
+          } else {
+            knowledgeStats.value = []
+          }
+          wrongQuestions.value = []
+        } else if (props.type === 'lesson' && props.lessonId && props.studentId) {
+          // 单个学生某课时错题
+          const questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
+          if (questionsResponse && questionsResponse.code === 0) {
+            wrongQuestions.value = Array.isArray(questionsResponse.data) ? questionsResponse.data : []
+            // 前端统计知识点分布
+            const statsMap = {}
+            wrongQuestions.value.forEach(item => {
+              if (item.knowledge) {
+                if (!statsMap[item.knowledge]) {
+                  statsMap[item.knowledge] = 0
+                }
+                statsMap[item.knowledge]++
+              }
+            })
+            knowledgeStats.value = Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
+          } else {
+            wrongQuestions.value = []
+            knowledgeStats.value = []
+          }
+        } else {
+          knowledgeStats.value = []
+          wrongQuestions.value = []
+        }
+      } catch (error) {
+        knowledgeStats.value = []
+        wrongQuestions.value = []
+      } finally {
+        loading.value = false
       }
-      return localKnowledgeStats.value
-    })
+    }
+
+    // 监听参数变化自动刷新
+    watch(() => [props.type, props.courseId, props.lessonId, props.studentId], loadData, { immediate: true })
 
     const totalWrongCount = computed(() => {
       return knowledgeStats.value.reduce((sum, item) => sum + item.wrongCount, 0)
     })
-
     const maxWrongCount = computed(() => {
       if (knowledgeStats.value.length === 0) return 0
       return Math.max(...knowledgeStats.value.map(item => item.wrongCount))
     })
-
-    // 获取标签样式
     const getTagStyle = (wrongCount) => {
       const maxCount = maxWrongCount.value
       const ratio = maxCount > 0 ? wrongCount / maxCount : 0
-      const fontSize = 14 + ratio * 10 // 14-24px
-      const opacity = 0.6 + ratio * 0.4 // 0.6-1.0
+      const fontSize = 14 + ratio * 10
+      const opacity = 0.6 + ratio * 0.4
       const color = ratio > 0.7 ? '#f56c6c' : ratio > 0.4 ? '#e6a23c' : '#409eff'
-      
       return {
         fontSize: `${fontSize}px`,
         opacity: opacity,
@@ -167,82 +204,17 @@ export default {
         fontWeight: ratio > 0.7 ? 'bold' : 'normal'
       }
     }
-
-    // 加载数据
-    const loadData = async () => {
-      loading.value = true
-      try {
-        // 课程整体云图直接用外部传入数据
-        if (props.type === 'course' && Array.isArray(props.knowledgeStats)) {
-          localKnowledgeStats.value = []
-          wrongQuestions.value = []
-          loading.value = false
-          return
-        }
-        let questionsResponse
-        // 只有发布了测试的课时才请求错题
-        if (props.type === 'lesson' && props.lessonId && props.studentId) {
-          if (props.lessonHasQuestion !== 1) {
-            localKnowledgeStats.value = []
-            wrongQuestions.value = []
-            loading.value = false
-            return
-          }
-            questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
-        } else {
-          localKnowledgeStats.value = []
-          wrongQuestions.value = []
-          loading.value = false
-          return
-        }
-        if (questionsResponse && questionsResponse.code === 0) {
-          wrongQuestions.value = Array.isArray(questionsResponse.data) ? questionsResponse.data : []
-          // 前端统计知识点分布
-          const statsMap = {}
-          wrongQuestions.value.forEach(item => {
-            if (item.knowledge) {
-              if (!statsMap[item.knowledge]) {
-                statsMap[item.knowledge] = 0
-              }
-              statsMap[item.knowledge]++
-            }
-          })
-          localKnowledgeStats.value = Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
-        } else {
-          wrongQuestions.value = []
-          localKnowledgeStats.value = []
-        }
-      } catch (error) {
-        // 不弹窗，只清空
-        wrongQuestions.value = []
-        localKnowledgeStats.value = []
-      } finally {
-        loading.value = false
-      }
-    }
-
-    // 处理标签点击
     const handleTagClick = (item) => {
       emit('tag-click', item)
     }
-    
-    // 开始即时练习
     const startInstantPractice = (item) => {
       emit('start-practice', item)
     }
-
-    // 格式化日期
     const formatDate = (dateStr) => {
       if (!dateStr) return ''
       const date = new Date(dateStr)
       return date.toLocaleString('zh-CN')
     }
-
-    // 组件挂载时加载数据
-    onMounted(() => {
-      loadData()
-    })
-
     return {
       loading,
       knowledgeStats,
@@ -250,7 +222,6 @@ export default {
       totalWrongCount,
       maxWrongCount,
       getTagStyle,
-      loadData,
       handleTagClick,
       startInstantPractice,
       formatDate

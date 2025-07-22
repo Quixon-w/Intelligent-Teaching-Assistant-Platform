@@ -556,10 +556,10 @@
           <h5>文件下载</h5>
           <div class="download-buttons">
             <el-button 
-              @click="downloadOutline(currentLesson)"
-              :disabled="!hasOutline"
+              @click="downloadContentDesign(currentLesson)"
+              :disabled="!hasContentDesign"
             >
-              下载教学大纲
+              下载教学内容
             </el-button>
             <el-button 
               @click="downloadExercises(currentLesson)"
@@ -572,9 +572,9 @@
           <!-- 文件状态显示 -->
           <div class="file-status">
             <el-descriptions :column="2" border size="small">
-              <el-descriptions-item label="教学大纲">
-                <el-tag :type="hasOutline ? 'success' : 'info'">
-                  {{ hasOutline ? '已生成' : '未生成' }}
+              <el-descriptions-item label="教学内容">
+                <el-tag :type="hasContentDesign ? 'success' : 'info'">
+                  {{ hasContentDesign ? '已生成' : '未生成' }}
                 </el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="习题">
@@ -585,10 +585,10 @@
             </el-descriptions>
           </div>
           
-          <!-- 教学大纲文件列表 -->
-          <div v-if="hasOutline" class="outline-files">
-            <h6>教学大纲文件</h6>
-            <el-table :data="lessonOutlineStatus.files" style="width: 100%" size="small">
+          <!-- 教学内容文件列表 -->
+          <div v-if="hasContentDesign" class="content-design-files">
+            <h6>教学内容文件</h6>
+            <el-table :data="lessonContentDesignStatus.files" style="width: 100%" size="small">
               <el-table-column prop="filename" label="文件名" />
               <el-table-column prop="size" label="文件大小" width="120">
                 <template #default="scope">
@@ -601,7 +601,7 @@
                   <el-button 
                     type="primary" 
                     size="small" 
-                    @click="downloadOutlineFile(scope.row)"
+                    @click="downloadContentDesignFile(scope.row)"
                   >
                     下载
                   </el-button>
@@ -609,8 +609,6 @@
               </el-table-column>
             </el-table>
           </div>
-          
-
           
           <!-- 习题文件列表 -->
           <div v-if="hasExercises" class="exercise-files">
@@ -3499,6 +3497,11 @@ const loadLessonContentDesignStatus = async () => {
     lessonContentDesignStatus.value = null
   }
 }
+
+const lessonContentDesignStatus = ref(null)
+const hasContentDesign = computed(() => lessonContentDesignStatus.value && lessonContentDesignStatus.value.files && lessonContentDesignStatus.value.files.length > 0)
+const downloadContentDesignFile = async (file) => { /* ...见前述... */ }
+const loadLessonContentDesignStatus = async () => { /* ...见前述... */ }
 </script>
 
 <style scoped>
