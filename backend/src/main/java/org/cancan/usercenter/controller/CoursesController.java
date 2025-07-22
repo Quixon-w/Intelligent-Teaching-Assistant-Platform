@@ -95,6 +95,13 @@ public class CoursesController {
         return ResultUtils.success(resultPage);
     }
 
+    @GetMapping("/count")
+    @Operation(summary = "获取课程总数")
+    public BaseResponse<Long> getCourseCount() {
+        Long count = coursesService.count();
+        return ResultUtils.success(count);
+    }
+
     @PostMapping("/add")
     @Operation(summary = "添加课程")
     @Parameters({

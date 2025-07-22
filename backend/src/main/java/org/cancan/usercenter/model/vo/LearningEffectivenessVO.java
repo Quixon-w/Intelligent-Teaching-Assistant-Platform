@@ -14,27 +14,17 @@ public class LearningEffectivenessVO implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 平均正确率
+     * 整体学习效果指数
      */
-    private Double averageCorrectRate;
+    private Double overallEffectiveness;
 
     /**
-     * 正确率趋势
+     * 课时通过率统计
      */
-    private List<CorrectRateTrendVO> correctRateTrends;
+    private List<LessonPassRateVO> lessonPassRates;
 
     /**
-     * 知识点掌握情况
+     * 学生排名
      */
-    private List<KnowledgePointMasteryVO> knowledgePointMastery;
-
-    /**
-     * 高频错误知识点
-     */
-    private List<HighFrequencyErrorVO> highFrequencyErrors;
-
-    /**
-     * 学习效果分布
-     */
-    private List<LearningEffectivenessDistributionVO> effectivenessDistribution;
+    private List<StudentRankingVO> studentRankings;
 } 

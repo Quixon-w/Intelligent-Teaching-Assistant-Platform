@@ -16,7 +16,7 @@ public class TeachingEfficiencyVO implements Serializable {
     /**
      * 整体教学效率指数
      */
-    private Double overallEfficiencyIndex;
+    private Double overallEfficiency;
 
     /**
      * 课程通过率统计
@@ -24,17 +24,7 @@ public class TeachingEfficiencyVO implements Serializable {
     private List<CoursePassRateVO> coursePassRates;
 
     /**
-     * 需要优化的课程
+     * 教师排名
      */
-    private List<CourseOptimizationVO> optimizationSuggestions;
-
-    /**
-     * 教学效率趋势
-     */
-    private List<EfficiencyTrendVO> efficiencyTrends;
-
-    /**
-     * 学科表现分析
-     */
-    private List<SubjectPerformanceVO> subjectPerformances;
+    private List<TeacherRankingVO> teacherRankings;
 } 

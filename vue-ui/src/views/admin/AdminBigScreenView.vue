@@ -220,11 +220,11 @@
           </template>
           
           <!-- 教师排名表格 -->
-          <el-table v-if="activeTab === 'teacherRanking'" :data="teacherUsage.teacherRankings || []" 
+          <el-table v-if="activeTab === 'teacherRanking'" :data="teachingEfficiency.teacherRankings || []" 
                     stripe style="width: 100%">
             <el-table-column prop="ranking" label="排名" width="80" />
             <el-table-column prop="teacherName" label="教师姓名" />
-            <el-table-column prop="usageCount" label="使用次数" />
+            <el-table-column prop="usageCount" label="课时数量" />
             <el-table-column label="操作" width="120">
               <template #default="scope">
                 <el-button type="primary" size="small" @click="viewTeacherDetail(scope.row)">
@@ -235,11 +235,11 @@
           </el-table>
 
           <!-- 学生排名表格 -->
-          <el-table v-if="activeTab === 'studentRanking'" :data="studentUsage.studentRankings || []" 
+          <el-table v-if="activeTab === 'studentRanking'" :data="learningEffectiveness.studentRankings || []" 
                     stripe style="width: 100%">
             <el-table-column prop="ranking" label="排名" width="80" />
             <el-table-column prop="studentName" label="学生姓名" />
-            <el-table-column prop="usageCount" label="使用次数" />
+            <el-table-column prop="usageCount" label="做题次数" />
             <el-table-column label="操作" width="120">
               <template #default="scope">
                 <el-button type="primary" size="small" @click="viewStudentDetail(scope.row)">
@@ -384,16 +384,41 @@ const fetchAll = async () => {
       getLearningEffectiveness({ period: period.value })
     ])
     
-    teacherUsage.value = t.data || {}
-    studentUsage.value = s.data || {}
-    teachingEfficiency.value = e.data || {}
-    learningEffectiveness.value = l.data || {}
+    // 正确处理API响应
+    if (t.code === 0) {
+      teacherUsage.value = t.data || {}
+    } else {
+      console.error('获取教师使用统计失败:', t.message)
+      teacherUsage.value = {}
+    }
     
-    updateLastUpdateTime()
+    if (s.code === 0) {
+      studentUsage.value = s.data || {}
+    } else {
+      console.error('获取学生使用统计失败:', s.message)
+      studentUsage.value = {}
+    }
+    
+    if (e.code === 0) {
+      teachingEfficiency.value = e.data || {}
+    } else {
+      console.error('获取教学效率统计失败:', e.message)
+      teachingEfficiency.value = {}
+    }
+    
+    if (l.code === 0) {
+      learningEffectiveness.value = l.data || {}
+    } else {
+      console.error('获取学习效果统计失败:', l.message)
+      learningEffectiveness.value = {}
+    }
     
     // 等待DOM更新后初始化图表
     await nextTick()
     initCharts()
+    
+    // 最后更新时间
+    updateLastUpdateTime()
     
   } catch (err) {
     console.error('获取统计数据失败:', err)
