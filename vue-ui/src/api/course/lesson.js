@@ -1,5 +1,5 @@
 import request from '@/utils/request.js'
-import { lessonOutlineDownload, lessonOutlineStatus } from "@/api/ai.js";
+import { lessonContentDesignDownload } from "@/api/ai.js";
 import qs from "qs";
 export function getLessons(courseId) {
   return request.get('/api/lesson/list', {
@@ -9,12 +9,8 @@ export function getLessons(courseId) {
   }).then(res => {
     let lessons = res.data.data;
     for (let lesson of lessons) {
-      lessonOutlineStatus(courseId, lesson.lessonId).then(res => {
-        lesson.outlineStatus = res;
-      }).catch(err => {
-        console.log(err);
-      });
-      lessonOutlineDownload(courseId, lesson.lessonId).then(res => {
+      // lessonOutlineStatus 已废弃，不再调用
+      lessonContentDesignDownload(courseId, lesson.lessonId).then(res => {
         lesson.outlineDownload = res;
       }).catch(err => {
         console.log(err);
