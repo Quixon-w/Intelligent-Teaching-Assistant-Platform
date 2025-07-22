@@ -3521,7 +3521,9 @@ const studentCourseWrongKnowledgeStats = computed(() => {
       })
     }
   })
-  return Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
+  const result = Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
+  console.log('【课程整体错题知识点分布统计】', result, '原始Map:', statsMap, '当前选中学生:', selectedStudentForWrongQuestions.value, '课时列表:', lessonsList.value)
+  return result
 })
 
 // 选中学生后自动加载所有课时的答题记录
@@ -3533,16 +3535,20 @@ watch(selectedStudentForWrongQuestions, async (studentId) => {
         const res = await getLessonRecords(lesson.lessonId, studentId)
         if (res.code === 0 && Array.isArray(res.data)) {
           lesson.records = res.data
+          console.log('【课时答题记录加载】课时', lesson.lessonId, lesson.lessonName, '学生', studentId, '答题记录:', res.data)
         } else {
           lesson.records = []
+          console.warn('【课时答题记录加载】课时', lesson.lessonId, lesson.lessonName, '学生', studentId, '无答题记录')
         }
-      } catch {
+      } catch (e) {
         lesson.records = []
+        console.error('【课时答题记录加载异常】课时', lesson.lessonId, lesson.lessonName, '学生', studentId, e)
       }
     } else {
       lesson.records = []
     }
   }
+  console.log('【所有课时答题记录加载完成】', lessonsList.value)
 }, { immediate: true })
 </script>
 
