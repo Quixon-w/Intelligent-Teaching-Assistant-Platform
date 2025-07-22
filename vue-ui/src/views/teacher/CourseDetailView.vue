@@ -1931,6 +1931,12 @@ const handleLessonFileUploadSuccess = (response, file, fileList) => {
   setTimeout(() => {
     loadLessonFiles()
   }, 1000)
+
+  // 【新增】课时文件上传成功后，自动刷新教学内容（content_design）状态
+  // 注意：此处不是刷新教学大纲（outline），而是教学内容（content_design）
+  setTimeout(() => {
+    loadLessonContentDesignStatus()
+  }, 2000)
 }
 
 const handleLessonFileUploadError = (error, file, fileList) => {
