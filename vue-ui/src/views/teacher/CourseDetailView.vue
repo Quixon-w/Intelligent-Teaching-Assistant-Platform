@@ -2004,7 +2004,7 @@ const generateOutline = async (lesson) => {
     
     console.log('生成教学大纲请求:', requestData)
     
-    const response = await axios.post('/ai/v1/create/outline', requestData)
+    const response = await axios.post('/ai/v1/create/content_design', requestData)
     const result = response.data
     
     console.log('教学大纲生成响应:', result)

@@ -12,7 +12,7 @@ from docx import Document
 from docx.shared import Inches
 
 from utils.rwkv import *
-from utils.knowledge import load_vector_db, search_knowledge_db, ChromaDBManager
+from utils.knowledge import load_vector_db, search_knowledge_db, ChromaDBManager, search_domain_knowledge
 import global_var
 from config.settings import get_settings
 
@@ -1742,15 +1742,21 @@ async def test_docx_file(user_id: str, course_id: str, lesson_num: str, filename
         }
 
 
+class PracticeRequest(BaseModel):
+    knowledge_point: str = Field(..., description="知识点")
+    difficulty: str = Field("medium", description="题目难度：easy(简单)、medium(中等)、hard(困难)")
+
+
 @router.post("/v1/practice/generate_instant", tags=["Practice"])
 async def generate_instant_practice(
-    knowledge_point: str = Field(..., description="知识点"),
-    difficulty: str = Field("medium", description="题目难度：easy(简单)、medium(中等)、hard(困难)"),
+    body: PracticeRequest,
     request: Request = None
 ):
     """
     基于知识点生成即时自主练习题目（不保存）
     """
+    knowledge_point = body.knowledge_point
+    difficulty = body.difficulty
     print(f"开始生成即时练习题目: knowledge_point={knowledge_point}, difficulty={difficulty}")
     
     try:

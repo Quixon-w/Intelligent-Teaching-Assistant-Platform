@@ -321,7 +321,7 @@ export async function searchKnowledge(query, courseId = null, lessonNum = null, 
 export async function createLessonOutline(courseId, lessonId) {
   const { userId, isTeacher } = await getUserInfo()
   
-  return aiRequest.post('/ai/v1/create/outline', {
+  return aiRequest.post('/ai/v1/create/content_design', {
     user_id: String(userId),
     session_id: `outline_${Date.now()}`,
     course_id: courseId,
