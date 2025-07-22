@@ -406,7 +406,7 @@
                   <h5>课程整体错题统计</h5>
                   <WrongKnowledgeCloud
                     type="course"
-                    :courseId="courseId"
+                    :knowledgeStats="studentCourseWrongKnowledgeStats"
                     title="课程错题知识点分布"
                     :showDetails="false"
                   />
@@ -3500,6 +3500,29 @@ const loadLessonContentDesignStatus = async () => {
 const lessonContentDesignStatus = ref(null)
 const hasContentDesign = computed(() => lessonContentDesignStatus.value && lessonContentDesignStatus.value.files && lessonContentDesignStatus.value.files.length > 0)
 const downloadContentDesignFile = async (file) => { /* ...见前述... */ }
+
+// 课程整体错题云图数据（针对选中学生）
+const studentCourseWrongKnowledgeStats = computed(() => {
+  if (!selectedStudentForWrongQuestions.value) return []
+  const statsMap = {}
+  lessonsList.value.forEach(lesson => {
+    if (lesson.hasQuestion === 1 && Array.isArray(lesson.records)) {
+      lesson.records.forEach(record => {
+        if (
+          record.studentId == selectedStudentForWrongQuestions.value &&
+          record.isCorrect === 0 &&
+          record.questionDetails &&
+          record.questionDetails.knowledge
+        ) {
+          const knowledge = record.questionDetails.knowledge
+          if (!statsMap[knowledge]) statsMap[knowledge] = 0
+          statsMap[knowledge]++
+        }
+      })
+    }
+  })
+  return Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
+})
 </script>
 
 <style scoped>
