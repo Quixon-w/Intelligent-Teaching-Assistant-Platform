@@ -527,7 +527,7 @@
               :loading="outlineGenerating"
               :disabled="!hasLessonFiles"
             >
-              {{ outlineGenerating ? '生成中...' : '生成教学大纲' }}
+              {{ outlineGenerating ? '生成中...' : '生成教学内容' }}
             </el-button>
             <el-button 
               type="warning" 
@@ -2262,13 +2262,13 @@ const downloadExerciseFile = async (file) => {
 
 // 生成状态相关方法
 const getGenerationStatusTitle = () => {
-  if (outlineGenerating.value) return '正在生成教学大纲'
+  if (outlineGenerating.value) return '正在生成教学内容'
   if (exercisesGenerating.value) return '正在生成习题'
   return '生成状态'
 }
 
 const getGenerationStatusDescription = () => {
-  if (outlineGenerating.value) return 'AI正在分析课时文件并生成教学大纲，请稍候...'
+  if (outlineGenerating.value) return 'AI正在分析课时文件并生成教学内容，请稍候...'
   if (exercisesGenerating.value) return 'AI正在基于课时内容生成习题，请稍候...'
   return ''
 }
@@ -3453,6 +3453,51 @@ const goToQuestionBank = () => {
   showQuestionBankDialog.value = false
   // 跳转到题库管理页面
   router.push('/dashboard/teacher/questions')
+}
+
+// 下载教学内容
+const downloadContentDesign = async (lesson) => {
+  try {
+    if (!lessonContentDesignStatus.value?.files || lessonContentDesignStatus.value.files.length === 0) {
+      ElMessage.warning('教学内容尚未生成')
+      return
+    }
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${lesson.lessonId}`
+    const filename = lessonContentDesignStatus.value.files[0].filename
+    const downloadUrl = `/ai/v1/download/content_design/${userId}/${courseId}/${lessonNum}/${filename}`
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = filename
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    ElMessage.success('开始下载教学内容')
+  } catch (error) {
+    console.error('下载教学内容失败:', error)
+    ElMessage.error('下载失败，请重试')
+  }
+}
+
+// 加载教学内容状态
+const loadLessonContentDesignStatus = async () => {
+  if (!currentLesson.value) return
+  try {
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${currentLesson.value.lessonId}`
+    const response = await axios.get(`/ai/v1/list/content_designs/${userId}/${courseId}/${lessonNum}`)
+    if (response.data && response.data.files && response.data.files.length > 0) {
+      lessonContentDesignStatus.value = response.data
+    } else {
+      lessonContentDesignStatus.value = null
+    }
+  } catch (error) {
+    console.error('加载教学内容状态失败:', error)
+    lessonContentDesignStatus.value = null
+  }
 }
 </script>
 

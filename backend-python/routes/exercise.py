@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import json
-from fastapi import APIRouter, HTTPException, status, Request, Response
+from fastapi import APIRouter, HTTPException, status, Request, Response, Query
 from pydantic import BaseModel, Field
 from typing import Union, Optional, List, Dict, Any
 import asyncio
@@ -1842,3 +1842,73 @@ D. [选项D]
 所属知识点：[{knowledge_point}]"""
 
     return prompt
+
+
+@router.get("/v1/statistics/wrong_knowledge", tags=["Statistics"])
+async def get_wrong_knowledge_stats(
+    course_id: str = Query(..., description="课程ID"),
+    lesson_num: str = Query(None, description="课时号，可选"),
+    student_id: str = Query(None, description="学生ID，可选"),
+    is_teacher: bool = Query(True, description="是否为教师用户")
+):
+    """
+    统计某课程（可选课时/学生）下所有学生或单个学生的错题知识点分布
+    - 不传 student_id 返回全体学生的统计
+    - 传 lesson_num 可统计某课时
+    - 返回格式：[{knowledge: 'xxx', wrongCount: 12}, ...]
+    """
+    import os
+    from collections import Counter
+    from config.settings import get_settings
+
+    settings = get_settings()
+    base_dir = str(settings.STUDENTS_DIR)
+    course_path = os.path.join(base_dir, '*', course_id)
+    stats = Counter()
+    student_stats = {}
+
+    # 遍历所有学生目录
+    for student_id_dir in os.listdir(base_dir):
+        student_dir = os.path.join(base_dir, student_id_dir)
+        if not os.path.isdir(student_dir):
+            continue
+        course_dir = os.path.join(student_dir, course_id)
+        if not os.path.exists(course_dir):
+            continue
+        # 课时遍历
+        lesson_dirs = [lesson_num] if lesson_num else os.listdir(course_dir)
+        for lesson in lesson_dirs:
+            lesson_path = os.path.join(course_dir, lesson)
+            if not os.path.isdir(lesson_path):
+                continue
+            # 查找答题记录文件（如有）
+            record_file = os.path.join(lesson_path, 'records.json')
+            if not os.path.exists(record_file):
+                continue
+            try:
+                import json
+                with open(record_file, 'r', encoding='utf-8') as f:
+                    records = json.load(f)
+                # 统计错题
+                for rec in records:
+                    if student_id and rec.get('student_id') != student_id:
+                        continue
+                    if rec.get('isCorrect') == 0 and rec.get('knowledge'):
+                        stats[rec['knowledge']] += 1
+                        if student_id:
+                            student_stats[rec['knowledge']] = student_stats.get(rec['knowledge'], 0) + 1
+            except Exception as e:
+                print(f"读取答题记录失败: {record_file}, {e}")
+                continue
+    # 返回统计
+    if student_id:
+        result = [{'knowledge': k, 'wrongCount': v} for k, v in student_stats.items()]
+    else:
+        result = [{'knowledge': k, 'wrongCount': v} for k, v in stats.items()]
+    return {
+        'success': True,
+        'course_id': course_id,
+        'lesson_num': lesson_num,
+        'student_id': student_id,
+        'data': result
+    }

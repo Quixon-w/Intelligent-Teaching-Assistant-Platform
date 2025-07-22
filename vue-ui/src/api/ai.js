@@ -24,7 +24,7 @@ const getUserInfo = async () => {
   try {
     const userResponse = await getCurrentUser()
     console.log('🔍 getUserInfo - 原始响应:', userResponse)
-    
+
     if (userResponse && userResponse.id) {
       const user = userResponse
       const userId = user.id
@@ -37,7 +37,7 @@ const getUserInfo = async () => {
   } catch (error) {
     console.error('❌ 获取用户信息失败:', error)
   }
-  
+
   console.warn('⚠️ 使用默认用户信息')
   return { userId: 'anonymous', isTeacher: false }
 }
@@ -45,13 +45,13 @@ const getUserInfo = async () => {
 // AI对话完成接口
 export async function chatCompletions(sessionId, currentMessage) {
   const { userId, isTeacher } = await getUserInfo()
-  
+
   // 将当前消息包装成messages数组格式
   const messages = [{
     role: 'user',
     content: currentMessage
   }]
-  
+
   const requestData = {
     messages: messages,
     model: "rwkv",
@@ -60,11 +60,11 @@ export async function chatCompletions(sessionId, currentMessage) {
     session_id: sessionId,
     is_teacher: isTeacher
   }
-  
+
   console.log('🚀 发送AI对话请求数据:', requestData)
   console.log('🔍 用户ID类型和值:', typeof userId, userId)
   console.log('🔍 请求数据JSON:', JSON.stringify(requestData, null, 2))
-  
+
   try {
     const response = await fetch('/ai/v1/chat/completions', {
       method: 'POST',
@@ -90,7 +90,7 @@ export async function chatCompletions(sessionId, currentMessage) {
     let result
     try {
       result = JSON.parse(responseText)
-      
+
       // 处理双重编码的情况
       if (typeof result === 'string') {
         result = JSON.parse(result)
@@ -98,7 +98,7 @@ export async function chatCompletions(sessionId, currentMessage) {
     } catch (parseError) {
       throw new Error('响应不是有效的JSON格式')
     }
-    
+
     // 确保返回的数据结构正确
     if (result && result.choices && Array.isArray(result.choices) && result.choices.length > 0) {
       const firstChoice = result.choices[0]
@@ -121,9 +121,9 @@ export async function getAllSessions() {
   try {
     const { userId, isTeacher } = await getUserInfo()
     const response = await aiRequest.get(`/ai/v1/users/${String(userId)}/sessions`, {
-    params: {
-      is_teacher: isTeacher
-    }
+      params: {
+        is_teacher: isTeacher
+      }
     })
     console.log('🔍 会话列表响应:', response)
     return response.sessions || []
@@ -138,10 +138,10 @@ export async function getSessionHistory(sessionId, limit = 10) {
   try {
     const { userId, isTeacher } = await getUserInfo()
     const response = await aiRequest.get(`/ai/v1/users/${String(userId)}/sessions/${sessionId}/dialogues`, {
-    params: {
-      limit: limit,
-      is_teacher: isTeacher
-    }
+      params: {
+        limit: limit,
+        is_teacher: isTeacher
+      }
     })
     console.log('🔍 会话历史响应:', response)
     return response.dialogues || []
@@ -156,10 +156,10 @@ export async function getSessionContext(sessionId, maxMessages = 20) {
   try {
     const { userId, isTeacher } = await getUserInfo()
     const response = await aiRequest.get(`/ai/v1/qa/sessions/${String(userId)}/${sessionId}/context`, {
-    params: {
-      max_messages: maxMessages,
-      is_teacher: isTeacher
-    }
+      params: {
+        max_messages: maxMessages,
+        is_teacher: isTeacher
+      }
     })
     return response.context_messages || []
   } catch (error) {
@@ -189,9 +189,9 @@ export async function clearSessionHistory(sessionId) {
   try {
     const { userId, isTeacher } = await getUserInfo()
     const response = await aiRequest.delete(`/ai/v1/qa/sessions/${String(userId)}/${sessionId}/history`, {
-    data: {
-      is_teacher: isTeacher
-    }
+      data: {
+        is_teacher: isTeacher
+      }
     })
     return response
   } catch (error) {
@@ -205,9 +205,9 @@ export async function saveSessionHistory(sessionId, messages) {
   try {
     const { userId, isTeacher } = await getUserInfo()
     const response = await aiRequest.post(`/ai/v1/users/${String(userId)}/sessions/${sessionId}/dialogues`, {
-    messages: messages,
-    is_teacher: isTeacher
-  })
+      messages: messages,
+      is_teacher: isTeacher
+    })
     return response
   } catch (error) {
     console.error('保存会话历史失败:', error)
@@ -233,7 +233,7 @@ export async function getSessionInfo(sessionId) {
 // 智能问答接口
 export async function intelligentQA(query, sessionId, courseId = null, lessonNum = null) {
   const { userId, isTeacher } = await getUserInfo()
-  
+
   return fetch('/ai/v1/qa', {
     method: 'POST',
     headers: {
@@ -258,18 +258,18 @@ export async function intelligentQA(query, sessionId, courseId = null, lessonNum
 // 文件上传接口
 export async function uploadFile(file, sessionId, courseId = null, lessonNum = null, isResource = false, isAsk = false) {
   const { userId, isTeacher } = await getUserInfo()
-  
+
   const formData = new FormData()
   formData.append('file', file)
   formData.append('session_id', sessionId)
   formData.append('user_id', String(userId))
   formData.append('is_teacher', isTeacher)
-  
+
   if (courseId) formData.append('course_id', courseId)
   if (lessonNum) formData.append('lesson_num', lessonNum)
   formData.append('is_resource', isResource)
   formData.append('is_ask', isAsk)
-  
+
   return fetch('/ai/v1/upload', {
     method: 'POST',
     body: formData
@@ -299,7 +299,7 @@ export function getKnowledgeStatus() {
 // 搜索知识库
 export async function searchKnowledge(query, courseId = null, lessonNum = null, topK = 5) {
   const { userId, isTeacher } = await getUserInfo()
-  
+
   return aiRequest.post('/ai/v1/knowledge/search', {
     query: query,
     user_id: String(userId),
@@ -317,13 +317,12 @@ export async function searchKnowledge(query, courseId = null, lessonNum = null, 
   })
 }
 
-// 创建课程大纲
-export async function createLessonOutline(courseId, lessonId) {
+// 创建教学内容
+export async function createLessonContentDesign(courseId, lessonId) {
   const { userId, isTeacher } = await getUserInfo()
-  
   return aiRequest.post('/ai/v1/create/content_design', {
     user_id: String(userId),
-    session_id: `outline_${Date.now()}`,
+    session_id: `content_design_${Date.now()}`,
     course_id: courseId,
     lesson_num: lessonId,
     is_teacher: isTeacher,
@@ -331,40 +330,19 @@ export async function createLessonOutline(courseId, lessonId) {
   }).then(res => {
     return res
   }).catch(err => {
-    console.error('创建课程大纲失败:', err)
+    console.error('创建教学内容失败:', err)
     throw err
   })
 }
-
-// 检查课程大纲状态
-export async function lessonOutlineStatus(courseId, lessonId) {
-  const { userId, isTeacher } = await getUserInfo()
-  
-  return aiRequest.get('/ai/v1/create/outline/status', {
-    params: {
-      user_id: String(userId),
-      course_id: courseId,
-      lesson_num: lessonId,
-      is_teacher: isTeacher
-    }
-  }).then(res => {
-    return res.has_outline
-  }).catch(err => {
-    console.error('检查课程大纲状态失败:', err)
-    throw err
-  })
-}
-
-// 下载课程大纲
-export async function lessonOutlineDownload(courseId, lessonId) {
+// 获取教学内容文件列表
+export async function lessonContentDesignDownload(courseId, lessonId) {
   const { userId } = await getUserInfo()
-  
-  return aiRequest.get(`/ai/v1/list/outlines/${String(userId)}/${courseId}/${lessonId}`).then(res => {
+  return aiRequest.get(`/ai/v1/list/content_designs/${String(userId)}/${courseId}/${lessonId}`).then(res => {
     const files = res.files || []
     const urls = files.map(file => file.download_url)
     return urls
   }).catch(err => {
-    console.error('下载课程大纲失败:', err)
+    console.error('下载教学内容失败:', err)
     throw err
   })
 }
@@ -372,7 +350,7 @@ export async function lessonOutlineDownload(courseId, lessonId) {
 // 生成习题
 export async function generateExercises(courseId, lessonId, questionCount = 5, difficulty = 'medium') {
   const { userId, isTeacher } = await getUserInfo()
-  
+
   return aiRequest.post('/ai/v1/exercise/generate', {
     user_id: String(userId),
     session_id: `exercise_${Date.now()}`,
@@ -437,7 +415,7 @@ export async function fileQA(query, sessionId, courseId, lessonNum) {
     throw new Error('响应不是有效的JSON格式');
   }
   return result;
-} 
+}
 
 // 生成即时自主练习题目
 export async function generateInstantPractice(knowledgePoint, difficulty = 'medium') {
