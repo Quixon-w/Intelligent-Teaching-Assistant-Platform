@@ -188,7 +188,7 @@ export default {
             loading.value = false
             return
           }
-          questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
+            questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
         } else {
           localKnowledgeStats.value = []
           wrongQuestions.value = []

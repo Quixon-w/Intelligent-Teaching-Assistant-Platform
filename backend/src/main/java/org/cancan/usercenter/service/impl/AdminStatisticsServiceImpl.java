@@ -247,11 +247,16 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         for (Map.Entry<Long, Long> entry : teacherLessonCounts.entrySet()) {
             User teacher = userMapper.selectById(entry.getKey());
             if (teacher != null) {
+                final int currentRanking = ranking++;
+                final Long teacherId = entry.getKey();
+                final Long usageCount = entry.getValue();
+                final String teacherName = teacher.getUsername();
+                
                 teacherRankings.add(new TeacherRankingVO() {{
-                    setTeacherId(entry.getKey());
-                    setTeacherName(teacher.getUsername());
-                    setUsageCount(entry.getValue());
-                    setRanking(ranking++);
+                    setTeacherId(teacherId);
+                    setTeacherName(teacherName);
+                    setUsageCount(usageCount);
+                    setRanking(currentRanking);
                 }});
             }
         }
@@ -344,11 +349,16 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         for (Map.Entry<Long, Long> entry : studentRecordCounts.entrySet()) {
             User student = userMapper.selectById(entry.getKey());
             if (student != null) {
+                final int currentRanking = ranking++;
+                final Long studentId = entry.getKey();
+                final Long usageCount = entry.getValue();
+                final String studentName = student.getUsername();
+                
                 studentRankings.add(new StudentRankingVO() {{
-                    setStudentId(entry.getKey());
-                    setStudentName(student.getUsername());
-                    setUsageCount(entry.getValue());
-                    setRanking(ranking++);
+                    setStudentId(studentId);
+                    setStudentName(studentName);
+                    setUsageCount(usageCount);
+                    setRanking(currentRanking);
                 }});
             }
         }
