@@ -279,18 +279,18 @@ async def generate_content_design_with_rwkv(prompt: str, request: Request, max_w
             raise Exception("RWKV模型未初始化")
         
         # 设置生成参数
-        model.temperature = 0.7
-        model.top_p = 0.9
+        model.temperature = 0.8  # 稍微提高创造性
+        model.top_p = 0.95  # 提高采样范围
         
         # 重要：临时增加max_tokens_per_generation以支持更长的生成
         original_max_tokens = model.max_tokens_per_generation
-        max_tokens = 3000  # 设置最大token数
+        max_tokens = 4000  # 降低到4000，避免卡住
         model.max_tokens_per_generation = max_tokens
         
         # 生成教学设计内容
         content_design = ""
         token_count = 0
-        min_words = max(300, max_words * 0.3)  # 最小字数至少300字或目标字数的30%
+        min_words = max(400, max_words * 0.4)  # 调整最小字数要求
         
         print("开始生成教学设计...")
         print(f"提示词长度: {len(prompt)} 字符")
@@ -301,14 +301,14 @@ async def generate_content_design_with_rwkv(prompt: str, request: Request, max_w
         print(f"临时设置为: {model.max_tokens_per_generation}")
         
         # 设置停止条件
-        stop_sequences = ["###", "---", "问题", "题目", "结束", "完毕"]
+        stop_sequences = ["结束", "完毕"]
         
         print("开始生成循环...")
         for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
             content_design += delta
             token_count += 1
             
-                        # 每100个token打印一次进度
+            # 每100个token打印一次进度
             if token_count % 100 == 0:
                 current_words = len([c for c in content_design if '\u4e00' <= c <= '\u9fff'])
                 print(f"已生成 {token_count} tokens, 当前内容长度: {len(content_design)} 字符, 字数: {current_words}")
@@ -323,11 +323,11 @@ async def generate_content_design_with_rwkv(prompt: str, request: Request, max_w
                 print(f"达到最大token数: {max_tokens}")
                 break
             
-            # 检查字数限制
-            current_words = len([c for c in content_design if '\u4e00' <= c <= '\u9fff'])
-            if current_words >= max_words * 1.2:  # 允许超出20%的字数
-                print(f"达到字数限制 {current_words} >= {max_words * 1.2}")
-                break
+            # 检查字数限制 - 移除这个限制，让AI尽可能多生成
+            # current_words = len([c for c in content_design if '\u4e00' <= c <= '\u9fff'])
+            # if current_words >= max_words * 1.2:  # 允许超出20%的字数
+            #     print(f"达到字数限制 {current_words} >= {max_words * 1.2}")
+            #     break
             
         # 恢复原始设置
         model.max_tokens_per_generation = original_max_tokens
@@ -340,8 +340,8 @@ async def generate_content_design_with_rwkv(prompt: str, request: Request, max_w
         
         if final_word_count < min_words:
             print(f"生成的内容字数不足（{final_word_count} < {min_words}），尝试重新生成...")
-            # 如果字数不足，尝试重新生成一次
-            retry_prompt = prompt + "\n\n请确保生成的内容详细完整，字数不少于300字。"
+            # 如果字数不足，尝试重新生成一次 - 简化重试提示词，避免过长
+            retry_prompt = f"请继续生成更多内容，当前只生成了{final_word_count}字，需要至少{min_words}字。请详细展开每个知识点，包含案例和练习。"
             return await generate_content_design_with_rwkv_retry(retry_prompt, request, max_words, model, max_tokens)
         
         print(f"教学设计生成完成，生成长度: {len(content_design)} 字符，字数: {final_word_count}")
@@ -370,13 +370,13 @@ async def generate_content_design_with_rwkv_retry(prompt: str, request: Request,
         
         # 临时设置max_tokens_per_generation
         original_max_tokens = model.max_tokens_per_generation
-        model.max_tokens_per_generation = max_tokens
+        model.max_tokens_per_generation = 3000  # 重试时使用更小的token数
         
         content_design = ""
         token_count = 0
         
-        # 设置停止条件
-        stop_sequences = ["###", "---", "问题", "题目", "结束", "完毕"]
+        # 设置停止条件 - 减少停止条件，让AI继续生成
+        stop_sequences = ["完毕"]
         
         for response, delta, _, _ in model.generate(prompt, stop=stop_sequences):
             content_design += delta
@@ -390,10 +390,10 @@ async def generate_content_design_with_rwkv_retry(prompt: str, request: Request,
                 print(f"重试达到最大token限制 {max_tokens}")
                 break
             
-            # 检查字数限制
-            if current_words >= max_words * 1.5:  # 重试时允许更多字数
-                print(f"重试达到字数限制 {current_words} >= {max_words * 1.5}")
-                break
+            # 检查字数限制 - 移除这个限制，让AI尽可能多生成
+            # if current_words >= max_words * 1.5:  # 重试时允许更多字数
+            #     print(f"重试达到字数限制 {current_words} >= {max_words * 1.5}")
+            #     break
             
             # 检查请求是否断开
             if await request.is_disconnected():
@@ -503,6 +503,9 @@ async def create_content_design(body: CreateContentDesignBody, request: Request)
             
             # 添加字数限制到提示词
             enhanced_prompt += f"\n\n要求：字数控制在{body.max_words}字左右，包含知识讲解、实训练习、时间分配等详细内容。"
+            
+            # 强制要求AI生成更多内容
+            enhanced_prompt += f"\n\n重要提醒：请务必生成详细完整的内容，不要提前结束，目标字数{body.max_words}字，实际生成内容应该接近或超过这个字数。每个知识点都要详细展开，包含具体案例和练习。"
             
             # 使用RWKV模型生成教学设计
             content_design = await generate_content_design_with_rwkv(enhanced_prompt, request, body.max_words)
