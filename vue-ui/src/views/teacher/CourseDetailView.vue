@@ -1113,6 +1113,7 @@ import { getCourseScore } from '@/api/course'
 import { showError, showDetailedError, showSuccess, showWarning, handleApiResponse, handleException } from '@/utils/errorHandler'
 import WrongKnowledgeCloud from '@/components/WrongKnowledgeCloud.vue'
 import * as echarts from 'echarts'
+import { getWrongQuestionsByLesson } from '@/api/questionRecords'
 
 const route = useRoute()
 const router = useRouter()
@@ -1305,6 +1306,25 @@ const scoreChartRef = ref(null)
 // 错题统计相关
 const selectedStudentForWrongQuestions = ref(null)
 const activeLessonCollapse = ref([])
+
+const allLessonWrongQuestions = ref([])
+
+const loadAllLessonWrongQuestions = async () => {
+  allLessonWrongQuestions.value = []
+  for (const lesson of lessonsList.value) {
+    if (lesson.hasQuestion === 1) {
+      try {
+        const res = await getWrongQuestionsByLesson(lesson.lessonId, selectedStudentForWrongQuestions.value)
+        if (res && res.code === 0 && Array.isArray(res.data)) {
+          allLessonWrongQuestions.value.push(...res.data)
+        }
+      } catch (e) {
+        console.error('【获取课时错题失败】', lesson.lessonId, lesson.lessonName, e)
+      }
+    }
+  }
+  console.log('【所有课时错题合并】', allLessonWrongQuestions.value)
+}
 
 // 计算属性：判断当前用户是否为课程教师
 const isCurrentUserTeacher = computed(() => {
@@ -3503,28 +3523,15 @@ const downloadContentDesignFile = async (file) => { /* ...见前述... */ }
 
 // 课程整体错题云图数据（针对选中学生）
 const studentCourseWrongKnowledgeStats = computed(() => {
-  if (!selectedStudentForWrongQuestions.value) return []
-  const allWrongRecords = []
-  lessonsList.value.forEach(lesson => {
-    if (lesson.hasQuestion === 1 && Array.isArray(lesson.records)) {
-      allWrongRecords.push(...lesson.records.filter(
-        record =>
-          String(record.studentId) === String(selectedStudentForWrongQuestions.value) &&
-          (record.isCorrect === 0 || record.isCorrect === '0' || record.isCorrect === false) &&
-          record.questionDetails &&
-          record.questionDetails.knowledge
-      ))
+  const statsMap = {}
+  allLessonWrongQuestions.value.forEach(item => {
+    if (item.knowledge) {
+      if (!statsMap[item.knowledge]) statsMap[item.knowledge] = 0
+      statsMap[item.knowledge]++
     }
   })
-  // 统计知识点
-  const statsMap = {}
-  allWrongRecords.forEach(record => {
-    const knowledge = record.questionDetails.knowledge
-    if (!statsMap[knowledge]) statsMap[knowledge] = 0
-    statsMap[knowledge]++
-  })
   const result = Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
-  console.log('【课程整体错题知识点分布统计-修正版】', result, allWrongRecords)
+  console.log('【课程整体错题知识点分布统计-最终版】', result, allLessonWrongQuestions.value)
   return result
 })
 
@@ -3551,6 +3558,7 @@ watch(selectedStudentForWrongQuestions, async (studentId) => {
     }
   }
   console.log('【所有课时答题记录加载完成】', lessonsList.value)
+  await loadAllLessonWrongQuestions()
 }, { immediate: true })
 </script>
 
