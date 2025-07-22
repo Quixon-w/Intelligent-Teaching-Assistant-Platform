@@ -1102,13 +1102,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive, nextTick } from 'vue'
+import { ref, computed, onMounted, reactive, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 import axios from 'axios'
-import { addLesson as addLessonApi, commitQuestion } from '@/api/course/lesson'
+import { addLesson as addLessonApi, commitQuestion, getLessonRecords } from '@/api/course/lesson'
 import { getCourseScore } from '@/api/course'
 import { showError, showDetailedError, showSuccess, showWarning, handleApiResponse, handleException } from '@/utils/errorHandler'
 import WrongKnowledgeCloud from '@/components/WrongKnowledgeCloud.vue'
@@ -3523,6 +3523,27 @@ const studentCourseWrongKnowledgeStats = computed(() => {
   })
   return Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
 })
+
+// 选中学生后自动加载所有课时的答题记录
+watch(selectedStudentForWrongQuestions, async (studentId) => {
+  if (!studentId) return
+  for (const lesson of lessonsList.value) {
+    if (lesson.hasQuestion === 1) {
+      try {
+        const res = await getLessonRecords(lesson.lessonId, studentId)
+        if (res.code === 0 && Array.isArray(res.data)) {
+          lesson.records = res.data
+        } else {
+          lesson.records = []
+        }
+      } catch {
+        lesson.records = []
+      }
+    } else {
+      lesson.records = []
+    }
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>

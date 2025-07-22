@@ -1819,28 +1819,20 @@ def generate_instant_practice_prompt(knowledge_point: str, difficulty: str, doma
     
     difficulty_text = difficulty_map.get(difficulty, "中等")
     
-    prompt = f"""基于知识点"{knowledge_point}"生成1道{difficulty_text}难度的单选题。
+    prompt = f"""基于知识点\"{knowledge_point}\"生成1道{difficulty_text}难度的单选题。
 
-要求：
+严格按照下面的要求来生成题目：
 1. 题目要针对该知识点的常见错误和难点
-2. 选项要具有迷惑性，体现学生的常见错误
+2. 选项要具有迷惑性，体现学生的常见错误,必须有四个选项而且每个选项都得有内容！！！
 3. 解析要详细说明为什么选择正确答案
-4. 严格按照标准格式输出
+4. 只输出题目本体，不要输出任何多余的语言、解释、说明、开头、结尾、提示、注释等
+5. 每个字段（题干、选项、答案、解析、知识点）必须单独换行，字段前后都要换行
+6. 输出严格按照上面的格式，字段顺序和标记必须一致
+7. 题目内容用中文
 
 相关教学知识参考：
 {domain_knowledge}
-
-格式：
-题目：
-题干：[题干内容]
-A. [选项A]
-B. [选项B]
-C. [选项C]
-D. [选项D]
-正确答案：[A/B/C/D]
-解析：[详细解析为什么选择正确答案，说明其他选项为什么错误]
-所属知识点：[{knowledge_point}]"""
-
+"""
     return prompt
 
 
