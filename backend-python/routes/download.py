@@ -104,6 +104,54 @@ async def download_outline_file(user_id: str, course_id: str, lesson_num: str, f
     )
 
 
+@router.get("/v1/download/content_design/{user_id}/{course_id}/{lesson_num}/{filename}")
+async def download_content_design_file(user_id: str, course_id: str, lesson_num: str, filename: str, is_teacher: bool = True):
+    """
+    下载课时教学内容（content_design）文件
+    :param user_id: 用户ID
+    :param course_id: 课程ID
+    :param lesson_num: 课时号
+    :param filename: 文件名
+    :param is_teacher: 是否为教师用户
+    :return: 文件下载响应
+    """
+    # 获取用户路径
+    user_path = get_user_path(user_id, is_teacher)
+    
+    # 构建文件路径
+    file_path = os.path.join(user_path, course_id, lesson_num, "content_design", filename)
+    
+    # 检查文件是否存在
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=404, 
+            detail=f"教学内容文件不存在: {filename}"
+        )
+    
+    # 检查文件是否为普通文件
+    if not os.path.isfile(file_path):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"路径不是文件: {filename}"
+        )
+    
+    # 根据文件扩展名设置正确的MIME类型
+    file_extension = os.path.splitext(filename)[1].lower()
+    if file_extension == '.docx':
+        media_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    elif file_extension == '.txt':
+        media_type = 'text/plain'
+    else:
+        media_type = 'application/octet-stream'
+    
+    # 返回文件下载响应
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type=media_type
+    )
+
+
 @router.get("/v1/list/resources/{user_id}/{course_id}")
 async def list_resource_files(user_id: str, course_id: str, is_teacher: bool = True):
     """
