@@ -407,7 +407,6 @@
                   <WrongKnowledgeCloud
                     type="course"
                     :courseId="courseId"
-                    :studentId="selectedStudentForWrongQuestions"
                     title="课程错题知识点分布"
                     :showDetails="false"
                   />

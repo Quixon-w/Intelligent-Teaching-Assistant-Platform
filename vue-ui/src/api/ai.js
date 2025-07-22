@@ -418,14 +418,9 @@ export async function fileQA(query, sessionId, courseId, lessonNum) {
 }
 
 // 生成即时自主练习题目
-export async function generateInstantPractice(knowledgePoint, difficulty = 'medium') {
+export async function generateInstantPractice(knowledgePoint, difficulty) {
   return aiRequest.post('/ai/v1/practice/generate_instant', {
     knowledge_point: knowledgePoint,
     difficulty: difficulty
-  }).then(res => {
-    return res
-  }).catch(err => {
-    console.error('生成即时练习失败:', err)
-    throw err
-  })
+  }, { timeout: 60000 }) // 设置超时时间为60秒
 } 
