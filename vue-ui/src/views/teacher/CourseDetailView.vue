@@ -3501,7 +3501,6 @@ const loadLessonContentDesignStatus = async () => {
 const lessonContentDesignStatus = ref(null)
 const hasContentDesign = computed(() => lessonContentDesignStatus.value && lessonContentDesignStatus.value.files && lessonContentDesignStatus.value.files.length > 0)
 const downloadContentDesignFile = async (file) => { /* ...见前述... */ }
-const loadLessonContentDesignStatus = async () => { /* ...见前述... */ }
 </script>
 
 <style scoped>
