@@ -3504,25 +3504,27 @@ const downloadContentDesignFile = async (file) => { /* ...见前述... */ }
 // 课程整体错题云图数据（针对选中学生）
 const studentCourseWrongKnowledgeStats = computed(() => {
   if (!selectedStudentForWrongQuestions.value) return []
-  const statsMap = {}
+  const allWrongRecords = []
   lessonsList.value.forEach(lesson => {
     if (lesson.hasQuestion === 1 && Array.isArray(lesson.records)) {
-      lesson.records.forEach(record => {
-        if (
-          record.studentId == selectedStudentForWrongQuestions.value &&
-          record.isCorrect === 0 &&
+      allWrongRecords.push(...lesson.records.filter(
+        record =>
+          String(record.studentId) === String(selectedStudentForWrongQuestions.value) &&
+          (record.isCorrect === 0 || record.isCorrect === '0' || record.isCorrect === false) &&
           record.questionDetails &&
           record.questionDetails.knowledge
-        ) {
-          const knowledge = record.questionDetails.knowledge
-          if (!statsMap[knowledge]) statsMap[knowledge] = 0
-          statsMap[knowledge]++
-        }
-      })
+      ))
     }
   })
+  // 统计知识点
+  const statsMap = {}
+  allWrongRecords.forEach(record => {
+    const knowledge = record.questionDetails.knowledge
+    if (!statsMap[knowledge]) statsMap[knowledge] = 0
+    statsMap[knowledge]++
+  })
   const result = Object.keys(statsMap).map(k => ({ knowledge: k, wrongCount: statsMap[k] }))
-  console.log('【课程整体错题知识点分布统计】', result, '原始Map:', statsMap, '当前选中学生:', selectedStudentForWrongQuestions.value, '课时列表:', lessonsList.value)
+  console.log('【课程整体错题知识点分布统计-修正版】', result, allWrongRecords)
   return result
 })
 
