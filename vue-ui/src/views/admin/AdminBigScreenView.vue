@@ -92,7 +92,7 @@
                 <span class="value">{{ (teacherUsage.averageUsageCount || 0).toFixed(1) }}</span>
               </div>
             </div>
-            <div ref="teacherChart" class="chart"></div>
+            <div ref="teacherChartRef" class="chart"></div>
             <div class="active-modules">
               <h4>活跃板块分布</h4>
               <div class="module-list">
@@ -127,7 +127,7 @@
                 <span class="value">{{ (studentUsage.averageUsageCount || 0).toFixed(1) }}</span>
               </div>
             </div>
-            <div ref="studentChart" class="chart"></div>
+            <div ref="studentChartRef" class="chart"></div>
             <div class="active-modules">
               <h4>活跃板块分布</h4>
               <div class="module-list">
@@ -151,26 +151,13 @@
           <template #header>
             <div class="card-header">
               <h2>教学效率指数</h2>
-              <el-tag :type="getEfficiencyTagType(teachingEfficiency.overallEfficiencyIndex)">
-                {{ (teachingEfficiency.overallEfficiencyIndex || 0).toFixed(1) }} 分
+              <el-tag :type="getEfficiencyTagType(teachingEfficiency.overallEfficiency)">
+                {{ (teachingEfficiency.overallEfficiency || 0).toFixed(1) }} 分
               </el-tag>
             </div>
           </template>
           <div class="chart-container">
-            <div ref="efficiencyChart" class="chart"></div>
-            <div class="optimization-suggestions" v-if="teachingEfficiency.optimizationSuggestions?.length">
-              <h4>优化建议</h4>
-              <div class="suggestion-list">
-                <div v-for="suggestion in teachingEfficiency.optimizationSuggestions.slice(0, 3)" 
-                     :key="suggestion.courseId" class="suggestion-item">
-                  <el-tag :type="getPriorityType(suggestion.priority)" size="small">
-                    {{ suggestion.priority === 'high' ? '高' : suggestion.priority === 'medium' ? '中' : '低' }}优先级
-                  </el-tag>
-                  <span class="course-name">{{ suggestion.courseName }}</span>
-                  <span class="issue-desc">{{ suggestion.issueDescription }}</span>
-                </div>
-              </div>
-            </div>
+            <div ref="efficiencyChartRef" class="chart"></div>
           </div>
         </el-card>
       </el-col>
@@ -181,24 +168,13 @@
           <template #header>
             <div class="card-header">
               <h2>学生学习效果</h2>
-              <el-tag :type="getCorrectRateTagType(learningEffectiveness.averageCorrectRate)">
-                平均正确率 {{ (learningEffectiveness.averageCorrectRate || 0).toFixed(1) }}%
+              <el-tag :type="getCorrectRateTagType(learningEffectiveness.overallEffectiveness)">
+                平均正确率 {{ (learningEffectiveness.overallEffectiveness || 0).toFixed(1) }}%
               </el-tag>
             </div>
           </template>
           <div class="chart-container">
-            <div ref="effectivenessChart" class="chart"></div>
-            <div class="high-frequency-errors" v-if="learningEffectiveness.highFrequencyErrors?.length">
-              <h4>高频错误知识点</h4>
-              <div class="error-list">
-                <div v-for="error in learningEffectiveness.highFrequencyErrors.slice(0, 3)" 
-                     :key="error.knowledgePoint" class="error-item">
-                  <span class="knowledge-point">{{ error.knowledgePoint }}</span>
-                  <span class="error-rate">错误率 {{ error.errorRate.toFixed(1) }}%</span>
-                  <span class="error-count">{{ error.errorCount }} 次</span>
-                </div>
-              </div>
-            </div>
+            <div ref="effectivenessChartRef" class="chart"></div>
           </div>
         </el-card>
       </el-col>
@@ -317,6 +293,12 @@ let teacherChart = null
 let studentChart = null
 let efficiencyChart = null
 let effectivenessChart = null
+
+// 图表DOM引用
+const teacherChartRef = ref(null)
+const studentChartRef = ref(null)
+const efficiencyChartRef = ref(null)
+const effectivenessChartRef = ref(null)
 
 // 获取基础统计数据（使用和管理员页面相同的API）
 const fetchBasicStats = async () => {
@@ -441,253 +423,253 @@ const updateLastUpdateTime = () => {
 
 // 初始化所有图表
 const initCharts = () => {
-  initTeacherChart()
-  initStudentChart()
-  initEfficiencyChart()
-  initEffectivenessChart()
+  try {
+    initTeacherChart()
+    initStudentChart()
+    initEfficiencyChart()
+    initEffectivenessChart()
+  } catch (error) {
+    console.error('初始化图表失败:', error)
+  }
 }
 
 // 初始化教师使用统计图表
 const initTeacherChart = () => {
-  const chartDom = document.querySelector('.chart-card:first-child .chart')
-  if (!chartDom) return
-  
-  if (teacherChart) {
-    teacherChart.dispose()
-  }
-  
-  teacherChart = echarts.init(chartDom)
-  
-  const option = {
-    title: {
-      text: '教师使用趋势',
-      left: 'center',
-      textStyle: {
-        fontSize: 14,
-        fontWeight: 'normal'
-      }
-    },
-    tooltip: {
-      trigger: 'axis'
-    },
-    xAxis: {
-      type: 'category',
-      data: teacherUsage.value.usageTrends?.map(item => 
-        new Date(item.timePoint).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-      ) || []
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: [{
-      data: teacherUsage.value.usageTrends?.map(item => item.usageCount) || [],
-      type: 'line',
-      smooth: true,
-      areaStyle: {
-        opacity: 0.3
+  try {
+    const chartDom = teacherChartRef.value
+    if (!chartDom) {
+      console.warn('教师图表容器未找到')
+      return
+    }
+    
+    // 检查并销毁现有图表实例
+    if (teacherChart && typeof teacherChart.dispose === 'function') {
+      teacherChart.dispose()
+    }
+    
+    teacherChart = echarts.init(chartDom)
+    
+    // 使用模拟数据
+    const option = {
+      title: {
+        text: '教师使用统计',
+        left: 'center',
+        textStyle: {
+          fontSize: 14,
+          fontWeight: 'normal'
+        }
       },
-      itemStyle: {
-        color: '#409EFF'
-      }
-    }]
+      tooltip: {
+        trigger: 'item'
+      },
+      series: [{
+        type: 'pie',
+        radius: '50%',
+        data: [
+          { value: teacherUsage.value.totalUsageCount || 0, name: '总课时数' },
+          { value: teacherUsage.value.activeTeacherCount || 0, name: '活跃教师数' }
+        ],
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }
+      }]
+    }
+    
+    teacherChart.setOption(option)
+  } catch (error) {
+    console.error('初始化教师图表失败:', error)
   }
-  
-  teacherChart.setOption(option)
 }
 
 // 初始化学生使用统计图表
 const initStudentChart = () => {
-  const chartDom = document.querySelector('.chart-card:nth-child(2) .chart')
-  if (!chartDom) return
-  
-  if (studentChart) {
-    studentChart.dispose()
-  }
-  
-  studentChart = echarts.init(chartDom)
-  
-  const option = {
-    title: {
-      text: '学生使用趋势',
-      left: 'center',
-      textStyle: {
-        fontSize: 14,
-        fontWeight: 'normal'
-      }
-    },
-    tooltip: {
-      trigger: 'axis'
-    },
-    xAxis: {
-      type: 'category',
-      data: studentUsage.value.usageTrends?.map(item => 
-        new Date(item.timePoint).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-      ) || []
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: [{
-      data: studentUsage.value.usageTrends?.map(item => item.usageCount) || [],
-      type: 'line',
-      smooth: true,
-      areaStyle: {
-        opacity: 0.3
+  try {
+    const chartDom = studentChartRef.value
+    if (!chartDom) {
+      console.warn('学生图表容器未找到')
+      return
+    }
+    
+    // 检查并销毁现有图表实例
+    if (studentChart && typeof studentChart.dispose === 'function') {
+      studentChart.dispose()
+    }
+    
+    studentChart = echarts.init(chartDom)
+    
+    // 使用模拟数据
+    const option = {
+      title: {
+        text: '学生使用统计',
+        left: 'center',
+        textStyle: {
+          fontSize: 14,
+          fontWeight: 'normal'
+        }
       },
-      itemStyle: {
-        color: '#67C23A'
-      }
-    }]
+      tooltip: {
+        trigger: 'item'
+      },
+      series: [{
+        type: 'pie',
+        radius: '50%',
+        data: [
+          { value: studentUsage.value.totalUsageCount || 0, name: '总做题次数' },
+          { value: studentUsage.value.activeStudentCount || 0, name: '活跃学生数' }
+        ],
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }
+      }]
+    }
+    
+    studentChart.setOption(option)
+  } catch (error) {
+    console.error('初始化学生图表失败:', error)
   }
-  
-  studentChart.setOption(option)
 }
 
 // 初始化教学效率图表
 const initEfficiencyChart = () => {
-  const chartDom = document.querySelector('.chart-card:nth-child(3) .chart')
-  if (!chartDom) return
-  
-  if (efficiencyChart) {
-    efficiencyChart.dispose()
-  }
-  
-  efficiencyChart = echarts.init(chartDom)
-  
-  const option = {
-    title: {
-      text: '教学效率趋势',
-      left: 'center',
-      textStyle: {
-        fontSize: 14,
-        fontWeight: 'normal'
-      }
-    },
-    tooltip: {
-      trigger: 'axis'
-    },
-    legend: {
-      data: ['效率指数', '通过率'],
-      bottom: 0
-    },
-    xAxis: {
-      type: 'category',
-      data: teachingEfficiency.value.efficiencyTrends?.map(item => 
-        item.date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
-      ) || []
-    },
-    yAxis: {
-      type: 'value',
-      max: 100
-    },
-    series: [
-      {
-        name: '效率指数',
-        data: teachingEfficiency.value.efficiencyTrends?.map(item => item.efficiencyIndex) || [],
-        type: 'line',
-        smooth: true,
-        itemStyle: { color: '#E6A23C' }
+  try {
+    const chartDom = efficiencyChartRef.value
+    if (!chartDom) {
+      console.warn('教学效率图表容器未找到')
+      return
+    }
+    
+    // 检查并销毁现有图表实例
+    if (efficiencyChart && typeof efficiencyChart.dispose === 'function') {
+      efficiencyChart.dispose()
+    }
+    
+    efficiencyChart = echarts.init(chartDom)
+    
+    const option = {
+      title: {
+        text: '教学效率统计',
+        left: 'center',
+        textStyle: {
+          fontSize: 14,
+          fontWeight: 'normal'
+        }
       },
-      {
-        name: '通过率',
-        data: teachingEfficiency.value.efficiencyTrends?.map(item => item.passRate) || [],
-        type: 'line',
-        smooth: true,
-        itemStyle: { color: '#F56C6C' }
-      }
-    ]
+      tooltip: {
+        trigger: 'axis'
+      },
+      xAxis: {
+        type: 'category',
+        data: ['整体效率指数']
+      },
+      yAxis: {
+        type: 'value',
+        max: 100
+      },
+      series: [{
+        data: [teachingEfficiency.value.overallEfficiency || 0],
+        type: 'bar',
+        itemStyle: { color: '#E6A23C' }
+      }]
+    }
+    
+    efficiencyChart.setOption(option)
+  } catch (error) {
+    console.error('初始化教学效率图表失败:', error)
   }
-  
-  efficiencyChart.setOption(option)
 }
 
 // 初始化学习效果图表
 const initEffectivenessChart = () => {
-  const chartDom = document.querySelector('.chart-card:nth-child(4) .chart')
-  if (!chartDom) return
-  
-  if (effectivenessChart) {
-    effectivenessChart.dispose()
-  }
-  
-  effectivenessChart = echarts.init(chartDom)
-  
-  const option = {
-    title: {
-      text: '正确率趋势',
-      left: 'center',
-      textStyle: {
-        fontSize: 14,
-        fontWeight: 'normal'
-      }
-    },
-    tooltip: {
-      trigger: 'axis'
-    },
-    xAxis: {
-      type: 'category',
-      data: learningEffectiveness.value.correctRateTrends?.map(item => 
-        item.date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
-      ) || []
-    },
-    yAxis: {
-      type: 'value',
-      max: 100
-    },
-    series: [{
-      data: learningEffectiveness.value.correctRateTrends?.map(item => item.correctRate) || [],
-      type: 'line',
-      smooth: true,
-      areaStyle: {
-        opacity: 0.3
+  try {
+    const chartDom = effectivenessChartRef.value
+    if (!chartDom) {
+      console.warn('学习效果图表容器未找到')
+      return
+    }
+    
+    // 检查并销毁现有图表实例
+    if (effectivenessChart && typeof effectivenessChart.dispose === 'function') {
+      effectivenessChart.dispose()
+    }
+    
+    effectivenessChart = echarts.init(chartDom)
+    
+    const option = {
+      title: {
+        text: '学习效果统计',
+        left: 'center',
+        textStyle: {
+          fontSize: 14,
+          fontWeight: 'normal'
+        }
       },
-      itemStyle: {
-        color: '#909399'
-      }
-    }]
+      tooltip: {
+        trigger: 'axis'
+      },
+      xAxis: {
+        type: 'category',
+        data: ['整体效果指数']
+      },
+      yAxis: {
+        type: 'value',
+        max: 100
+      },
+      series: [{
+        data: [learningEffectiveness.value.overallEffectiveness || 0],
+        type: 'bar',
+        itemStyle: { color: '#909399' }
+      }]
+    }
+    
+    effectivenessChart.setOption(option)
+  } catch (error) {
+    console.error('初始化学习效果图表失败:', error)
   }
-  
-  effectivenessChart.setOption(option)
 }
 
-// 工具方法
+// 获取效率标签类型
 const getEfficiencyTagType = (efficiency) => {
   if (efficiency >= 80) return 'success'
   if (efficiency >= 60) return 'warning'
   return 'danger'
 }
 
+// 获取正确率标签类型
 const getCorrectRateTagType = (rate) => {
   if (rate >= 80) return 'success'
   if (rate >= 60) return 'warning'
   return 'danger'
 }
 
-const getPriorityType = (priority) => {
-  switch (priority) {
-    case 'high': return 'danger'
-    case 'medium': return 'warning'
-    case 'low': return 'info'
-    default: return 'info'
-  }
-}
-
+// 获取通过率颜色
 const getPassRateColor = (rate) => {
   if (rate >= 80) return '#67C23A'
   if (rate >= 60) return '#E6A23C'
   return '#F56C6C'
 }
 
-// 事件处理
-const handleTabClick = () => {
-  // 标签页切换处理
+// 处理标签点击
+const handleTabClick = (tab) => {
+  console.log('切换到标签:', tab.props.name)
 }
 
+// 查看教师详情
 const viewTeacherDetail = (teacher) => {
+  console.log('查看教师详情:', teacher)
   ElMessage.info(`查看教师 ${teacher.teacherName} 的详细信息`)
 }
 
+// 查看学生详情
 const viewStudentDetail = (student) => {
+  console.log('查看学生详情:', student)
   ElMessage.info(`查看学生 ${student.studentName} 的详细信息`)
 }
 
