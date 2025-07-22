@@ -204,3 +204,42 @@ async def list_outline_files(user_id: str, course_id: str, lesson_num: str, is_t
             status_code=500, 
             detail=f"获取大纲文件列表失败: {str(e)}"
         ) 
+
+
+@router.get("/v1/list/content_designs/{user_id}/{course_id}/{lesson_num}", tags=["Create"])
+async def list_content_design_files(user_id: str, course_id: str, lesson_num: str, is_teacher: bool = True):
+    """
+    列出指定课时的所有教学设计文件（content_design 文件夹）
+    """
+    from datetime import datetime
+    user_path = get_user_path(user_id, is_teacher)
+    content_design_folder = os.path.join(user_path, course_id, lesson_num, "content_design")
+    if not os.path.exists(content_design_folder):
+        return {"files": [], "message": "教学设计目录不存在"}
+    try:
+        files = []
+        for filename in os.listdir(content_design_folder):
+            file_path = os.path.join(content_design_folder, filename)
+            if os.path.isfile(file_path) and filename.startswith('content_design_') and (filename.endswith('.docx') or filename.endswith('.txt')):
+                file_size = os.path.getsize(file_path)
+                download_url = f"/v1/download/content_design/{user_id}/{course_id}/{lesson_num}/{filename}"
+                files.append({
+                    "filename": filename,
+                    "size": file_size,
+                    "download_url": download_url,
+                    "created_time": datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+                })
+        files.sort(key=lambda x: x['created_time'], reverse=True)
+        return {
+            "files": files,
+            "total_files": len(files),
+            "course_id": course_id,
+            "lesson_num": lesson_num,
+            "user_id": user_id,
+            "is_teacher": is_teacher
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"获取教学设计文件列表失败: {str(e)}"
+        ) 

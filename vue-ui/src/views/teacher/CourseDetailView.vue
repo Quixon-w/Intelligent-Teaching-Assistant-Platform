@@ -3519,7 +3519,25 @@ const loadLessonContentDesignStatus = async () => {
 
 const lessonContentDesignStatus = ref(null)
 const hasContentDesign = computed(() => lessonContentDesignStatus.value && lessonContentDesignStatus.value.files && lessonContentDesignStatus.value.files.length > 0)
-const downloadContentDesignFile = async (file) => { /* ...见前述... */ }
+const downloadContentDesignFile = async (file) => {
+  try {
+    const userId = authStore.user?.id
+    const courseId = route.params.id
+    const lessonNum = `lesson${currentLesson.value.lessonId}`
+    const downloadUrl = `/ai/v1/download/content_design/${userId}/${courseId}/${lessonNum}/${file.filename}`
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = file.filename
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    ElMessage.success('开始下载教学内容文件')
+  } catch (error) {
+    console.error('下载教学内容文件失败:', error)
+    ElMessage.error('下载失败，请重试')
+  }
+}
 
 // 课程整体错题云图数据（针对选中学生）
 const studentCourseWrongKnowledgeStats = computed(() => {
