@@ -124,20 +124,29 @@ export default {
     showPracticeButton: {
       type: Boolean,
       default: false
+    },
+    knowledgeStats: {
+      type: Array,
+      default: null
     }
   },
   emits: ['tag-click', 'start-practice'],
   setup(props, { emit }) {
     const loading = ref(false)
-    const knowledgeStats = ref([])
+    // 优先用外部传入的 knowledgeStats
+    const knowledgeStats = ref(props.knowledgeStats ? props.knowledgeStats : [])
     const wrongQuestions = ref([])
 
     // 统计数据加载
     const loadData = async () => {
+      if (props.knowledgeStats) {
+        knowledgeStats.value = props.knowledgeStats
+        loading.value = false
+        return
+      }
       loading.value = true
       try {
         if (props.type === 'course' && props.courseId) {
-          // 课程整体错题统计（全体学生）
           const res = await axios.get('/v1/statistics/wrong_knowledge', {
             params: { course_id: props.courseId }
           })
@@ -150,11 +159,9 @@ export default {
           }
           wrongQuestions.value = []
         } else if (props.type === 'lesson' && props.lessonId && props.studentId) {
-          // 单个学生某课时错题
           const questionsResponse = await getWrongQuestionsByLesson(props.lessonId, props.studentId)
           if (questionsResponse && questionsResponse.code === 0) {
             wrongQuestions.value = Array.isArray(questionsResponse.data) ? questionsResponse.data : []
-            // 前端统计知识点分布
             const statsMap = {}
             wrongQuestions.value.forEach(item => {
               if (item.knowledge) {
@@ -182,7 +189,7 @@ export default {
     }
 
     // 监听参数变化自动刷新
-    watch(() => [props.type, props.courseId, props.lessonId, props.studentId], loadData, { immediate: true })
+    watch(() => [props.type, props.courseId, props.lessonId, props.studentId, props.knowledgeStats], loadData, { immediate: true })
 
     const totalWrongCount = computed(() => {
       return knowledgeStats.value.reduce((sum, item) => sum + item.wrongCount, 0)

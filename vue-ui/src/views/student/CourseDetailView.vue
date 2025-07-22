@@ -329,11 +329,9 @@
                 <h5>课程整体错题统计</h5>
                 <WrongKnowledgeCloud
                   type="course"
-                  :title="'课程错题知识点分布'"
-                  :showDetails="false"
-                  :showPracticeButton="true"
                   :knowledgeStats="courseWrongKnowledgeStats"
-                  @start-practice="handleStartPractice"
+                  title="课程错题知识点分布"
+                  :showDetails="false"
                 />
               </div>
               

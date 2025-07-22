@@ -198,7 +198,7 @@ export default {
       try {
         const html = marked.parse(rawText.value)
         // 简单判断是否为纯文本（无标签）
-        if (/<[a-z][\s\S]*>/i.test(html)) {
+        if (/<[a-z][\s\S]*>/i.test(html) && html.replace(/<[^>]+>/g, '').trim() !== rawText.value.trim()) {
           return html
         }
         return ''
