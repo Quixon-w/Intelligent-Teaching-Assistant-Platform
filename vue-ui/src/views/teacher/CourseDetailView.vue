@@ -2037,6 +2037,7 @@ const generateOutline = async (lesson) => {
       // 延迟加载状态，确保文件已生成
       setTimeout(() => {
         loadLessonOutlineStatus()
+        loadLessonContentDesignStatus() // 新增：自动刷新教学内容状态
       }, 2000)
     } else {
       ElMessage.error(result.message || '教学大纲生成失败')
