@@ -1,57 +1,60 @@
 # Intelligent-Teaching-Assistant-Platform
+
 Intelligent Teaching Assistant Platform (ITAP) 是一个融合人工智能与教育科学的智能辅助平台，旨在为教师和学习者提供全周期教学支持。通过实时数据分析、个性化内容推荐和自动化流程管理，ITAP 优化教学效率、提升学习成效，构建“教-学-评-练”一体化的智能教育生态。
 
 ---
 
-# 🎓 智能教学助手平台
+# 智能教学助手平台
 
 ## 项目简介
 
 本项目旨在开发一个基于开源大语言模型的智能教学助手平台，聚焦于教学过程的**备课设计自动化**、**学生个性化练习辅导**以及**教学数据分析可视化**，助力教育数字化转型，提升实训教学效率与个性化水平。
 
-该项目采用前后端分离架构，模块清晰，便于团队协作。平台整合了本地知识库与大模型能力，实现从“教师教”到“AI辅助教”，从“学生练”到“AI智能练”。
+该项目采用前后端分离架构，模块清晰，便于团队协作。平台整合了本地知识库与大模型能力，实现从“教师教”到“AI 辅助教”，从“学生练”到“AI 智能练”。
 
 ---
 
-## 🎯 项目功能
+## 项目功能
 
 ### 教师端功能
 
-* 智能备课设计（基于课程大纲生成教学内容）
-* 自动生成考核题目（选择题）
-* 学情分析与建议（学生答题批改与趋势报告）
-* 教学资源导出与管理
+- 智能备课设计
+- 自动生成考核题目
+- 学情分析与建议（学生答题批改与趋势报告）
+- 教学资源导出与管理
 
 ### 学生端功能
 
-* 课程选择与查询筛选
-* 在线练习与错题反馈
-* 智能问答助手（结合本地课程知识）
+- 课程选择与查询筛选
+- 在线练习与错题反馈
+- 基于错题情况的自主练习
+- 智能问答助手
 
 ### 管理端功能
 
-* 用户管理（教师、学生、管理员）
-* 课程管理（课件、试题等）
+- 用户管理（教师、学生、管理员）
+- 课程管理（课件、试题等）
+- 大屏概览教师学生使用情况
 
 ---
 
 ## 📦 技术栈
 
-| 模块    | 技术                                                  |
-| ----- | --------------------------------------------------- |
-| 前端    | Vue 3 + Vite + Element Plus + ECharts + Pinia      |
-| 后端    | Java 17 + Spring Boot 3.4.3 + MyBatis Plus + MySQL + Redis |
-| 大模型服务 | Python + FastAPI + RWKV + ChromaDB + LangChain |
-| 知识库构建 | BGE-M3嵌入模型 + 文档向量化 + 重排序模型 |
+| 模块       | 技术                                                       |
+| ---------- | ---------------------------------------------------------- |
+| 前端       | Vue 3 + Vite + Element Plus + ECharts + Pinia              |
+| 后端       | Java 17 + Spring Boot 3.4.3 + MyBatis Plus + MySQL + Redis |
+| 大模型服务 | Python + FastAPI + RWKV + ChromaDB + LangChain             |
+| 知识库构建 | BGE-M3 嵌入模型 + 文档向量化 + 重排序模型                  |
 
 ---
 
 ## 👥 团队分工
 
-| 成员 | 负责模块                   |
-| -- | ---------------------- |
-| 王乾旭  | 大模型服务开发与知识库构建、后端开发（模型服务集成）、前端界面开发 |
-| 洪宇灿  | 后端开发（接口开发、数据处理）、测试与整理、可视化开发 |
+| 成员     | 负责模块                                                           |
+| -------- | ------------------------------------------------------------------ |
+| Quixon   | 大模型服务开发与知识库构建、后端开发（模型服务集成）、前端界面开发 |
+| 餐餐吃好 | 后端开发（接口开发、数据处理）、测试与整理、可视化开发             |
 
 ---
 
@@ -63,18 +66,13 @@ Intelligent-Teaching-Assistant-Platform/
 │   ├── src/main/java/org/cancan/usercenter/
 │   │   ├── controller/               # 控制器层（API接口）
 │   │   │   ├── UserController.java   # 用户管理接口
-│   │   │   ├── CoursesController.java # 课程管理接口
-│   │   │   ├── LessonsController.java # 课程管理接口
-│   │   │   ├── QuestionsController.java # 题目管理接口
 │   │   │   └── ...
 │   │   ├── service/                  # 业务逻辑层
 │   │   │   ├── impl/                # 服务实现类
 │   │   │   ├── UserService.java     # 用户服务接口
-│   │   │   ├── CoursesService.java  # 课程服务接口
 │   │   │   └── ...
 │   │   ├── mapper/                  # 数据访问层
 │   │   │   ├── UserMapper.java      # 用户数据访问
-│   │   │   ├── CoursesMapper.java   # 课程数据访问
 │   │   │   └── ...
 │   │   ├── model/domain/            # 数据模型
 │   │   │   ├── User.java           # 用户实体
@@ -99,9 +97,6 @@ Intelligent-Teaching-Assistant-Platform/
 │   │   └── env_example.env         # 环境变量示例
 │   ├── routes/                      # API路由
 │   │   ├── completion.py           # 文本补全接口
-│   │   ├── qa.py                   # 问答接口
-│   │   ├── exercise.py             # 练习生成接口
-│   │   ├── knowledge.py            # 知识库管理
 │   │   └── ...
 │   ├── rwkv_pip/                   # RWKV模型相关
 │   │   ├── model.py                # 模型加载
@@ -190,7 +185,7 @@ GET /api/courses/list?pageNum=1&pageSize=10
 Authorization: Bearer {session_token}
 ```
 
-### AI服务接口
+### AI 服务接口
 
 ```http
 # 智能问答
@@ -268,7 +263,7 @@ mvn spring-boot:run
 # 或使用IDE直接运行 UserCenterApplication.java
 ```
 
-### 3. Python大模型服务启动
+### 3. Python 大模型服务启动
 
 ```bash
 # 进入Python服务目录
@@ -282,7 +277,7 @@ cp config/env_example.env .env
 # 编辑 .env 文件，配置模型路径、数据库连接等
 
 # 启动ChromaDB向量数据库与大模型服务
-python main.py 
+python main.py
 ```
 
 ### 4. 前端应用启动
@@ -301,16 +296,17 @@ npm run dev
 ### 5. 访问应用
 
 - **前端应用**: http://localhost:3000
-- **后端API文档**: http://localhost:8080/api/swagger-ui
-- **Python服务**: http://localhost:8001
+- **后端 API 文档**: http://localhost:8080/api/swagger-ui
+- **Python 服务**: http://localhost:8001
 
 ### 6. 模型文件与其他文件准备
 
-将RWKV模型文件放置在 `path_to_your_workspace/model/` 目录下：
-- RWKV-x060-World-7B-v3-20241112-ctx4096.pth或其他RWKV模型
+将 RWKV 模型文件放置在 `path_to_your_workspace/model/` 目录下：
+
+- RWKV-x060-World-7B-v3-20241112-ctx4096.pth，https://hf-mirror.com/BlinkDL/rwkv-6-world/tree/main
 - bge-m3 嵌入模型
 - bge-reranker-v2-m3 重排序模型
-其他缺少的文件较多，需自行前往RWKV模型库中下载添加
+  其他缺少的文件较多，需自行前往 RWKV-Runner 库中下载添加
 
 ---
 
@@ -319,4 +315,3 @@ npm run dev
 本项目仅为学生实训实践项目，目的为教育实训，涉及的大模型及其使用需遵守相应开源协议。
 
 ---
-
